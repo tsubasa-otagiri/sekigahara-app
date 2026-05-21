@@ -1,5 +1,18 @@
 export const REAL_TEAMS = ["杉山T", "鈴木T", "中村T", "渡部T"];
 export const ALL_TABS   = ["全体", "杉山T", "鈴木T", "鈴木Tプレ", "中村T", "渡部T"];
+
+/* ══════════════════════════════════════════════
+   メンバー表示マスター順
+   ドロップダウン・ランキング・分析画面の並び順を統一
+   ※ 杉山（全社FS）は表示上「杉山T」グループに含める
+══════════════════════════════════════════════ */
+export const DISPLAY_GROUPS = [
+  { label: "中村T", names: ["中村", "中", "櫻井", "青木"] },
+  { label: "渡部T", names: ["渡部", "横井", "上浦", "太田"] },
+  { label: "鈴木T", names: ["鈴木", "十文字", "井上"] },
+  { label: "杉山T", names: ["杉山", "小田切", "早川", "早坂"] },
+];
+export const MEMBER_MASTER_NAMES = DISPLAY_GROUPS.flatMap(g => g.names);
 export const CONF       = ["30%", "50%", "70%", "回収"];
 export const PLANS      = ["MDC", "コンサル", "Dash!", "運用代行", "MDCスモール", "MDCスタンダード"];
 export const PHASES     = [

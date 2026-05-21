@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Save } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
-import { CONF, PHASES, PLANS, TEAMS_OPT } from "../constants/index.js";
+import { CONF, PHASES, PLANS, TEAMS_OPT, MEMBER_MASTER_NAMES } from "../constants/index.js";
 import { parseAmt, resolvePhase } from "../utils/index.js";
 import Modal from "./ui/Modal.jsx";
 
@@ -37,24 +37,32 @@ export default function DealModal({ deal, onClose }) {
   );
   const [errors, setErrors] = useState({});
 
-  /* ── チームに応じたメンバー絞り込み ── */
-  const teamMembers = members.filter(
-    (m) => m.status === "active" && m.team === form.team
+  /* マスター順ソートヘルパー */
+  const masterSort = (arr) =>
+    [...arr].sort((a, b) => {
+      const ai = MEMBER_MASTER_NAMES.indexOf(a.name);
+      const bi = MEMBER_MASTER_NAMES.indexOf(b.name);
+      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    });
+
+  /* ── チームに応じたメンバー絞り込み（マスター順） ── */
+  const teamMembers = masterSort(
+    members.filter((m) => m.status === "active" && m.team === form.team)
   );
-  /* 全社FS は常にFS候補に追加 */
-  const globalFs = members.filter(
-    (m) => m.status === "active" && m.team === "全社FS"
+  /* 全社FS は常にFS候補に追加（マスター順） */
+  const globalFs = masterSort(
+    members.filter((m) => m.status === "active" && m.team === "全社FS")
   );
 
-  /* IS/FS ともにチーム全員から選択可（同一人物も可） */
+  /* IS: チームメンバーのみ */
   const isOptions = form.team ? teamMembers : [];
 
-  /* FS = チーム全員 + 全社FS（重複除去） */
+  /* FS = チームメンバー + 全社FS（重複除去） */
   const fsOptions = form.team
-    ? [
+    ? masterSort([
         ...teamMembers,
         ...globalFs.filter((g) => !teamMembers.find((t) => t.id === g.id)),
-      ]
+      ])
     : [];
 
   /* ── フォーム更新ヘルパー ── */
@@ -161,6 +169,11 @@ export default function DealModal({ deal, onClose }) {
               disabled={!form.team}
             >
               <option value="">{form.team ? "未選択" : "チームを先に選択"}</option>
+              {form.team && (
+                <option disabled style={{ color: "#9ca3af", fontWeight: "600" }}>
+                  ── {form.team} ──
+                </option>
+              )}
               {isOptions.map((m) => (
                 <option key={m.id} value={m.name}>{m.name}</option>
               ))}
@@ -174,10 +187,21 @@ export default function DealModal({ deal, onClose }) {
               disabled={!form.team}
             >
               <option value="">{form.team ? "未選択" : "チームを先に選択"}</option>
-              {fsOptions.map((m) => (
-                <option key={m.id} value={m.name}>
-                  {m.name}{m.team === "全社FS" ? "（全社FS）" : ""}
+              {form.team && (
+                <option disabled style={{ color: "#9ca3af", fontWeight: "600" }}>
+                  ── {form.team} ──
                 </option>
+              )}
+              {teamMembers.map((m) => (
+                <option key={m.id} value={m.name}>{m.name}</option>
+              ))}
+              {globalFs.filter(g => !teamMembers.find(t => t.id === g.id)).length > 0 && (
+                <option disabled style={{ color: "#9ca3af", fontWeight: "600" }}>
+                  ── 全社FS ──
+                </option>
+              )}
+              {globalFs.filter(g => !teamMembers.find(t => t.id === g.id)).map((m) => (
+                <option key={m.id} value={m.name}>{m.name}</option>
               ))}
             </select>
           </Fld>

@@ -90,26 +90,24 @@ export default function PeriodNav() {
             <Chevron />
           </div>
 
-          {/* 月 セレクト — 月次モード時のみ表示 */}
-          {isMonthMode && (
-            <div className="relative shrink-0">
-              <select
-                value={currentMonth}
-                onChange={handleMonth}
-                style={{
-                  ...baseSel,
-                  border: `1.5px solid ${SF}`,
-                  color: SF,
-                  fontWeight: "700",
-                }}
-                onFocus={e => { e.target.style.boxShadow = "0 0 0 3px rgba(0,112,210,.2)"; }}
-                onBlur={e  => { e.target.style.boxShadow = "none"; }}
-              >
-                {MONTHS.map(m => <option key={m} value={m}>{m}月</option>)}
-              </select>
-              <Chevron color={SF} />
-            </div>
-          )}
+          {/* 月 セレクト — 常時表示（Q モード時も有効） */}
+          <div className="relative shrink-0">
+            <select
+              value={currentMonth}
+              onChange={handleMonth}
+              style={{
+                ...baseSel,
+                border: isMonthMode ? `1.5px solid ${SF}` : "1px solid #c9c7c5",
+                color: isMonthMode ? SF : "#3e3e3c",
+                fontWeight: isMonthMode ? "700" : "600",
+              }}
+              onFocus={e => { e.target.style.boxShadow = "0 0 0 3px rgba(0,112,210,.2)"; }}
+              onBlur={e  => { e.target.style.boxShadow = "none"; }}
+            >
+              {MONTHS.map(m => <option key={m} value={m}>{m}月</option>)}
+            </select>
+            <Chevron color={isMonthMode ? SF : "#706e6b"} />
+          </div>
 
           <div className="w-px h-4 bg-slate-200 shrink-0" />
 

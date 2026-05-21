@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import { fmtAmt } from "../../utils/index.js";
-import { REAL_TEAMS } from "../../constants/index.js";
+import { REAL_TEAMS, MEMBER_MASTER_NAMES } from "../../constants/index.js";
 
 /* ── チームフィルターボタン ── */
 const TEAM_OPTS = ["全体", ...REAL_TEAMS];
@@ -109,11 +109,15 @@ export default function StatsView() {
     else { setSortKey(col); setSortDir("desc"); }
   };
 
-  /* 表示メンバー（admin除外） */
+  /* 表示メンバー（admin除外・マスター順） */
   const visibleMembers = useMemo(() => {
     const base = members.filter((m) => m.role !== "admin" && m.status === "active");
-    if (teamFilter === "全体") return base;
-    return base.filter((m) => m.team === teamFilter);
+    const filtered = teamFilter === "全体" ? base : base.filter((m) => m.team === teamFilter);
+    return [...filtered].sort((a, b) => {
+      const ai = MEMBER_MASTER_NAMES.indexOf(a.name);
+      const bi = MEMBER_MASTER_NAMES.indexOf(b.name);
+      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    });
   }, [members, teamFilter]);
 
   /* 各メンバーの集計（IS/FS折半ロジック適用） */
@@ -157,7 +161,8 @@ export default function StatsView() {
       }
       if (va < vb) return sortDir === "asc" ? -1 : 1;
       if (va > vb) return sortDir === "asc" ?  1 : -1;
-      return 0;
+      /* 同値の場合はマスター順を tie-breaker として使用 */
+      return MEMBER_MASTER_NAMES.indexOf(a.m.name) - MEMBER_MASTER_NAMES.indexOf(b.m.name);
     });
   }, [rows, sortKey, sortDir]);
 

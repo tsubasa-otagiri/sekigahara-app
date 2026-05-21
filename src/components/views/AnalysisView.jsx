@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { REAL_TEAMS } from "../../constants/index.js";
+import { REAL_TEAMS, DISPLAY_GROUPS, MEMBER_MASTER_NAMES } from "../../constants/index.js";
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, BarElement, Tooltip, Legend,
@@ -258,11 +258,19 @@ function TeamBarChart({ stats, color }) {
 export default function AnalysisView() {
   const { deals, members, activeTab, activePeriods } = useApp();
 
-  /* 表示メンバー（admin・退職者除外） */
+  /* 表示メンバー（admin・退職者除外）— DISPLAY_GROUPS ベースでフィルタ */
   const teamMembers = useMemo(() => {
     const base = members.filter(m => m.role !== "admin" && m.status === "active");
-    if (activeTab === "全体")     return base;
-    if (activeTab === "鈴木Tプレ") return base.filter(m => m.team === "杉山T" || m.team === "鈴木T");
+    if (activeTab === "全体") return base;
+    if (activeTab === "鈴木Tプレ") {
+      const names = [
+        ...DISPLAY_GROUPS.find(g => g.label === "鈴木T")?.names ?? [],
+        ...DISPLAY_GROUPS.find(g => g.label === "杉山T")?.names ?? [],
+      ];
+      return base.filter(m => names.includes(m.name));
+    }
+    const group = DISPLAY_GROUPS.find(g => g.label === activeTab);
+    if (group) return base.filter(m => group.names.includes(m.name));
     return base.filter(m => m.team === activeTab);
   }, [members, activeTab]);
 
@@ -286,21 +294,25 @@ export default function AnalysisView() {
 
   const color = THEX[activeTab] ?? "#7c3aed";
 
-  /* チームごとにメンバーを整理（REAL_TEAMS の順序を維持） */
+  /* チームごとにメンバーを整理（DISPLAY_GROUPS マスター順） */
   const grouped = useMemo(() => {
-    const teamOrder = activeTab === "鈴木Tプレ"
-      ? ["杉山T", "鈴木T"]
-      : activeTab === "全体"
-      ? [...REAL_TEAMS, "全社FS"]
-      : [activeTab];
+    let groupsToShow;
+    if (activeTab === "全体") {
+      groupsToShow = DISPLAY_GROUPS;
+    } else if (activeTab === "鈴木Tプレ") {
+      groupsToShow = DISPLAY_GROUPS.filter(g => g.label === "鈴木T" || g.label === "杉山T");
+    } else {
+      groupsToShow = DISPLAY_GROUPS.filter(g => g.label === activeTab);
+    }
 
-    return teamOrder
-      .map(t => ({
-        team:    t,
-        color:   THEX[t] ?? "#7c3aed",
-        members: teamMembers.filter(m => m.team === t),
-      }))
-      .filter(g => g.members.length > 0);
+    return groupsToShow.map(g => ({
+      team:    g.label,
+      color:   THEX[g.label] ?? "#7c3aed",
+      /* DISPLAY_GROUPS の names 順で並べる */
+      members: g.names
+        .map(name => teamMembers.find(m => m.name === name))
+        .filter(Boolean),
+    })).filter(g => g.members.length > 0);
   }, [teamMembers, activeTab]);
 
   return (

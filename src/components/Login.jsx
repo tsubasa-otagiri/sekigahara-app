@@ -2,11 +2,20 @@ import { useState } from "react";
 import { Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
 import KabutoLogo from "../assets/KabutoLogo.jsx";
+import { DISPLAY_GROUPS, MEMBER_MASTER_NAMES } from "../constants/index.js";
 
 export default function Login() {
   const { login, members, logoDataUrl } = useApp();
 
   const activeMembers = members.filter(m => m.status === "active");
+
+  /* マスター順でグループ化 */
+  const memberGroups = DISPLAY_GROUPS.map(g => ({
+    label: g.label,
+    members: g.names
+      .map(name => activeMembers.find(m => m.name === name))
+      .filter(Boolean),
+  })).filter(g => g.members.length > 0);
 
   const [selectedId, setSelectedId] = useState("");
   const [pw,         setPw]         = useState("");
@@ -71,8 +80,12 @@ export default function Login() {
                   transition appearance-none cursor-pointer text-slate-700"
               >
                 <option value="" disabled>メンバーを選択してください...</option>
-                {activeMembers.map(m => (
-                  <option key={m.id} value={m.id}>{m.name}（{m.team}）</option>
+                {memberGroups.map(g => (
+                  <optgroup key={g.label} label={`── ${g.label} ──`}>
+                    {g.members.map(m => (
+                      <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>
