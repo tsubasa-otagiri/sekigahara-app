@@ -1,7 +1,7 @@
 import { createContext, useState, useEffect, useCallback } from "react";
 import { DEF_MEMBERS, DEF_DEALS } from "../constants/defaultData.js";
 import { LS_KEYS } from "../constants/index.js";
-import { lsGet, lsSet, authLoad, authSave, authClear, nextId, parseAmt, resolvePhase } from "../utils/index.js";
+import { lsGet, lsSet, authLoad, authSave, authClear, nextId, parseAmt, resolvePhase, normalizeName } from "../utils/index.js";
 
 export const AppContext = createContext(null);
 
@@ -9,9 +9,21 @@ export const AppProvider = ({ children }) => {
   /* ── 認証 ── */
   const [currentUserId, setCurrentUserId] = useState(() => authLoad());
 
-  /* ── マスタデータ ── */
-  const [members, setMembers] = useState(() => lsGet(LS_KEYS.MEMBERS, DEF_MEMBERS));
-  const [deals,   setDeals]   = useState(() => lsGet(LS_KEYS.DEALS,   DEF_DEALS));
+  /* ── マスタデータ（LS読み込み時に名前を自動マイグレーション） ── */
+  const [members, setMembers] = useState(() => {
+    const stored = lsGet(LS_KEYS.MEMBERS, DEF_MEMBERS);
+    /* 旧ニックネーム → 正式名 に自動変換 */
+    return stored.map(m => ({ ...m, name: normalizeName(m.name) }));
+  });
+  const [deals, setDeals] = useState(() => {
+    const stored = lsGet(LS_KEYS.DEALS, DEF_DEALS);
+    /* 案件の IS/FS 担当名も正規化 */
+    return stored.map(d => ({
+      ...d,
+      is: normalizeName(d.is),
+      fs: normalizeName(d.fs),
+    }));
+  });
 
   /* ── UI状態 ── */
   const [activeTab,    setActiveTab]    = useState("全体");
@@ -55,6 +67,8 @@ export const AppProvider = ({ children }) => {
       id:     nextId(),
       amount: parseAmt(raw.amount),
       phase:  resolvePhase(raw.confidence, raw.phase),
+      is:     normalizeName(raw.is),
+      fs:     normalizeName(raw.fs),
     };
     setDeals(prev => [deal, ...prev]);
     return deal;
@@ -65,6 +79,8 @@ export const AppProvider = ({ children }) => {
       if (d.id !== id) return d;
       const next = { ...d, ...patch, amount: patch.amount !== undefined ? parseAmt(patch.amount) : d.amount };
       next.phase = resolvePhase(next.confidence, next.phase);
+      next.is = normalizeName(next.is);
+      next.fs = normalizeName(next.fs);
       return next;
     }));
   }, []);

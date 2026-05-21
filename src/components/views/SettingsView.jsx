@@ -279,8 +279,9 @@ function BackupSection() {
 
   /* ── CSV エクスポート（管理者限定） ── */
   const exportCSV = () => {
-    const headers = ["企業名","プラン","月額（万）","チーム","IS担当","FS担当","確度","フェーズ","メモ"];
-    const rows = deals.map(d=>[d.company,d.plan,d.amount,d.team,d.is||"",d.fs||"",d.confidence,d.phase,d.note||""]);
+    /* 列順: 企業名, プラン, 月額, IS担当, FS担当, チーム, 確度, フェーズ, 備考 */
+    const headers = ["企業名","プラン","月額","IS担当","FS担当","チーム","確度","フェーズ","備考"];
+    const rows = deals.map(d=>[d.company,d.plan,Math.round((d.amount||0)*10000),d.is||"",d.fs||"",d.team,d.confidence,d.phase,d.note||""]);
     const csv = [headers, ...rows].map(r=>r.map(csvEscape).join(",")).join("\r\n");
     const blob = new Blob(["﻿"+csv], {type:"text/csv;charset=utf-8;"});
     const url  = URL.createObjectURL(blob);
@@ -299,16 +300,17 @@ function BackupSection() {
         const text = ev.target.result.replace(/^﻿/, "");
         const lines = text.split(/\r?\n/).filter(l=>l.trim());
         const [, ...dataLines] = lines; // ヘッダー行をスキップ
+        /* 列順: 企業名, プラン, 月額, IS担当, FS担当, チーム, 確度, フェーズ, 備考 */
         const newDeals = dataLines.map((line, i) => {
           const cols = parseCSVLine(line);
           return {
-            id: Date.now() + i,
+            id:         Date.now() + i,
             company:    cols[0] || "",
-            plan:       cols[1] || "MDCスモール",
-            amount:     parseAmt(cols[2]),
-            team:       cols[3] || "",
-            is:         cols[4] || "",
-            fs:         cols[5] || "",
+            plan:       cols[1] || "MDC",
+            amount:     parseAmt(cols[2]),   // 円単位でも万単位でも自動変換
+            is:         cols[3] || "",
+            fs:         cols[4] || "",
+            team:       cols[5] || "",
             confidence: cols[6] || "30%",
             phase:      cols[7] || "未設定",
             note:       cols[8] || "",
@@ -357,7 +359,7 @@ function BackupSection() {
             </label>
           </div>
           <p className="text-[11px] text-gray-400 mt-3">
-            CSVフォーマット: 企業名, プラン, 月額（万）, チーム, IS担当, FS担当, 確度, フェーズ, メモ
+            CSVフォーマット: 企業名, プラン, 月額, IS担当, FS担当, チーム, 確度, フェーズ, 備考
           </p>
         </div>
       ) : (

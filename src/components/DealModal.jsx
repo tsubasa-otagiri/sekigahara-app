@@ -21,7 +21,7 @@ const Fld = ({ label, req, err, children }) => (
 );
 
 const BLANK = {
-  company: "", plan: "MDCスモール", amount: "",
+  company: "", plan: "MDC", amount: "",
   team: "", is: "", fs: "",
   confidence: "50%", phase: "未設定", note: "",
 };

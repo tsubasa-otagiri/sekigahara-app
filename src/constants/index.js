@@ -1,7 +1,7 @@
 export const REAL_TEAMS = ["杉山T", "鈴木T", "中村T", "渡部T"];
 export const ALL_TABS   = ["全体", "杉山T", "鈴木T", "鈴木Tプレ", "中村T", "渡部T"];
 export const CONF       = ["30%", "50%", "70%", "回収"];
-export const PLANS      = ["MDCスモール", "MDCスタンダード", "コンサル", "Dash!"];
+export const PLANS      = ["MDC", "コンサル", "Dash!", "運用代行", "MDCスモール", "MDCスタンダード"];
 export const PHASES     = [
   "未設定", "①2nd", "②デモ", "社内資料すり合わせ",
   "③上長共有", "④決済者商談予定", "⑤決済者共有",
@@ -43,10 +43,13 @@ export const CTW = {
 
 /* プランTailwindクラス */
 export const PCL = {
-  "MDCスモール":    "bg-teal-50 text-teal-700 border-teal-200",
-  "MDCスタンダード":"bg-blue-50 text-blue-700 border-blue-200",
-  "コンサル":       "bg-violet-50 text-violet-700 border-violet-200",
-  "Dash!":          "bg-pink-50 text-pink-700 border-pink-200",
+  "MDC":            "bg-teal-50 text-teal-700 border-teal-200",
+  "コンサル":        "bg-violet-50 text-violet-700 border-violet-200",
+  "Dash!":           "bg-pink-50 text-pink-700 border-pink-200",
+  "運用代行":        "bg-orange-50 text-orange-700 border-orange-200",
+  /* 旧名称（既存データの互換維持） */
+  "MDCスモール":     "bg-teal-50 text-teal-700 border-teal-200",
+  "MDCスタンダード": "bg-teal-50 text-teal-700 border-teal-200",
 };
 
 /* メンバーバッジ背景色 */
