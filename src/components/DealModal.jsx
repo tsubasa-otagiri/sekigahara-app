@@ -213,7 +213,8 @@ export default function DealModal({ deal, onClose }) {
           </button>
           <button
             type="submit"
-            className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition flex items-center justify-center gap-1.5 shadow-sm"
+            className="flex-1 py-2.5 rounded-xl text-white text-sm font-bold transition flex items-center justify-center gap-1.5 shadow-sm hover:brightness-110"
+            style={{ background: "#0070d2" }}
           >
             <Save size={14} />
             {isEdit ? "更新する" : "登録する"}

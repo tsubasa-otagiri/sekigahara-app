@@ -1,13 +1,16 @@
 import { Plus, Search, LogOut } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
 import { THEX } from "../constants/index.js";
+import KabutoLogo from "../assets/KabutoLogo.jsx";
 
 const ROLE_BG = {
-  admin:  "bg-violet-600",
-  leader: "bg-orange-500",
-  IS:     "bg-cyan-600",
-  FS:     "bg-emerald-600",
+  admin:  "#9c27b0",
+  leader: "#e8590c",
+  IS:     "#0176d3",
+  FS:     "#04844b",
 };
+
+const SF_BLUE = "#0070d2";
 
 export default function Header() {
   const {
@@ -17,31 +20,32 @@ export default function Header() {
     activeTab,
   } = useApp();
 
-  const teamColor = THEX[activeTab] ?? "#6d28d9";
+  const teamColor = THEX[activeTab] ?? SF_BLUE;
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm"
-      style={{ borderBottom: "1px solid #f1f5f9", boxShadow: "0 1px 0 0 rgba(0,0,0,.04)" }}>
+    <header
+      className="sticky top-0 z-40 bg-white/97 backdrop-blur-sm"
+      style={{ borderBottom: "1px solid #dddbda", boxShadow: "0 1px 0 0 rgba(0,0,0,.04)" }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
 
         {/* ── ブランドロゴ ── */}
         <div className="flex items-center gap-2 shrink-0 mr-1">
-          <div
-            className="w-8 h-8 rounded-xl flex items-center justify-center shadow-sm flex-none"
-            style={{ background: "linear-gradient(135deg,#6d28d9,#4f46e5)" }}
-          >
-            <span className="text-white text-sm font-black leading-none" style={{ letterSpacing: "-1px" }}>関</span>
-          </div>
+          <KabutoLogo size={32} color={SF_BLUE} />
           <div className="hidden sm:flex flex-col leading-none">
             <span className="text-[13px] font-black text-slate-800 tracking-tight">SEKIGAHARA</span>
             <span className="text-[9px] font-semibold text-slate-400 tracking-widest">by GMO</span>
           </div>
         </div>
 
-        {/* ── アクティブチームインジケーター ── */}
+        {/* ── アクティブチームバッジ ── */}
         <div
           className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border flex-none"
-          style={{ color: teamColor, borderColor: teamColor + "40", background: teamColor + "10" }}
+          style={{
+            color: teamColor,
+            borderColor: teamColor + "40",
+            background: teamColor + "12",
+          }}
         >
           <span className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: teamColor }} />
           {activeTab}
@@ -55,9 +59,8 @@ export default function Header() {
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="会社名・担当者で検索..."
-            className="w-full pl-8 pr-3 py-2 text-xs rounded-full
-              bg-slate-100 border border-transparent
-              focus:bg-white focus:border-violet-300 focus:ring-2 focus:ring-violet-100
+            className="w-full pl-8 pr-3 py-2 text-xs rounded-full bg-[#f3f7f9] border border-transparent
+              focus:bg-white focus:border-[#0070d2] focus:ring-2 focus:ring-[#d8edff]
               outline-none transition-all placeholder:text-slate-400 text-slate-700"
           />
         </div>
@@ -69,20 +72,23 @@ export default function Header() {
           onClick={() => setShowNewDeal(true)}
           className="shrink-0 flex items-center gap-1.5 text-white text-[11px] font-bold
             px-3.5 py-2 rounded-xl shadow-sm transition-all active:scale-95
-            hover:shadow-md hover:brightness-105"
-          style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)" }}
+            hover:brightness-110"
+          style={{ background: SF_BLUE }}
         >
           <Plus size={13} strokeWidth={2.5} />
           <span className="hidden sm:inline">新規案件</span>
         </button>
 
-        {/* ── ユーザーアバター ── */}
+        {/* ── ユーザーアバター + ログアウト ── */}
         <div className="flex items-center gap-2 shrink-0">
           <div className="hidden sm:flex flex-col items-end leading-none">
             <span className="text-[12px] font-semibold text-slate-700">{currentUser?.name}</span>
             <span className="text-[10px] text-slate-400 mt-0.5">{currentUser?.team}</span>
           </div>
-          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-black flex-none ${ROLE_BG[currentUser?.role] ?? "bg-slate-400"}`}>
+          <div
+            className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-black flex-none"
+            style={{ background: ROLE_BG[currentUser?.role] ?? SF_BLUE }}
+          >
             {currentUser?.name?.[0] ?? "?"}
           </div>
           <button

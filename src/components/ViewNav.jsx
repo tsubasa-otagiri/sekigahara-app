@@ -26,10 +26,10 @@ export default function ViewNav() {
                 className={`flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-lg
                   text-[11px] font-semibold whitespace-nowrap transition-all duration-150 outline-none
                   ${isActive
-                    ? "bg-white text-violet-700 shadow-sm"
+                    ? "bg-white text-[#0070d2] shadow-sm"
                     : "text-slate-500 hover:text-slate-700 hover:bg-white/60"
                   }`}
-                style={isActive ? { boxShadow: "0 1px 3px 0 rgba(0,0,0,.08), 0 0 0 1px rgba(0,0,0,.04)" } : {}}
+                style={isActive ? { boxShadow: "0 1px 3px 0 rgba(0,112,210,.12), 0 0 0 1px rgba(0,112,210,.08)" } : {}}
               >
                 <Icon size={12} strokeWidth={isActive ? 2.5 : 2} />
                 {label}

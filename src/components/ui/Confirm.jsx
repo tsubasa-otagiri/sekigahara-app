@@ -20,7 +20,8 @@ export default function Confirm({ message, onOk, onCancel, okLabel = "はい", d
           </button>
           <button
             onClick={onOk}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition ${danger ? "bg-red-500 hover:bg-red-600" : "bg-blue-600 hover:bg-blue-700"}`}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition hover:brightness-110`}
+          style={{ background: danger ? "#e42b2b" : "#0070d2" }}
           >
             {okLabel}
           </button>

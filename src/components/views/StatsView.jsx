@@ -15,7 +15,7 @@ function SortTh({ label, col, sortKey, sortDir, onSort, right = false }) {
       onClick={() => onSort(col)}
       className={`px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide cursor-pointer select-none whitespace-nowrap
         ${right ? "text-right" : "text-left"}
-        ${active ? "text-blue-700 bg-blue-50" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`}
+        ${active ? "text-[#0070d2] bg-[#e8f4fd]" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`}
     >
       <span className="inline-flex items-center gap-1">
         {label}
@@ -190,8 +190,8 @@ export default function StatsView() {
             onClick={() => setTeamFilter(t)}
             className="px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all outline-none"
             style={teamFilter === t
-              ? { background: "linear-gradient(135deg,#7c3aed,#4f46e5)", color: "#fff", boxShadow: "0 2px 8px -2px rgba(124,58,237,.4)" }
-              : { background: "#fff", color: "#64748b", border: "1px solid #e2e8f0" }
+              ? { background: "#0070d2", color: "#fff", boxShadow: "0 2px 8px -2px rgba(0,112,210,.35)" }
+              : { background: "#fff", color: "#64748b", border: "1px solid #dddbda" }
             }
           >
             {t}

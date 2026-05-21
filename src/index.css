@@ -3,10 +3,10 @@
 
 /* ── ベースリセット ── */
 *, *::before, *::after { box-sizing: border-box; font-family: 'Noto Sans JP', sans-serif; }
-body { margin: 0; background: #f8fafc; color: #1e293b; -webkit-font-smoothing: antialiased; }
+body { margin: 0; background: #f4f6f9; color: #3e3e3c; -webkit-font-smoothing: antialiased; }
 #root { min-height: 100svh; }
 
-/* ── 数値を等幅で揃える ── */
+/* ── 数値等幅 ── */
 .tabular { font-variant-numeric: tabular-nums; }
 
 /* ── スクロールバー ── */
@@ -14,8 +14,8 @@ body { margin: 0; background: #f8fafc; color: #1e293b; -webkit-font-smoothing: a
 .no-scrollbar::-webkit-scrollbar { display: none; }
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+::-webkit-scrollbar-thumb { background: #d8edff; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #a8c7e8; }
 
 /* ── 数値入力スピナー非表示 ── */
 input[type=number]::-webkit-outer-spin-button,
@@ -31,19 +31,19 @@ input[type=number] { -moz-appearance: textfield; }
 .spin { animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── ロゴグラデーション ── */
+/* ── ロゴグラデーション（Salesforce Blue） ── */
 .logo-grad {
-  background: linear-gradient(135deg, #6d28d9, #4f46e5);
+  background: linear-gradient(135deg, #0070d2, #005a9e);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 /* ── カード共通シャドウ ── */
-.card-shadow { box-shadow: 0 1px 3px 0 rgba(0,0,0,.05), 0 1px 2px -1px rgba(0,0,0,.03); }
+.card-shadow    { box-shadow: 0 1px 3px 0 rgba(0,0,0,.05), 0 1px 2px -1px rgba(0,0,0,.03); }
 .card-shadow-md { box-shadow: 0 4px 16px -4px rgba(0,0,0,.08), 0 2px 4px -2px rgba(0,0,0,.04); }
 .card-shadow-lg { box-shadow: 0 8px 32px -8px rgba(0,0,0,.12), 0 4px 8px -4px rgba(0,0,0,.06); }
 
 /* ── カンバン drag ── */
-.drag-over { outline: 2px dashed #7c3aed !important; background: rgba(124,58,237,.05) !important; }
+.drag-over { outline: 2px dashed #0070d2 !important; background: rgba(0,112,210,.05) !important; }
 .card-dragging { opacity: .3; transform: rotate(1.5deg) scale(.98); }
