@@ -90,45 +90,26 @@ export default function PeriodNav() {
             <Chevron />
           </div>
 
-          {/* 月 or 四半期バッジ */}
-          <div className="relative shrink-0">
-            {isMonthMode ? (
-              <>
-                <select
-                  value={currentMonth}
-                  onChange={handleMonth}
-                  style={{
-                    ...baseSel,
-                    border: `1.5px solid ${SF}`,
-                    color: SF,
-                    fontWeight: "700",
-                  }}
-                  onFocus={e  => { e.target.style.boxShadow = "0 0 0 3px rgba(0,112,210,.2)"; }}
-                  onBlur={e   => { e.target.style.boxShadow = "none"; }}
-                >
-                  {MONTHS.map(m => <option key={m} value={m}>{m}月</option>)}
-                </select>
-                <Chevron color={SF} />
-              </>
-            ) : (
-              /* 四半期アクティブ時 — 範囲ラベルを表示 */
-              <div
+          {/* 月 セレクト — 月次モード時のみ表示 */}
+          {isMonthMode && (
+            <div className="relative shrink-0">
+              <select
+                value={currentMonth}
+                onChange={handleMonth}
                 style={{
-                  borderRadius: "4px",
-                  border: `1.5px solid ${SF_DARK}`,
-                  padding: "4px 12px",
-                  fontSize: "12px",
+                  ...baseSel,
+                  border: `1.5px solid ${SF}`,
+                  color: SF,
                   fontWeight: "700",
-                  color: "#fff",
-                  background: SF_DARK,
-                  whiteSpace: "nowrap",
-                  lineHeight: "1.6",
                 }}
+                onFocus={e => { e.target.style.boxShadow = "0 0 0 3px rgba(0,112,210,.2)"; }}
+                onBlur={e  => { e.target.style.boxShadow = "none"; }}
               >
-                {periodType}：{Q_RANGE[periodType]}
-              </div>
-            )}
-          </div>
+                {MONTHS.map(m => <option key={m} value={m}>{m}月</option>)}
+              </select>
+              <Chevron color={SF} />
+            </div>
+          )}
 
           <div className="w-px h-4 bg-slate-200 shrink-0" />
 
