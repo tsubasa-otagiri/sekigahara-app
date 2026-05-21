@@ -392,13 +392,13 @@ function BackupSection() {
 
 /* デフォルト旗印（HONNOJIロゴSVG） — リセット時に使用 */
 const DEFAULT_FAVICON =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 8 64 50'%3E" +
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E" +
   "%3Crect width='64' height='64' fill='%230070d2'/%3E" +
-  "%3Cpath d='M27,14 C6,12 0,26 25,40' fill='none' stroke='white' stroke-width='7' stroke-linecap='round'/%3E" +
-  "%3Cpath d='M37,14 C58,12 64,26 39,40' fill='none' stroke='white' stroke-width='7' stroke-linecap='round'/%3E" +
-  "%3Cpath d='M16,36 C16,21 23,14 32,14 C41,14 48,21 48,36Z' fill='white'/%3E" +
-  "%3Cellipse cx='32' cy='29' rx='9' ry='7' fill='%230070d2' opacity='.55'/%3E" +
-  "%3Cpath d='M12,37 C12,50 20,54 32,54 C44,54 52,50 52,37Z' fill='white' opacity='.78'/%3E" +
+  "%3Cpath d='M27,10 C6,8 0,24 25,46' fill='none' stroke='white' stroke-width='7' stroke-linecap='round'/%3E" +
+  "%3Cpath d='M37,10 C58,8 64,24 39,46' fill='none' stroke='white' stroke-width='7' stroke-linecap='round'/%3E" +
+  "%3Cpath d='M16,38 C16,23 23,10 32,10 C41,10 48,23 48,38Z' fill='white'/%3E" +
+  "%3Cellipse cx='32' cy='29' rx='9' ry='8' fill='%230070d2' opacity='.55'/%3E" +
+  "%3Cpath d='M12,38 C12,52 20,60 32,60 C44,60 52,52 52,38Z' fill='white' opacity='.78'/%3E" +
   "%3C/svg%3E";
 
 function FaviconSection() {
