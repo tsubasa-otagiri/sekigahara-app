@@ -5,6 +5,17 @@ import { lsGet, lsSet, authLoad, authSave, authClear, nextId, parseAmt, resolveP
 
 export const AppContext = createContext(null);
 
+/* デフォルト旗印（HONNOJIロゴSVG） — リセット時にファビコンを戻すために使用 */
+const DEFAULT_FAVICON_HREF =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E" +
+  "%3Crect width='64' height='64' rx='13' fill='%230070d2'/%3E" +
+  "%3Cpath d='M27,14 C6,12 0,26 25,40' fill='none' stroke='white' stroke-width='7' stroke-linecap='round'/%3E" +
+  "%3Cpath d='M37,14 C58,12 64,26 39,40' fill='none' stroke='white' stroke-width='7' stroke-linecap='round'/%3E" +
+  "%3Cpath d='M16,36 C16,21 23,14 32,14 C41,14 48,21 48,36Z' fill='white'/%3E" +
+  "%3Cellipse cx='32' cy='29' rx='9' ry='7' fill='%230070d2' opacity='.55'/%3E" +
+  "%3Cpath d='M12,37 C12,50 20,54 32,54 C44,54 52,50 52,37Z' fill='white' opacity='.78'/%3E" +
+  "%3C/svg%3E";
+
 export const AppProvider = ({ children }) => {
   /* ── 認証 ── */
   const [currentUserId, setCurrentUserId] = useState(() => authLoad());
@@ -24,6 +35,29 @@ export const AppProvider = ({ children }) => {
       fs: normalizeName(d.fs),
     }));
   });
+
+  /* ── ロゴ（旗印）— LocalStorage から初期化し、全コンポーネントで共有 ── */
+  const [logoDataUrl, setLogoDataUrl] = useState(
+    () => localStorage.getItem("honnoji_favicon") || null
+  );
+
+  /** 旗印を保存・即時反映する。null を渡すとデフォルトに戻す */
+  const saveLogo = useCallback((dataUrl) => {
+    if (dataUrl) {
+      localStorage.setItem("honnoji_favicon", dataUrl);
+    } else {
+      localStorage.removeItem("honnoji_favicon");
+    }
+    /* <link rel="icon"> をリアルタイムで書き換え */
+    let link = document.querySelector('link[rel="icon"]');
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.head.appendChild(link);
+    }
+    link.href = dataUrl || DEFAULT_FAVICON_HREF;
+    setLogoDataUrl(dataUrl || null);
+  }, []);
 
   /* ── UI状態 ── */
   const [activeTab,    setActiveTab]    = useState("全体");
@@ -117,6 +151,8 @@ export const AppProvider = ({ children }) => {
       addDeal, updateDeal, deleteDeal,
       updateMember, addMember, deleteMember,
       replaceDeals, replaceMembers,
+      /* logo */
+      logoDataUrl, saveLogo,
       /* ui */
       activeTab, setActiveTab,
       activeView, setActiveView,

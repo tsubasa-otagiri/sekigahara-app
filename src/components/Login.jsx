@@ -4,7 +4,7 @@ import { useApp } from "../contexts/useApp.js";
 import KabutoLogo from "../assets/KabutoLogo.jsx";
 
 export default function Login() {
-  const { login, members } = useApp();
+  const { login, members, logoDataUrl } = useApp();
 
   const activeMembers = members.filter(m => m.status === "active");
 
@@ -37,7 +37,15 @@ export default function Login() {
         {/* ── ロゴエリア ── */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center mb-4 drop-shadow-xl">
-            <KabutoLogo size={72} color={SF_BLUE} />
+            {logoDataUrl
+              ? <img
+                  src={logoDataUrl}
+                  alt="HONNOJI logo"
+                  className="w-[72px] h-[72px] rounded-2xl object-contain"
+                  style={{ background: SF_BLUE }}
+                />
+              : <KabutoLogo size={72} color={SF_BLUE} />
+            }
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight">HONNOJI</h1>
           <p className="text-blue-300 text-sm mt-1 font-semibold tracking-wide">no HEN</p>

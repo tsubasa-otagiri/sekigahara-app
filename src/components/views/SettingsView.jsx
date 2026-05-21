@@ -401,27 +401,17 @@ const DEFAULT_FAVICON =
   "%3Cpath d='M12,37 C12,50 20,54 32,54 C44,54 52,50 52,37Z' fill='white' opacity='.78'/%3E" +
   "%3C/svg%3E";
 
-/* DOMのファビコンを即時書き換えるユーティリティ */
-function applyFaviconDOM(href) {
-  let link = document.querySelector('link[rel="icon"]');
-  if (!link) {
-    link = document.createElement('link');
-    link.rel = 'icon';
-    document.head.appendChild(link);
-  }
-  link.href = href;
-}
-
 function FaviconSection() {
-  const { currentUser } = useApp();
+  const { currentUser, logoDataUrl, saveLogo } = useApp();
   const isAdmin = currentUser?.role === "admin";
   const fileRef = useRef(null);
 
-  const [preview, setPreview]   = useState(() => localStorage.getItem("honnoji_favicon") || DEFAULT_FAVICON);
-  const [isCustom, setIsCustom] = useState(() => !!localStorage.getItem("honnoji_favicon"));
-  const [status, setStatus]     = useState("");
-
+  const [status, setStatus] = useState("");
   const flash = (msg) => { setStatus(msg); setTimeout(() => setStatus(""), 3500); };
+
+  /* 現在のプレビュー: contextのlogoDataUrl（リアルタイム連動） */
+  const preview  = logoDataUrl || DEFAULT_FAVICON;
+  const isCustom = !!logoDataUrl;
 
   /* 旗印アップロード処理 */
   const handleUpload = (e) => {
@@ -437,12 +427,8 @@ function FaviconSection() {
     }
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const dataUrl = ev.target.result;
-      localStorage.setItem("honnoji_favicon", dataUrl);  /* 旗印を永久保存 */
-      applyFaviconDOM(dataUrl);                           /* タブに即時反映 */
-      setPreview(dataUrl);
-      setIsCustom(true);
-      flash("✅ 旗印を掲げました！ブラウザのタブに反映されました");
+      saveLogo(ev.target.result); /* LS保存 + タブ反映 + Header/Login即時更新 */
+      flash("✅ 旗印を掲げました！ヘッダー・ログイン画面・タブに即時反映されました");
     };
     reader.readAsDataURL(file);
     e.target.value = "";
@@ -450,10 +436,7 @@ function FaviconSection() {
 
   /* 旗印リセット（HONNOJIデフォルトに戻す） */
   const handleReset = () => {
-    localStorage.removeItem("honnoji_favicon");
-    applyFaviconDOM(DEFAULT_FAVICON);
-    setPreview(DEFAULT_FAVICON);
-    setIsCustom(false);
+    saveLogo(null);
     flash("🔄 旗印をHONNOJIデフォルトに戻しました");
   };
 

@@ -18,6 +18,7 @@ export default function Header() {
     searchQuery, setSearchQuery,
     setShowNewDeal,
     activeTab,
+    logoDataUrl,
   } = useApp();
 
   const teamColor = THEX[activeTab] ?? SF_BLUE;
@@ -31,7 +32,15 @@ export default function Header() {
 
         {/* ── ブランドロゴ ── */}
         <div className="flex items-center gap-2 shrink-0 mr-1">
-          <KabutoLogo size={32} color={SF_BLUE} />
+          {logoDataUrl
+            ? <img
+                src={logoDataUrl}
+                alt="HONNOJI logo"
+                className="w-8 h-8 rounded-lg object-contain flex-none"
+                style={{ background: SF_BLUE }}
+              />
+            : <KabutoLogo size={32} color={SF_BLUE} />
+          }
           <div className="hidden sm:flex flex-col leading-none">
             <span className="text-[13px] font-black text-slate-800 tracking-tight">HONNOJI</span>
             <span className="text-[9px] font-semibold text-slate-400 tracking-widest">no HEN</span>
