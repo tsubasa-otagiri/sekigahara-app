@@ -1,0 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;900&display=swap');
+@import "tailwindcss";
+
+/* ── ベースリセット ── */
+*, *::before, *::after { box-sizing: border-box; font-family: 'Noto Sans JP', sans-serif; }
+body { margin: 0; background: #f8fafc; color: #1e293b; -webkit-font-smoothing: antialiased; }
+#root { min-height: 100svh; }
+
+/* ── 数値を等幅で揃える ── */
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* ── スクロールバー ── */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ── 数値入力スピナー非表示 ── */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; }
+
+/* ── アニメーション ── */
+.fade-in { animation: fadeSlideUp .18s ease both; }
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.spin { animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── ロゴグラデーション ── */
+.logo-grad {
+  background: linear-gradient(135deg, #6d28d9, #4f46e5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── カード共通シャドウ ── */
+.card-shadow { box-shadow: 0 1px 3px 0 rgba(0,0,0,.05), 0 1px 2px -1px rgba(0,0,0,.03); }
+.card-shadow-md { box-shadow: 0 4px 16px -4px rgba(0,0,0,.08), 0 2px 4px -2px rgba(0,0,0,.04); }
+.card-shadow-lg { box-shadow: 0 8px 32px -8px rgba(0,0,0,.12), 0 4px 8px -4px rgba(0,0,0,.06); }
+
+/* ── カンバン drag ── */
+.drag-over { outline: 2px dashed #7c3aed !important; background: rgba(124,58,237,.05) !important; }
+.card-dragging { opacity: .3; transform: rotate(1.5deg) scale(.98); }

@@ -1,0 +1,37 @@
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  SEKIGAHARA 案件管理 by GMO — Cloudflare Workers 設定
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#
+#  ▶ 公開 URL:
+#      https://dashboard.anken-gmotech.workers.dev/
+#
+#  Cloudflare Workers の URL は以下の形式で決まります:
+#    https://<name>.<アカウントのサブドメイン>.workers.dev/
+#
+#  上記 URL を得るための設定:
+#    name              = "dashboard"          ← Worker 名（= URL の先頭部分）
+#    アカウントサブドメイン = "anken-gmotech"  ← Cloudflare ダッシュボードで設定
+#
+#  ⚙ アカウントサブドメインの確認・変更:
+#    Cloudflare ダッシュボード
+#      → Workers & Pages → 概要 → サブドメイン
+#      → "anken-gmotech" を設定（1アカウント1サブドメイン・変更は慎重に）
+#
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  【デプロイ手順】
+#   初回のみ:
+#     npx wrangler login          # Cloudflare アカウントで認証
+#
+#   以降は 1 コマンドで完結:
+#     npm run deploy              # ビルド → デプロイを一括実行
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+name               = "dashboard"
+compatibility_date = "2024-11-01"
+
+# Vite ビルド成果物（dist/）を静的アセットとして配信
+[assets]
+directory             = "./dist"
+# SPA ルーティング: 未知のパスはすべて index.html にフォールバック
+# React のクライアントサイドルーティングに必須
+not_found_handling    = "single-page-application"
