@@ -5,17 +5,9 @@ import { lsGet, lsSet, authLoad, authSave, authClear, nextId, parseAmt, resolveP
 
 export const AppContext = createContext(null);
 
-/* デフォルト旗印（HONNOJIロゴSVG） — リセット時にファビコンを戻すために使用
- * viewBox="0 8 64 50" : 兜コンテンツに合わせて上下余白をカットし最大表示 */
-const DEFAULT_FAVICON_HREF =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E" +
-  "%3Crect width='64' height='64' fill='%230070d2'/%3E" +
-  "%3Cpath d='M27,10 C6,8 0,24 25,46' fill='none' stroke='white' stroke-width='7' stroke-linecap='round'/%3E" +
-  "%3Cpath d='M37,10 C58,8 64,24 39,46' fill='none' stroke='white' stroke-width='7' stroke-linecap='round'/%3E" +
-  "%3Cpath d='M16,38 C16,23 23,10 32,10 C41,10 48,23 48,38Z' fill='white'/%3E" +
-  "%3Cellipse cx='32' cy='29' rx='9' ry='8' fill='%230070d2' opacity='.55'/%3E" +
-  "%3Cpath d='M12,38 C12,52 20,60 32,60 C44,60 52,52 52,38Z' fill='white' opacity='.78'/%3E" +
-  "%3C/svg%3E";
+/* デフォルト旗印 = なし（空データURI）
+ * カスタム未設定時はファビコン非表示・ロゴ非表示 */
+const DEFAULT_FAVICON_HREF = "data:,";
 
 export const AppProvider = ({ children }) => {
   /* ── 認証 ── */

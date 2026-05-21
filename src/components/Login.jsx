@@ -36,16 +36,15 @@ export default function Login() {
 
         {/* ── ロゴエリア ── */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center mb-4 drop-shadow-xl">
-            {logoDataUrl
-              ? <img
-                  src={logoDataUrl}
-                  alt="HONNOJI logo"
-                  className="w-[72px] h-[72px] rounded-2xl object-contain"
-                />
-              : <KabutoLogo size={72} color={SF_BLUE} />
-            }
-          </div>
+          {logoDataUrl && (
+            <div className="inline-flex items-center justify-center mb-4 drop-shadow-xl">
+              <img
+                src={logoDataUrl}
+                alt="HONNOJI logo"
+                className="w-[72px] h-[72px] rounded-2xl object-contain"
+              />
+            </div>
+          )}
           <h1 className="text-2xl font-black text-white tracking-tight">HONNOJI</h1>
           <p className="text-gray-400 text-sm mt-1 font-semibold tracking-wide">no HEN</p>
         </div>

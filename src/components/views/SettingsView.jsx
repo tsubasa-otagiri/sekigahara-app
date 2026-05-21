@@ -391,15 +391,8 @@ function BackupSection() {
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 /* デフォルト旗印（HONNOJIロゴSVG） — リセット時に使用 */
-const DEFAULT_FAVICON =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E" +
-  "%3Crect width='64' height='64' fill='%230070d2'/%3E" +
-  "%3Cpath d='M27,10 C6,8 0,24 25,46' fill='none' stroke='white' stroke-width='7' stroke-linecap='round'/%3E" +
-  "%3Cpath d='M37,10 C58,8 64,24 39,46' fill='none' stroke='white' stroke-width='7' stroke-linecap='round'/%3E" +
-  "%3Cpath d='M16,38 C16,23 23,10 32,10 C41,10 48,23 48,38Z' fill='white'/%3E" +
-  "%3Cellipse cx='32' cy='29' rx='9' ry='8' fill='%230070d2' opacity='.55'/%3E" +
-  "%3Cpath d='M12,38 C12,52 20,60 32,60 C44,60 52,52 52,38Z' fill='white' opacity='.78'/%3E" +
-  "%3C/svg%3E";
+/* デフォルト = なし（カスタム未設定時はロゴ・ファビコン非表示） */
+const DEFAULT_FAVICON = null;
 
 function FaviconSection() {
   const { currentUser, logoDataUrl, saveLogo } = useApp();
@@ -409,8 +402,6 @@ function FaviconSection() {
   const [status, setStatus] = useState("");
   const flash = (msg) => { setStatus(msg); setTimeout(() => setStatus(""), 3500); };
 
-  /* 現在のプレビュー: contextのlogoDataUrl（リアルタイム連動） */
-  const preview  = logoDataUrl || DEFAULT_FAVICON;
   const isCustom = !!logoDataUrl;
 
   /* 旗印アップロード処理 */
@@ -437,7 +428,7 @@ function FaviconSection() {
   /* 旗印リセット（HONNOJIデフォルトに戻す） */
   const handleReset = () => {
     saveLogo(null);
-    flash("🔄 旗印をHONNOJIデフォルトに戻しました");
+    flash("🔄 旗印を削除しました（ロゴ・ファビコンなし）");
   };
 
   if (!isAdmin) {
@@ -468,15 +459,18 @@ function FaviconSection() {
 
         {/* 現在の旗印プレビュー */}
         <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl border border-gray-200 mb-5">
-          <div className="w-14 h-14 rounded-xl overflow-hidden border border-gray-300 shadow-sm flex items-center justify-center bg-white flex-none">
-            <img src={preview} alt="favicon preview" className="w-10 h-10 object-contain" />
+          <div className="w-14 h-14 rounded-xl border border-gray-300 shadow-sm flex items-center justify-center bg-white flex-none">
+            {logoDataUrl
+              ? <img src={logoDataUrl} alt="favicon preview" className="w-10 h-10 object-contain" />
+              : <span className="text-gray-300 text-xs font-bold">なし</span>
+            }
           </div>
           <div>
             <p className="text-xs font-bold text-gray-600">現在の旗印</p>
             <p className="text-xs text-gray-400 mt-0.5">
               {isCustom
                 ? "✦ カスタム画像（LocalStorageに保存中）"
-                : "HONNOJIデフォルトロゴ"}
+                : "未設定（ロゴ・ファビコンなし）"}
             </p>
             {isCustom && (
               <p className="text-[11px] text-blue-500 mt-1 font-medium">
