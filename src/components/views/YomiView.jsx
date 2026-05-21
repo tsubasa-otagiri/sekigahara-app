@@ -120,7 +120,7 @@ export default function YomiView() {
   const {
     deals, currentUser,
     deleteDeal, setEditingDeal,
-    activeTab, searchQuery,
+    activeTab, searchQuery, activePeriods,
   } = useApp();
 
   const isAdmin = currentUser?.role === "admin";
@@ -135,7 +135,8 @@ export default function YomiView() {
 
   /* ── フィルター + 検索 ── */
   const filtered = useMemo(() => {
-    let ds = filterByTab(deals, activeTab);
+    const pdDeals = deals.filter(d => activePeriods.includes(d.period));
+    let ds = filterByTab(pdDeals, activeTab);
     const q = searchQuery.trim().toLowerCase();
     if (q) {
       ds = ds.filter((d) =>
@@ -147,7 +148,7 @@ export default function YomiView() {
       );
     }
     return ds;
-  }, [deals, activeTab, searchQuery]);
+  }, [deals, activeTab, searchQuery, activePeriods]);
 
   /* ── 確度別グループ ── */
   const groups = useMemo(() =>

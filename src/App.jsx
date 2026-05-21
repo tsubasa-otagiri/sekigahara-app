@@ -3,6 +3,7 @@ import { useApp } from "./contexts/useApp.js";
 import Login from "./components/Login.jsx";
 import Header from "./components/Header.jsx";
 import TeamTabs from "./components/TeamTabs.jsx";
+import PeriodNav from "./components/PeriodNav.jsx";
 import ViewNav from "./components/ViewNav.jsx";
 import DealModal        from "./components/DealModal.jsx";
 import PwChangePrompt  from "./components/PwChangePrompt.jsx";
@@ -32,6 +33,7 @@ function MainApp() {
     <div className="min-h-screen flex flex-col" style={{ background: "#f4f6f9" }}>
       <Header />
       <TeamTabs />
+      <PeriodNav />
       <ViewNav />
 
       <main className="flex-1">

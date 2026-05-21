@@ -96,7 +96,9 @@ const fmtCount = (n) => {
 
 /* ── メイン ── */
 export default function StatsView() {
-  const { deals, members } = useApp();
+  const { deals, members, activePeriods } = useApp();
+
+  const pdDeals = useMemo(() => deals.filter(d => activePeriods.includes(d.period)), [deals, activePeriods]);
 
   const [teamFilter, setTeamFilter] = useState("全体");
   const [sortKey,    setSortKey]    = useState("kaishu");
@@ -117,7 +119,7 @@ export default function StatsView() {
   /* 各メンバーの集計（IS/FS折半ロジック適用） */
   const rows = useMemo(() => {
     return visibleMembers.map((m) => {
-      const myDeals = deals.filter((d) => d.is === m.name || d.fs === m.name);
+      const myDeals = pdDeals.filter((d) => d.is === m.name || d.fs === m.name);
 
       /* 回収額: 確度=回収の案件のみ、折半クレジットを乗算 */
       const kaishu = myDeals
@@ -137,7 +139,7 @@ export default function StatsView() {
       const rate   = target > 0 ? Math.round((kaishu / target) * 100) : 0;
       return { m, target, kaishu, aggressive, pipeline, rate };
     });
-  }, [visibleMembers, deals]);
+  }, [visibleMembers, pdDeals]);
 
   /* ソート */
   const sorted = useMemo(() => {

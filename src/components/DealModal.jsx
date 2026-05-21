@@ -27,11 +27,13 @@ const BLANK = {
 };
 
 export default function DealModal({ deal, onClose }) {
-  const { addDeal, updateDeal, members } = useApp();
+  const { addDeal, updateDeal, members, currentPeriod } = useApp();
   const isEdit = !!deal;
 
   const [form, setForm] = useState(() =>
-    isEdit ? { ...deal, amount: String(deal.amount) } : { ...BLANK }
+    isEdit
+      ? { ...deal, amount: String(deal.amount), period: deal.period || currentPeriod }
+      : { ...BLANK, period: currentPeriod }
   );
   const [errors, setErrors] = useState({});
 
@@ -89,6 +91,20 @@ export default function DealModal({ deal, onClose }) {
   };
 
   const isKaishu = form.confidence === "回収";
+
+  /* 対象年月の選択肢: currentPeriod を中心に前後12ヶ月 */
+  const periodOptions = (() => {
+    const [yr, mo] = currentPeriod.split('-').map(Number);
+    const opts = [];
+    for (let i = -12; i <= 12; i++) {
+      let m = mo + i, y = yr;
+      while (m > 12) { m -= 12; y++; }
+      while (m < 1)  { m += 12; y--; }
+      const val = `${y}-${String(m).padStart(2,'0')}`;
+      opts.push({ value: val, label: `${y}年${m}月` });
+    }
+    return opts;
+  })();
 
   return (
     <Modal
@@ -190,6 +206,19 @@ export default function DealModal({ deal, onClose }) {
             )}
           </Fld>
         </div>
+
+        {/* 対象年月 */}
+        <Fld label="対象年月">
+          <select
+            className={SEL}
+            value={form.period || currentPeriod}
+            onChange={(e) => set("period", e.target.value)}
+          >
+            {periodOptions.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </Fld>
 
         {/* メモ */}
         <Fld label="メモ">

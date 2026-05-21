@@ -136,8 +136,11 @@ function TeamStackBar({ deals, teams }) {
 
 /* ── メイン ── */
 export default function SummaryView() {
-  const { deals, members, activeTab } = useApp();
-  const filtered = useMemo(() => filterByTab(deals, activeTab), [deals, activeTab]);
+  const { deals, members, activeTab, activePeriods } = useApp();
+  const filtered = useMemo(() => {
+    const pd = deals.filter(d => activePeriods.includes(d.period));
+    return filterByTab(pd, activeTab);
+  }, [deals, activeTab, activePeriods]);
 
   const byConf = useMemo(() => {
     const acc = { "30%": 0, "50%": 0, "70%": 0, "回収": 0 };

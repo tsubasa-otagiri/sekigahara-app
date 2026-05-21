@@ -5,6 +5,11 @@ import { lsGet, lsSet, authLoad, authSave, authClear, nextId, parseAmt, resolveP
 
 export const AppContext = createContext(null);
 
+/* 当月 period 文字列 ("YYYY-MM") */
+const _NOW = new Date();
+const _PAD = (n) => String(n).padStart(2, '0');
+export const TODAY_PERIOD = `${_NOW.getFullYear()}-${_PAD(_NOW.getMonth() + 1)}`;
+
 /* デフォルト旗印 = なし（空データURI）
  * カスタム未設定時はファビコン非表示・ロゴ非表示 */
 const DEFAULT_FAVICON_HREF = "data:,";
@@ -26,6 +31,7 @@ export const AppProvider = ({ children }) => {
       ...d,
       is: normalizeName(d.is),
       fs: normalizeName(d.fs),
+      period: d.period || TODAY_PERIOD,
     }));
   });
 
@@ -51,6 +57,17 @@ export const AppProvider = ({ children }) => {
     link.href = dataUrl || DEFAULT_FAVICON_HREF;
     setLogoDataUrl(dataUrl || null);
   }, []);
+
+  /* ── 年月選択 ── */
+  const [currentYear,  setCurrentYear]  = useState(_NOW.getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(_NOW.getMonth() + 1);
+  const [periodType,   setPeriodType]   = useState("month"); // "month"|"Q1"|"Q2"|"Q3"|"Q4"
+
+  const currentPeriod = `${currentYear}-${_PAD(currentMonth)}`;
+  const _QM = { Q1:[1,2,3], Q2:[4,5,6], Q3:[7,8,9], Q4:[10,11,12] };
+  const activePeriods = periodType === "month"
+    ? [currentPeriod]
+    : (_QM[periodType] || []).map(m => `${currentYear}-${_PAD(m)}`);
 
   /* ── UI状態 ── */
   const [activeTab,     setActiveTab]     = useState("全体");
@@ -99,10 +116,11 @@ export const AppProvider = ({ children }) => {
       phase:  resolvePhase(raw.confidence, raw.phase),
       is:     normalizeName(raw.is),
       fs:     normalizeName(raw.fs),
+      period: raw.period || currentPeriod,
     };
     setDeals(prev => [deal, ...prev]);
     return deal;
-  }, []);
+  }, [currentPeriod]);
 
   const updateDeal = useCallback((id, patch) => {
     setDeals(prev => prev.map(d => {
@@ -151,6 +169,11 @@ export const AppProvider = ({ children }) => {
       logoDataUrl, saveLogo,
       /* pw prompt */
       showPwPrompt, setShowPwPrompt,
+      /* period */
+      currentYear, setCurrentYear,
+      currentMonth, setCurrentMonth,
+      periodType, setPeriodType,
+      currentPeriod, activePeriods,
       /* ui */
       activeTab, setActiveTab,
       activeView, setActiveView,

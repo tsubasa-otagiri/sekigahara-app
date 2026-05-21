@@ -12,7 +12,7 @@ const COLS = CONF; // ["30%","50%","70%","回収"]
   ヘッダー(56) + チームタブ(48) + ビューナビ(36) + ページ上余白(16) + カンバンヘッダー行(44) ≈ 200
   下部余白も少し取って 210px をオフセットに使用
 */
-const COL_BODY_H = "calc(100vh - 210px)";
+const COL_BODY_H = "calc(100vh - 250px)";
 
 /* ── 案件カード ── */
 function DealCard({ deal, isDragging, onDragStart, onDragEnd }) {
@@ -134,14 +134,15 @@ function KanbanCol({
 
 /* ── メインコンポーネント ── */
 export default function KanbanView() {
-  const { deals, updateDeal, activeTab, searchQuery } = useApp();
+  const { deals, updateDeal, activeTab, searchQuery, activePeriods } = useApp();
 
   const [draggedId,   setDraggedId]   = useState(null);
   const [dragOverCol, setDragOverCol] = useState(null);
   const [pendingMove, setPendingMove] = useState(null);
 
   const filtered = useMemo(() => {
-    let ds = filterByTab(deals, activeTab);
+    const pdDeals = deals.filter(d => activePeriods.includes(d.period));
+    let ds = filterByTab(pdDeals, activeTab);
     const q = searchQuery.trim().toLowerCase();
     if (q) {
       ds = ds.filter((d) =>
@@ -152,7 +153,7 @@ export default function KanbanView() {
       );
     }
     return ds;
-  }, [deals, activeTab, searchQuery]);
+  }, [deals, activeTab, searchQuery, activePeriods]);
 
   /* ── DnD ── */
   const handleDragStart  = (e, id) => { setDraggedId(id); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", String(id)); };
