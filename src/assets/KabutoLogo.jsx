@@ -1,11 +1,11 @@
 /**
  * SEKIGAHARA 兜（カブト）ロゴ
  * Salesforce Blue (#0070d2) ベースのSVGアイコン
+ * 大きく横に広がる鍬形（kuwagata）＋鉢（dome）＋吹き返し（crescent）
  * size: アイコンサイズ（px）
  * color: 背景色（デフォルト Salesforce Blue）
  */
 export default function KabutoLogo({ size = 32, color = "#0070d2" }) {
-  const id = `kbg_${size}`;
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -14,58 +14,40 @@ export default function KabutoLogo({ size = 32, color = "#0070d2" }) {
       viewBox="0 0 64 64"
       aria-label="SEKIGAHARA logo"
     >
-      <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="white" stopOpacity="0.22" />
-          <stop offset="100%" stopColor="white" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-
       {/* 背景（角丸正方形） */}
       <rect width="64" height="64" rx="13" fill={color} />
-      <rect width="64" height="64" rx="13" fill={`url(#${id})`} />
 
-      {/* 前立て（金色三角クレスト） */}
-      <polygon points="32,4 27.5,17 36.5,17" fill="#fbbf24" />
-      <polygon points="32,6 29,17 35,17" fill="#fde68a" opacity="0.65" />
-
-      {/* 鉢（ドーム本体） */}
+      {/* 左 鍬形（kuwagata）— 大きく左へ弧を描く */}
       <path
-        d="M11 40 C11 22 21 14 32 14 C43 14 53 22 53 40 Z"
-        fill="white"
-        opacity="0.92"
-      />
-      {/* 鉢ハイライト（光沢） */}
-      <path
-        d="M18 27 Q26 19 39 23"
-        stroke="white"
-        strokeWidth="1.8"
+        d="M 27,14 C 6,12 0,26 25,40"
         fill="none"
-        opacity="0.38"
+        stroke="white"
+        strokeWidth="7"
         strokeLinecap="round"
       />
 
-      {/* しころ（ネックガード2層） */}
+      {/* 右 鍬形（kuwagata）— 左の鏡像 */}
       <path
-        d="M9 40 L7 51 L32 55 L57 51 L55 40 Z"
-        fill="white"
-        opacity="0.55"
-      />
-      <path
-        d="M11 43 L10 50 L32 53 L54 50 L53 43 Z"
-        fill="white"
-        opacity="0.3"
-      />
-
-      {/* 面（顔の開口部） */}
-      <ellipse cx="32" cy="35" rx="12" ry="8" fill={color} opacity="0.72" />
-
-      {/* 中央縦線（装飾） */}
-      <line
-        x1="32" y1="15" x2="32" y2="39"
+        d="M 37,14 C 58,12 64,26 39,40"
+        fill="none"
         stroke="white"
-        strokeWidth="1.4"
-        opacity="0.38"
+        strokeWidth="7"
+        strokeLinecap="round"
+      />
+
+      {/* 鉢（dome）— 中央の丸 */}
+      <circle cx="32" cy="27" r="9" fill="white" />
+
+      {/* 首元（鉢と吹き返しをつなぐ） */}
+      <rect x="25" y="34" width="14" height="8" fill="white" />
+
+      {/* 吹き返し（crescent）— 下部の弧 */}
+      <path
+        d="M 19,44 Q 32,58 45,44"
+        fill="none"
+        stroke="white"
+        strokeWidth="6"
+        strokeLinecap="round"
       />
     </svg>
   );
