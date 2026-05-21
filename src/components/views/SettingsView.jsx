@@ -392,8 +392,8 @@ function BackupSection() {
 
 /* デフォルト旗印（HONNOJIロゴSVG） — リセット時に使用 */
 const DEFAULT_FAVICON =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E" +
-  "%3Crect width='64' height='64' rx='13' fill='%230070d2'/%3E" +
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 8 64 50'%3E" +
+  "%3Crect width='64' height='64' fill='%230070d2'/%3E" +
   "%3Cpath d='M27,14 C6,12 0,26 25,40' fill='none' stroke='white' stroke-width='7' stroke-linecap='round'/%3E" +
   "%3Cpath d='M37,14 C58,12 64,26 39,40' fill='none' stroke='white' stroke-width='7' stroke-linecap='round'/%3E" +
   "%3Cpath d='M16,36 C16,21 23,14 32,14 C41,14 48,21 48,36Z' fill='white'/%3E" +

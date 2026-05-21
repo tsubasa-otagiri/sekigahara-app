@@ -42,7 +42,6 @@ export default function Login() {
                   src={logoDataUrl}
                   alt="HONNOJI logo"
                   className="w-[72px] h-[72px] rounded-2xl object-contain"
-                  style={{ background: SF_BLUE }}
                 />
               : <KabutoLogo size={72} color={SF_BLUE} />
             }

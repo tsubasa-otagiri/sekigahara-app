@@ -37,7 +37,6 @@ export default function Header() {
                 src={logoDataUrl}
                 alt="HONNOJI logo"
                 className="w-8 h-8 rounded-lg object-contain flex-none"
-                style={{ background: SF_BLUE }}
               />
             : <KabutoLogo size={32} color={SF_BLUE} />
           }
