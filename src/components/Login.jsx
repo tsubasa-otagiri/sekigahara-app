@@ -17,6 +17,11 @@ export default function Login() {
       .filter(Boolean),
   })).filter(g => g.members.length > 0);
 
+  /* DISPLAY_GROUPS に含まれないメンバー（管理者など）を末尾に追加 */
+  const ungrouped = activeMembers.filter(
+    m => !MEMBER_MASTER_NAMES.includes(m.name)
+  );
+
   const [selectedId, setSelectedId] = useState("");
   const [pw,         setPw]         = useState("");
   const [showPw,     setShowPw]     = useState(false);
@@ -87,6 +92,13 @@ export default function Login() {
                     ))}
                   </optgroup>
                 ))}
+                {ungrouped.length > 0 && (
+                  <optgroup label="── 管理者 ──">
+                    {ungrouped.map(m => (
+                      <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
 
