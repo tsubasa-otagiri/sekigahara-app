@@ -122,7 +122,7 @@ export default function Login() {
           </form>
         </div>
 
-        <p className="text-center text-white/30 text-xs mt-6">© GMO Tech Solutions</p>
+        <p className="text-center text-gray-400 text-xs mt-6">GMO TECH株式会社 / 営業部</p>
       </div>
     </div>
   );
