@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, Edit2, Save, X, Eye, EyeOff, Download, Upload, FileText, Lock, UserX, UserCheck } from "lucide-react";
+import { Plus, Edit2, Save, X, Eye, EyeOff, Download, Upload, FileText, Lock, UserX, UserCheck, Flag } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import { TEAMS_OPT, ROLE_OPT, LS_KEYS } from "../../constants/index.js";
 import { parseAmt, lsGet } from "../../utils/index.js";
@@ -383,11 +383,174 @@ function BackupSection() {
   );
 }
 
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ *  旗印（ファビコン）セクション
+ *  ── 陣頭に掲げる旗印を管理者権限で自由に変更できる ──
+ *  画像をアップロードすると即座にタブアイコンに反映し、
+ *  LocalStorage に保存することでリロード後も旗印を維持する。
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* デフォルト旗印（HONNOJIロゴSVG） — リセット時に使用 */
+const DEFAULT_FAVICON =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E" +
+  "%3Crect width='64' height='64' rx='13' fill='%230070d2'/%3E" +
+  "%3Cpath d='M27,14 C6,12 0,26 25,40' fill='none' stroke='white' stroke-width='7' stroke-linecap='round'/%3E" +
+  "%3Cpath d='M37,14 C58,12 64,26 39,40' fill='none' stroke='white' stroke-width='7' stroke-linecap='round'/%3E" +
+  "%3Cpath d='M16,36 C16,21 23,14 32,14 C41,14 48,21 48,36Z' fill='white'/%3E" +
+  "%3Cellipse cx='32' cy='29' rx='9' ry='7' fill='%230070d2' opacity='.55'/%3E" +
+  "%3Cpath d='M12,37 C12,50 20,54 32,54 C44,54 52,50 52,37Z' fill='white' opacity='.78'/%3E" +
+  "%3C/svg%3E";
+
+/* DOMのファビコンを即時書き換えるユーティリティ */
+function applyFaviconDOM(href) {
+  let link = document.querySelector('link[rel="icon"]');
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'icon';
+    document.head.appendChild(link);
+  }
+  link.href = href;
+}
+
+function FaviconSection() {
+  const { currentUser } = useApp();
+  const isAdmin = currentUser?.role === "admin";
+  const fileRef = useRef(null);
+
+  const [preview, setPreview]   = useState(() => localStorage.getItem("honnoji_favicon") || DEFAULT_FAVICON);
+  const [isCustom, setIsCustom] = useState(() => !!localStorage.getItem("honnoji_favicon"));
+  const [status, setStatus]     = useState("");
+
+  const flash = (msg) => { setStatus(msg); setTimeout(() => setStatus(""), 3500); };
+
+  /* 旗印アップロード処理 */
+  const handleUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      flash("❌ 画像ファイル（PNG / JPG / SVG / WebP）を選択してください");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      flash("❌ ファイルサイズは 2MB 以下にしてください");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target.result;
+      localStorage.setItem("honnoji_favicon", dataUrl);  /* 旗印を永久保存 */
+      applyFaviconDOM(dataUrl);                           /* タブに即時反映 */
+      setPreview(dataUrl);
+      setIsCustom(true);
+      flash("✅ 旗印を掲げました！ブラウザのタブに反映されました");
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  /* 旗印リセット（HONNOJIデフォルトに戻す） */
+  const handleReset = () => {
+    localStorage.removeItem("honnoji_favicon");
+    applyFaviconDOM(DEFAULT_FAVICON);
+    setPreview(DEFAULT_FAVICON);
+    setIsCustom(false);
+    flash("🔄 旗印をHONNOJIデフォルトに戻しました");
+  };
+
+  if (!isAdmin) {
+    return (
+      <div className="bg-gray-100 border border-gray-200 rounded-2xl p-5 flex items-center gap-3">
+        <Lock size={18} className="text-gray-400 flex-none" />
+        <div>
+          <p className="text-sm font-semibold text-gray-500">旗印の変更は管理者専用です</p>
+          <p className="text-xs text-gray-400 mt-0.5">管理者アカウントでログインすると利用できます。</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+        {/* ヘッダー */}
+        <div className="flex items-center gap-2 mb-1">
+          <Flag size={14} className="text-blue-600" />
+          <h3 className="text-sm font-bold text-gray-700">旗印（ファビコン）設定</h3>
+          <span className="text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200 rounded px-1.5 py-0.5">管理者限定</span>
+        </div>
+        <p className="text-xs text-gray-500 mb-5">
+          ブラウザのタブに表示されるアイコンを自由に差し替えます。
+          設定はこのブラウザの LocalStorage に保存され、リロード後も引き継がれます。
+        </p>
+
+        {/* 現在の旗印プレビュー */}
+        <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl border border-gray-200 mb-5">
+          <div className="w-14 h-14 rounded-xl overflow-hidden border border-gray-300 shadow-sm flex items-center justify-center bg-white flex-none">
+            <img src={preview} alt="favicon preview" className="w-10 h-10 object-contain" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-gray-600">現在の旗印</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {isCustom
+                ? "✦ カスタム画像（LocalStorageに保存中）"
+                : "HONNOJIデフォルトロゴ"}
+            </p>
+            {isCustom && (
+              <p className="text-[11px] text-blue-500 mt-1 font-medium">
+                リロード後もこの旗印が引き継がれます
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* アクションボタン */}
+        <div className="flex flex-wrap gap-3">
+          <label className={BTN_PRI + " cursor-pointer"}>
+            <Upload size={13} />
+            旗印を変更する
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleUpload}
+            />
+          </label>
+          {isCustom && (
+            <button onClick={handleReset} className={BTN_GRAY}>
+              <X size={13} />
+              デフォルトに戻す
+            </button>
+          )}
+        </div>
+
+        {/* 注意書き */}
+        <p className="text-[11px] text-gray-400 mt-3 leading-relaxed">
+          対応形式: PNG / JPG / SVG / WebP　／　サイズ制限: 2MB 以下<br />
+          推奨サイズ: 64×64px 以上の正方形（ブラウザが自動でリサイズします）
+        </p>
+      </div>
+
+      {/* ステータスメッセージ */}
+      {status && (
+        <div className={`rounded-xl px-4 py-3 text-sm font-medium transition-all
+          ${status.startsWith("✅") ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+          : status.startsWith("🔄") ? "bg-blue-50 text-blue-700 border border-blue-200"
+          : "bg-red-50 text-red-600 border border-red-200"}`}
+        >
+          {status}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ━━━━━━━━ メインコンポーネント ━━━━━━━━ */
 const SECTIONS = [
-  { id:"members",  label:"メンバー" },
+  { id:"members",  label:"メンバー"      },
   { id:"password", label:"パスワード管理" },
-  { id:"backup",   label:"バックアップ" },
+  { id:"backup",   label:"バックアップ"   },
+  { id:"favicon",  label:"旗印"          },
 ];
 
 export default function SettingsView() {
@@ -424,6 +587,7 @@ export default function SettingsView() {
         {section === "members"  && <MembersSection />}
         {section === "password" && <PasswordSection />}
         {section === "backup"   && <BackupSection />}
+        {section === "favicon"  && <FaviconSection />}
       </div>
     </div>
   );
