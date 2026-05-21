@@ -47,7 +47,7 @@ export default function Login() {
             }
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight">HONNOJI</h1>
-          <p className="text-blue-300 text-sm mt-1 font-semibold tracking-wide">no HEN</p>
+          <p className="text-gray-400 text-sm mt-1 font-semibold tracking-wide">no HEN</p>
         </div>
 
         {/* ── カード ── */}
