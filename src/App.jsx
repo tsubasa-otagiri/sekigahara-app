@@ -4,7 +4,8 @@ import Login from "./components/Login.jsx";
 import Header from "./components/Header.jsx";
 import TeamTabs from "./components/TeamTabs.jsx";
 import ViewNav from "./components/ViewNav.jsx";
-import DealModal from "./components/DealModal.jsx";
+import DealModal        from "./components/DealModal.jsx";
+import PwChangePrompt  from "./components/PwChangePrompt.jsx";
 import SummaryView  from "./components/views/SummaryView.jsx";
 import YomiView     from "./components/views/YomiView.jsx";
 import KanbanView   from "./components/views/KanbanView.jsx";
@@ -17,6 +18,7 @@ function MainApp() {
     currentUserId, activeView,
     showNewDeal, setShowNewDeal,
     editingDeal, setEditingDeal,
+    showPwPrompt,
   } = useApp();
 
   if (!currentUserId) return <Login />;
@@ -45,6 +47,9 @@ function MainApp() {
       {(showNewDeal || editingDeal) && (
         <DealModal deal={editingDeal} onClose={closeDealModal} />
       )}
+
+      {/* 初回パスワード変更案内 — 初期パスワード「1111」のままのユーザーに表示 */}
+      {showPwPrompt && <PwChangePrompt />}
     </div>
   );
 }

@@ -61,11 +61,12 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   /* ── UI状態 ── */
-  const [activeTab,    setActiveTab]    = useState("全体");
-  const [activeView,   setActiveView]   = useState("summary"); // summary | list | kanban | personal | settings
-  const [searchQuery,  setSearchQuery]  = useState("");
-  const [showNewDeal,  setShowNewDeal]  = useState(false);
-  const [editingDeal,  setEditingDeal]  = useState(null); // null | deal object
+  const [activeTab,     setActiveTab]     = useState("全体");
+  const [activeView,    setActiveView]    = useState("summary");
+  const [searchQuery,   setSearchQuery]   = useState("");
+  const [showNewDeal,   setShowNewDeal]   = useState(false);
+  const [editingDeal,   setEditingDeal]   = useState(null);
+  const [showPwPrompt,  setShowPwPrompt]  = useState(false); // 初回パスワード変更案内
 
   /* LocalStorage 同期 */
   useEffect(() => { lsSet(LS_KEYS.MEMBERS, members); }, [members]);
@@ -77,6 +78,8 @@ export const AppProvider = ({ children }) => {
     if (!m) return false;
     authSave(m.id);
     setCurrentUserId(m.id);
+    /* 初期パスワード「1111」のままならパスワード変更を案内 */
+    if (pw === "1111") setShowPwPrompt(true);
     return true;
   }, [members]);
 
@@ -154,6 +157,8 @@ export const AppProvider = ({ children }) => {
       replaceDeals, replaceMembers,
       /* logo */
       logoDataUrl, saveLogo,
+      /* pw prompt */
+      showPwPrompt, setShowPwPrompt,
       /* ui */
       activeTab, setActiveTab,
       activeView, setActiveView,
