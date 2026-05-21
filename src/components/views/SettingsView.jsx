@@ -255,7 +255,7 @@ function BackupSection() {
     const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
     const url  = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `sekigahara_${new Date().toISOString().slice(0,10)}.json`;
+    a.href = url; a.download = `honnoji_${new Date().toISOString().slice(0,10)}.json`;
     a.click(); URL.revokeObjectURL(url);
     flash("✅ JSONエクスポート完了");
   };
@@ -286,7 +286,7 @@ function BackupSection() {
     const blob = new Blob(["﻿"+csv], {type:"text/csv;charset=utf-8;"});
     const url  = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `sekigahara_deals_${new Date().toISOString().slice(0,10)}.csv`;
+    a.href = url; a.download = `honnoji_deals_${new Date().toISOString().slice(0,10)}.csv`;
     a.click(); URL.revokeObjectURL(url);
     flash("✅ CSVエクスポート完了");
   };

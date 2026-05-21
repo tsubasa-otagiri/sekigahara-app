@@ -1,7 +1,7 @@
 /**
- * SEKIGAHARA 兜（カブト）ロゴ
- * Salesforce Blue (#0070d2) ベースのSVGアイコン
- * 大きく横に広がる鍬形（kuwagata）＋鉢（dome）＋吹き返し（crescent）
+ * HONNOJI no HEN 兜（カブト）ロゴ
+ * Salesforce Blue (#0070d2) ベースのSVGイラスト
+ * 鍬形（横広がり）＋鉢（ドーム）＋目の部（バイザー）＋しころ（ネックガード）
  * size: アイコンサイズ（px）
  * color: 背景色（デフォルト Salesforce Blue）
  */
@@ -12,12 +12,12 @@ export default function KabutoLogo({ size = 32, color = "#0070d2" }) {
       width={size}
       height={size}
       viewBox="0 0 64 64"
-      aria-label="SEKIGAHARA logo"
+      aria-label="HONNOJI logo"
     >
       {/* 背景（角丸正方形） */}
       <rect width="64" height="64" rx="13" fill={color} />
 
-      {/* 左 鍬形（kuwagata）— 大きく左へ弧を描く */}
+      {/* 左 鍬形 — 大きく外へ張り出す弧 */}
       <path
         d="M 27,14 C 6,12 0,26 25,40"
         fill="none"
@@ -26,7 +26,7 @@ export default function KabutoLogo({ size = 32, color = "#0070d2" }) {
         strokeLinecap="round"
       />
 
-      {/* 右 鍬形（kuwagata）— 左の鏡像 */}
+      {/* 右 鍬形 — 左の完全鏡像 */}
       <path
         d="M 37,14 C 58,12 64,26 39,40"
         fill="none"
@@ -35,19 +35,20 @@ export default function KabutoLogo({ size = 32, color = "#0070d2" }) {
         strokeLinecap="round"
       />
 
-      {/* 鉢（dome）— 中央の丸 */}
-      <circle cx="32" cy="27" r="9" fill="white" />
-
-      {/* 首元（鉢と吹き返しをつなぐ） */}
-      <rect x="25" y="34" width="14" height="8" fill="white" />
-
-      {/* 吹き返し（crescent）— 下部の弧 */}
+      {/* 鉢（helmet dome）— 半アーチ形 */}
       <path
-        d="M 19,44 Q 32,58 45,44"
-        fill="none"
-        stroke="white"
-        strokeWidth="6"
-        strokeLinecap="round"
+        d="M 16,36 C 16,21 23,14 32,14 C 41,14 48,21 48,36 Z"
+        fill="white"
+      />
+
+      {/* 目の部（visor opening）— 深みを出す凹み */}
+      <ellipse cx="32" cy="29" rx="9" ry="7" fill={color} opacity="0.55" />
+
+      {/* しころ（neck guard）— 下部フレア */}
+      <path
+        d="M 12,37 C 12,50 20,54 32,54 C 44,54 52,50 52,37 Z"
+        fill="white"
+        opacity="0.78"
       />
     </svg>
   );

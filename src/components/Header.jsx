@@ -33,8 +33,8 @@ export default function Header() {
         <div className="flex items-center gap-2 shrink-0 mr-1">
           <KabutoLogo size={32} color={SF_BLUE} />
           <div className="hidden sm:flex flex-col leading-none">
-            <span className="text-[13px] font-black text-slate-800 tracking-tight">SEKIGAHARA</span>
-            <span className="text-[9px] font-semibold text-slate-400 tracking-widest">by GMO</span>
+            <span className="text-[13px] font-black text-slate-800 tracking-tight">HONNOJI</span>
+            <span className="text-[9px] font-semibold text-slate-400 tracking-widest">no HEN</span>
           </div>
         </div>
 

@@ -39,8 +39,8 @@ export default function Login() {
           <div className="inline-flex items-center justify-center mb-4 drop-shadow-xl">
             <KabutoLogo size={72} color={SF_BLUE} />
           </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">SEKIGAHARA</h1>
-          <p className="text-blue-300 text-sm mt-1 font-semibold tracking-wide">案件管理 by GMO</p>
+          <h1 className="text-2xl font-black text-white tracking-tight">HONNOJI</h1>
+          <p className="text-blue-300 text-sm mt-1 font-semibold tracking-wide">no HEN</p>
         </div>
 
         {/* ── カード ── */}
