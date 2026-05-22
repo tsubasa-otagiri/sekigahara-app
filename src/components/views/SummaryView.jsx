@@ -137,14 +137,13 @@ function TeamStackBar({ deals, teams }) {
 /* ══════════════════════════════════════════════
    マイダッシュボード
    ログインユーザーが IS / FS として関与している案件を
-   ヨミ度ごとに集計して表示
+   ヨミ度ごとに集計して表示（ヨミは分類ラベル、重み計算なし）
 ══════════════════════════════════════════════ */
-/* ヨミ表示定義: [value, displayLabel, weight, color] */
 const MY_YOMI = [
-  { val: "受注", label: "受注",  pct: "100%", color: YOMI_COLOR["受注"] },
-  { val: "70%",  label: "70%",   pct: "70%",  color: YOMI_COLOR["70%"]  },
-  { val: "50%",  label: "50%",   pct: "50%",  color: YOMI_COLOR["50%"]  },
-  { val: "30%",  label: "30%",   pct: "30%",  color: YOMI_COLOR["30%"]  },
+  { val: "受注", label: "受注", color: YOMI_COLOR["受注"] },
+  { val: "70%",  label: "70%",  color: YOMI_COLOR["70%"]  },
+  { val: "50%",  label: "50%",  color: YOMI_COLOR["50%"]  },
+  { val: "30%",  label: "30%",  color: YOMI_COLOR["30%"]  },
 ];
 
 function MyDashboard({ deals, activePeriods, currentUser }) {
@@ -160,18 +159,16 @@ function MyDashboard({ deals, activePeriods, currentUser }) {
     );
   }, [deals, name, activePeriods]);
 
-  /* ヨミ度ごとに集計 */
+  /* ヨミ度ごとに集計（件数・金額のみ） */
   const groups = useMemo(() =>
-    MY_YOMI.map(({ val, label, pct, color }) => {
+    MY_YOMI.map(({ val, label, color }) => {
       const ds  = myDeals.filter(d => d.yomi === val);
       const amt = ds.reduce((s, d) => s + (d.amount || 0), 0);
-      const w   = YOMI_WEIGHT[val] ?? 0;
-      return { val, label, pct, color, count: ds.length, amount: amt, weighted: amt * w };
+      return { val, label, color, count: ds.length, amount: amt };
     }),
   [myDeals]);
 
-  const totalAmt      = groups.reduce((s, g) => s + g.amount,   0);
-  const weightedTotal = groups.reduce((s, g) => s + g.weighted, 0);
+  const totalAmt = groups.reduce((s, g) => s + g.amount, 0);
 
   if (!name) return null;
 
@@ -186,54 +183,30 @@ function MyDashboard({ deals, activePeriods, currentUser }) {
         <span className="text-[11px] font-semibold text-slate-400">{myDeals.length} 件 / {fmtAmt(totalAmt)}</span>
       </div>
 
-      <div className="p-4 sm:p-5 space-y-4">
-        {/* ヨミ度ミニカード */}
+      <div className="p-4 sm:p-5">
         {myDeals.length === 0 ? (
           <p className="text-xs text-slate-400 text-center py-4">担当案件がありません</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {groups.map(({ val, label, pct, color, count, amount, weighted }) => (
+            {groups.map(({ val, label, color, count, amount }) => (
               <div
                 key={val}
-                className="rounded-xl p-3.5 flex flex-col gap-1.5"
+                className="rounded-xl p-3.5 flex flex-col gap-2"
                 style={{ background: color + "0d", border: `1.5px solid ${color}30` }}
               >
-                {/* ラベル */}
+                {/* ヨミラベル */}
                 <div className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
-                  <span className="text-[12px] font-black" style={{ color }}>
-                    {label}
-                    {label === "受注" && <span className="text-[9px] font-semibold ml-1 opacity-60">(100%)</span>}
-                  </span>
+                  <span className="text-[13px] font-black" style={{ color }}>{label}</span>
                 </div>
 
-                {/* 金額 */}
+                {/* 合計金額（大きく） */}
                 <p className="text-xl font-black text-slate-800 tabular leading-none">{fmtAmt(amount)}</p>
 
                 {/* 件数 */}
-                <p className="text-[10px] text-slate-400 tabular">{count} 件</p>
-
-                {/* 着地 */}
-                <div className="mt-0.5 pt-1.5 border-t" style={{ borderColor: color + "25" }}>
-                  <p className="text-[10px] text-slate-500">
-                    着地 <span className="font-black tabular" style={{ color }}>{fmtAmt(weighted)}</span>
-                  </p>
-                </div>
+                <p className="text-[11px] text-slate-400 tabular">{count} 件</p>
               </div>
             ))}
-          </div>
-        )}
-
-        {/* 着地予想合計 */}
-        {myDeals.length > 0 && (
-          <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-slate-50">
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">着地予想（加重合計）</p>
-              <p className="text-[10px] text-slate-400 mt-0.5">
-                受注×100% + 70%案件×70% + 50%案件×50% + 30%案件×30%
-              </p>
-            </div>
-            <p className="text-2xl font-black text-slate-800 tabular">{fmtAmt(weightedTotal)}</p>
           </div>
         )}
       </div>
