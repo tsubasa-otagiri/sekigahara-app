@@ -47,6 +47,39 @@ function StatCard({ conf, amt, count, total, onClick }) {
   );
 }
 
+/* ── シナリオカード（アグレッシブ / コンサバ） ── */
+const SCENARIO_HEX = { aggress: "#0ea5e9", conserv: "#6366f1" };
+function ScenarioCard({ label, sub, amt, count, total, hex, onClick }) {
+  const pct = total > 0 ? Math.round((amt / total) * 100) : 0;
+  return (
+    <div
+      className="bg-white rounded-2xl p-4 flex flex-col gap-2 card-shadow
+        hover:bg-blue-50/50 hover:-translate-y-0.5 hover:shadow-md transition-all duration-150
+        cursor-pointer active:scale-[0.98] select-none"
+      onClick={onClick}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full flex-none" style={{ background: hex }} />
+          <div>
+            <span className="text-[11px] font-bold text-slate-600">{label}</span>
+            <span className="text-[9px] text-slate-400 ml-1">({sub})</span>
+          </div>
+        </div>
+        <span className="text-[10px] font-semibold text-slate-400 tabular">{count} 件</span>
+      </div>
+      <p className="text-2xl font-black text-slate-800 tabular leading-none">{fmtAmt(amt)}</p>
+      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-700"
+          style={{ width: `${pct}%`, background: hex }}
+        />
+      </div>
+      <p className="text-[10px] text-slate-400 tabular">全体の {pct}%</p>
+    </div>
+  );
+}
+
 /* ── ドーナツ ── */
 function ConfDonut({ byConf }) {
   const total = Object.values(byConf).reduce((a, b) => a + b, 0);
@@ -340,7 +373,7 @@ export default function SummaryView() {
         </div>
       </div>
 
-      {/* ── 確度別ミニカード（クリックでヨミ一覧へ） ── */}
+      {/* ── 確度別ミニカード ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {CONF_ORDER.map(conf => (
           <StatCard
@@ -352,6 +385,28 @@ export default function SummaryView() {
             onClick={() => setActiveView("list")}
           />
         ))}
+      </div>
+
+      {/* ── シナリオカード（アグレッシブ / コンサバ） ── */}
+      <div className="grid grid-cols-2 gap-3">
+        <ScenarioCard
+          label="アグレッシブ"
+          sub="50%以上"
+          amt={aggress}
+          count={agressCount}
+          total={total}
+          hex={SCENARIO_HEX.aggress}
+          onClick={() => setActiveView("list")}
+        />
+        <ScenarioCard
+          label="コンサバ"
+          sub="70%以上"
+          amt={conserv}
+          count={conservCount}
+          total={total}
+          hex={SCENARIO_HEX.conserv}
+          onClick={() => setActiveView("list")}
+        />
       </div>
 
       {/* ── グラフ（チーム集計） ── */}
