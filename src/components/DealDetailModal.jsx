@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Plus, MessageSquare, Phone, Mail, FileText, Users, Clock } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
 import { ACTIVITY_TYPES, YOMI_COLOR, YOMI_WEIGHT } from "../constants/index.js";
@@ -15,8 +16,21 @@ const TYPE_ICON = {
 
 export default function DealDetailModal({ deal, onClose }) {
   const { addActivity } = useApp();
-  const [type, setType]   = useState("商談");
-  const [memo, setMemo]   = useState("");
+  const [type, setType] = useState("商談");
+  const [memo, setMemo] = useState("");
+
+  /* ── スクロールロック ── */
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  /* ── Escape で閉じる ── */
+  useEffect(() => {
+    const fn = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", fn);
+    return () => document.removeEventListener("keydown", fn);
+  }, [onClose]);
 
   if (!deal) return null;
 
@@ -41,12 +55,21 @@ export default function DealDetailModal({ deal, onClose }) {
     return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
   };
 
-  return (
-    <div className="fixed inset-0 z-[65] flex items-center justify-center p-4" style={{background:"rgba(0,0,0,0.5)"}}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden">
+  return createPortal(
+    /* ── オーバーレイ（背景クリックで閉じる） ── */
+    <div
+      className="fixed inset-0 z-[65] flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.5)" }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      {/* ── モーダル本体（クリックの伝播を止める） ── */}
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
 
         {/* ヘッダー */}
-        <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
+        <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3 shrink-0">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-base font-black text-slate-800 truncate">{deal.company}</h2>
@@ -61,15 +84,15 @@ export default function DealDetailModal({ deal, onClose }) {
               <span className="text-xs font-black text-slate-700">{fmtAmt(deal.amount)}</span>
               <span
                 className="text-[10px] font-bold rounded-full px-2 py-0.5 text-white"
-                style={{background: YOMI_COLOR[yomi] || "#94a3b8"}}
+                style={{ background: YOMI_COLOR[yomi] || "#94a3b8" }}
               >{yomi}</span>
               <span className="text-xs text-emerald-600 font-semibold">
-                着地: {fmtAmt(weighted)}（×{Math.round(weight*100)}%）
+                着地: {fmtAmt(weighted)}（×{Math.round(weight * 100)}%）
               </span>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition shrink-0">
-            <X size={18}/>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition shrink-0 mt-0.5">
+            <X size={18} />
           </button>
         </div>
 
@@ -82,7 +105,7 @@ export default function DealDetailModal({ deal, onClose }) {
             <p className="text-xs text-slate-400 text-center py-6">まだ活動履歴がありません</p>
           ) : sorted.map(a => (
             <div key={a.id} className="flex gap-3 p-3 bg-slate-50 rounded-xl">
-              <div className="mt-0.5 text-slate-400 shrink-0">{TYPE_ICON[a.type] || <Clock size={12}/>}</div>
+              <div className="mt-0.5 text-slate-400 shrink-0">{TYPE_ICON[a.type] || <Clock size={12} />}</div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold text-slate-500">{a.type}</span>
@@ -95,7 +118,7 @@ export default function DealDetailModal({ deal, onClose }) {
         </div>
 
         {/* 活動追加フォーム */}
-        <div className="px-5 py-4 border-t border-slate-100 space-y-2">
+        <div className="px-5 py-4 border-t border-slate-100 space-y-2 shrink-0">
           <div className="flex gap-2">
             <select
               value={type}
@@ -115,13 +138,14 @@ export default function DealDetailModal({ deal, onClose }) {
               onClick={handleAdd}
               disabled={!memo.trim()}
               className="shrink-0 p-1.5 rounded-lg text-white disabled:opacity-40 transition"
-              style={{background:"#0070d2"}}
+              style={{ background: "#0070d2" }}
             >
-              <Plus size={14}/>
+              <Plus size={14} />
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

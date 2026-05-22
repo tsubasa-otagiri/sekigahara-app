@@ -1,12 +1,33 @@
+import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { AlertTriangle } from "lucide-react";
 
 export default function Confirm({ message, onOk, onCancel, okLabel = "はい", danger = false }) {
-  return (
+  /* ── スクロールロック ── */
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  /* ── Escape でキャンセル ── */
+  useEffect(() => {
+    const fn = (e) => { if (e.key === "Escape") onCancel(); };
+    document.addEventListener("keydown", fn);
+    return () => document.removeEventListener("keydown", fn);
+  }, [onCancel]);
+
+  return createPortal(
+    /* ── オーバーレイ（背景クリックでキャンセル） ── */
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.5)" }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
-      <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center">
+      {/* ── ダイアログ本体 ── */}
+      <div
+        className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${danger ? "bg-red-100" : "bg-blue-100"}`}>
           <AlertTriangle size={22} className={danger ? "text-red-500" : "text-blue-500"} />
         </div>
@@ -20,13 +41,14 @@ export default function Confirm({ message, onOk, onCancel, okLabel = "はい", d
           </button>
           <button
             onClick={onOk}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition hover:brightness-110`}
-          style={{ background: danger ? "#e42b2b" : "#0070d2" }}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition hover:brightness-110"
+            style={{ background: danger ? "#e42b2b" : "#0070d2" }}
           >
             {okLabel}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

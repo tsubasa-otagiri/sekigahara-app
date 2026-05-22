@@ -1,21 +1,33 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 export default function Modal({ onClose, title, sub, maxW = "sm:max-w-lg", children }) {
-  /* Escape キーで閉じる */
+  /* ── Escape で閉じる ── */
   useEffect(() => {
     const fn = (e) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", fn);
     return () => document.removeEventListener("keydown", fn);
   }, [onClose]);
 
-  return (
+  /* ── スクロールロック ── */
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  return createPortal(
+    /* ── オーバーレイ（背景クリックで閉じる） ── */
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
       style={{ background: "rgba(0,0,0,0.45)" }}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className={`bg-white w-full overflow-y-auto rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[95vh] sm:max-h-[92vh] ${maxW}`}>
+      {/* ── モーダル本体 ── */}
+      <div
+        className={`bg-white w-full overflow-y-auto rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[95vh] sm:max-h-[92vh] ${maxW}`}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         {/* ヘッダー */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
           <div>
@@ -31,6 +43,7 @@ export default function Modal({ onClose, title, sub, maxW = "sm:max-w-lg", child
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
