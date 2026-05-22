@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useApp } from "../../contexts/useApp.js";
-import { filterByTab, fmtAmt, isNeglected } from "../../utils/index.js";
-import { CONF, CTW } from "../../constants/index.js";
+import { filterByTab, fmtAmt, isNeglected, getDealCredit } from "../../utils/index.js";
+import { CONF, CTW, THEX } from "../../constants/index.js";
 import { TeamBadge } from "../ui/Badges.jsx";
 import Confirm from "../ui/Confirm.jsx";
 import DealDetailModal from "../DealDetailModal.jsx";
@@ -142,10 +142,94 @@ function KanbanCol({
   );
 }
 
+/* ── 達成グラフパネル ── */
+const CONF_HEX = { "30%":"#f59e0b", "50%":"#3b82f6", "70%":"#10b981", "回収":"#8b5cf6" };
+const CONF_ORDER_REV = ["回収","70%","50%","30%"];
+
+function AchievePanel({ filtered, target, isMyTab, myName }) {
+  const byConf = useMemo(() => {
+    const acc = { "30%":0, "50%":0, "70%":0, "回収":0 };
+    filtered.forEach(d => {
+      const credit = isMyTab ? getDealCredit(d, myName) : 1.0;
+      acc[d.confidence] = (acc[d.confidence] || 0) + (d.amount || 0) * credit;
+    });
+    return acc;
+  }, [filtered, isMyTab, myName]);
+
+  const kaishu  = byConf["回収"]  || 0;
+  const conserv = (byConf["70%"] || 0) + kaishu;
+  const aggress = (byConf["50%"] || 0) + conserv;
+  const total   = Object.values(byConf).reduce((a,b)=>a+b,0);
+
+  const pct = (n) => target > 0 ? Math.min(Math.round((n / target) * 100), 999) : 0;
+  const bar = (n) => Math.min(pct(n), 100);
+
+  const rows = [
+    { label:"受注",           amt:kaishu,  hex:"#8b5cf6" },
+    { label:"コンサバ 70%以上", amt:conserv, hex:"#6366f1" },
+    { label:"アグレッシブ 50%以上", amt:aggress, hex:"#0ea5e9" },
+  ];
+
+  return (
+    <div className="w-60 shrink-0 bg-white rounded-2xl card-shadow p-4 flex flex-col gap-3 self-start sticky top-[182px]">
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">達成状況</p>
+
+      {/* 目標金額 */}
+      {target > 0 && (
+        <div className="text-center py-2 bg-slate-50 rounded-xl">
+          <p className="text-[9px] text-slate-400 mb-0.5">目標</p>
+          <p className="text-lg font-black text-slate-700 tabular">{fmtAmt(target)}</p>
+        </div>
+      )}
+
+      {/* 達成率バー群 */}
+      <div className="space-y-3">
+        {rows.map(({ label, amt, hex }) => (
+          <div key={label}>
+            <div className="flex justify-between items-baseline mb-1">
+              <span className="text-[10px] font-semibold text-slate-600 leading-tight">{label}</span>
+              <span className="text-[11px] font-black tabular" style={{ color: hex }}>{fmtAmt(amt)}</span>
+            </div>
+            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${bar(amt)}%`, background: hex }}
+              />
+            </div>
+            {target > 0 && (
+              <p className="text-[9px] text-slate-400 mt-0.5 tabular text-right">{pct(amt)}%</p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* 確度別内訳 */}
+      <div className="border-t border-slate-100 pt-3 space-y-1.5">
+        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">確度別</p>
+        {CONF_ORDER_REV.map(c => (
+          <div key={c} className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: CONF_HEX[c] }} />
+            <span className="text-[10px] text-slate-500 flex-1">{c}</span>
+            <span className="text-[11px] font-bold tabular" style={{ color: CONF_HEX[c] }}>{fmtAmt(byConf[c] || 0)}</span>
+            <span className="text-[9px] text-slate-300 tabular w-8 text-right">
+              {filtered.filter(d => d.confidence === c).length}件
+            </span>
+          </div>
+        ))}
+        <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
+          <span className="text-[10px] font-bold text-slate-500">合計</span>
+          <span className="text-[12px] font-black text-slate-700 tabular">{fmtAmt(total)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── メインコンポーネント ── */
 export default function KanbanView() {
-  const { deals, updateDeal, currentUser, activeTab, searchQuery, activePeriods } = useApp();
+  const { deals, updateDeal, members, currentUser, activeTab, searchQuery, activePeriods } = useApp();
   const myName = currentUser?.name ?? "";
+  const isMyTab = activeTab === "マイ";
 
   const [draggedId,   setDraggedId]   = useState(null);
   const [dragOverCol, setDragOverCol] = useState(null);
@@ -189,6 +273,16 @@ export default function KanbanView() {
     setPendingMove(null);
   };
 
+  /* 目標: マイタブ → 個人目標 / チームタブ → チーム合計 */
+  const teamTarget = useMemo(() => {
+    if (isMyTab) return currentUser?.target || 0;
+    return members
+      .filter(m => m.role !== "admin" && m.status === "active" &&
+        (activeTab === "全体" || m.team === activeTab ||
+         (activeTab === "鈴木Tプレ" && (m.team === "杉山T" || m.team === "鈴木T"))))
+      .reduce((s, m) => s + (m.target || 0), 0);
+  }, [members, activeTab, currentUser, isMyTab]);
+
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* タイトルバー */}
@@ -202,8 +296,11 @@ export default function KanbanView() {
         </span>
       </div>
 
-      {/* 4列ボード・横幅フル */}
-      <div className="grid grid-cols-4 gap-2.5 w-full" style={{ minWidth: 600 }}>
+      {/* カンバン ＋ 達成グラフ */}
+      <div className="flex gap-4 items-start">
+
+      {/* 4列ボード */}
+      <div className="flex-1 grid grid-cols-4 gap-2.5" style={{ minWidth: 0 }}>
         {COLS.map((conf) => (
           <KanbanCol
             key={conf}
@@ -220,6 +317,16 @@ export default function KanbanView() {
           />
         ))}
       </div>
+
+      {/* 達成グラフパネル */}
+      <AchievePanel
+        filtered={filtered}
+        target={teamTarget}
+        isMyTab={isMyTab}
+        myName={myName}
+      />
+
+      </div>{/* flex wrapper end */}
 
       {pendingMove && (
         <Confirm
