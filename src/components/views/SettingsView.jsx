@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import ImageCropModal from "../ImageCropModal.jsx";
 import { Plus, Edit2, Save, X, Eye, EyeOff, Download, Upload, FileText, Lock, UserX, UserCheck, Flag } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import { TEAMS_OPT, ROLE_OPT, LS_KEYS } from "../../constants/index.js";
@@ -399,12 +400,14 @@ function FaviconSection() {
   const isAdmin = currentUser?.role === "admin";
   const fileRef = useRef(null);
 
-  const [status, setStatus] = useState("");
+  const [status,       setStatus]       = useState("");
+  const [pendingImage, setPendingImage] = useState(null); // トリミング前の raw dataURL
+
   const flash = (msg) => { setStatus(msg); setTimeout(() => setStatus(""), 3500); };
 
   const isCustom = !!logoDataUrl;
 
-  /* 旗印アップロード処理 */
+  /* ファイル選択 → トリミングモーダルを開く */
   const handleUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -412,17 +415,21 @@ function FaviconSection() {
       flash("❌ 画像ファイル（PNG / JPG / SVG / WebP）を選択してください");
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      flash("❌ ファイルサイズは 2MB 以下にしてください");
+    if (file.size > 5 * 1024 * 1024) {
+      flash("❌ ファイルサイズは 5MB 以下にしてください");
       return;
     }
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      saveLogo(ev.target.result); /* LS保存 + タブ反映 + Header/Login即時更新 */
-      flash("✅ 旗印を掲げました！ヘッダー・ログイン画面・タブに即時反映されました");
-    };
+    reader.onload = (ev) => setPendingImage(ev.target.result);
     reader.readAsDataURL(file);
     e.target.value = "";
+  };
+
+  /* トリミングモーダルで「適用」 */
+  const handleCropApply = (dataUrl) => {
+    saveLogo(dataUrl);
+    setPendingImage(null);
+    flash("✅ 旗印を掲げました！ヘッダー・ログイン画面・タブに即時反映されました");
   };
 
   /* 旗印リセット（HONNOJIデフォルトに戻す） */
@@ -503,8 +510,8 @@ function FaviconSection() {
 
         {/* 注意書き */}
         <p className="text-[11px] text-gray-400 mt-3 leading-relaxed">
-          対応形式: PNG / JPG / SVG / WebP　／　サイズ制限: 2MB 以下<br />
-          推奨サイズ: 64×64px 以上の正方形（ブラウザが自動でリサイズします）
+          対応形式: PNG / JPG / SVG / WebP　／　サイズ制限: 5MB 以下<br />
+          アップロード後にトリミング・白背景透過・自動最大化が可能です
         </p>
       </div>
 
@@ -517,6 +524,15 @@ function FaviconSection() {
         >
           {status}
         </div>
+      )}
+
+      {/* トリミング・調整モーダル */}
+      {pendingImage && (
+        <ImageCropModal
+          src={pendingImage}
+          onApply={handleCropApply}
+          onCancel={() => setPendingImage(null)}
+        />
       )}
     </div>
   );
