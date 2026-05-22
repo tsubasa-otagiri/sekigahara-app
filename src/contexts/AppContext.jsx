@@ -111,17 +111,22 @@ export const AppProvider = ({ children }) => {
     ? [currentPeriod]
     : (_QM[periodType] || []).map(m => `${currentYear}-${_PAD(m)}`);
 
+  /* ── 要望データ ── */
+  const [requests, setRequests] = useState(() => lsGet(LS_KEYS.REQUESTS, []));
+  const [requestNotifs, setRequestNotifs] = useState([]); // ログイン時通知キュー
+
   /* ── UI状態 ── */
   const [activeTab,     setActiveTab]     = useState("マイ");
   const [activeView,    setActiveView]    = useState("summary");
   const [searchQuery,   setSearchQuery]   = useState("");
   const [showNewDeal,   setShowNewDeal]   = useState(false);
   const [editingDeal,   setEditingDeal]   = useState(null);
-  const [showPwPrompt,  setShowPwPrompt]  = useState(false); // 初回パスワード変更案内
+  const [showPwPrompt,  setShowPwPrompt]  = useState(false);
 
   /* LocalStorage 同期 */
-  useEffect(() => { lsSet(LS_KEYS.MEMBERS, members); }, [members]);
-  useEffect(() => { lsSet(LS_KEYS.DEALS,   deals);   }, [deals]);
+  useEffect(() => { lsSet(LS_KEYS.MEMBERS,  members);  }, [members]);
+  useEffect(() => { lsSet(LS_KEYS.DEALS,    deals);    }, [deals]);
+  useEffect(() => { lsSet(LS_KEYS.REQUESTS, requests); }, [requests]);
 
   /* ── 認証 ── */
   const login = useCallback((userId, pw) => {
@@ -138,6 +143,11 @@ export const AppProvider = ({ children }) => {
     setActiveView("summary");
     /* 初期パスワード「1111」のままならパスワード変更を案内 */
     if (pw === "1111") setShowPwPrompt(true);
+    /* 対応済み・未通知の要望を検出してキューに積む */
+    const unnotified = lsGet(LS_KEYS.REQUESTS, []).filter(
+      r => r.user === m.name && r.status === "対応済" && !r.notified
+    );
+    if (unnotified.length > 0) setRequestNotifs(unnotified);
     return true;
   }, [members]);
 
@@ -239,6 +249,34 @@ export const AppProvider = ({ children }) => {
   const replaceDeals   = useCallback((ds) => setDeals(ds),   []);
   const replaceMembers = useCallback((ms) => setMembers(ms), []);
 
+  /* ── 要望 CRUD ── */
+  const addRequest = useCallback((content) => {
+    const req = {
+      id:        `req_${Date.now()}`,
+      user:      currentUser?.name ?? "",
+      content,
+      status:    "未対応",
+      notified:  false,
+      createdAt: new Date().toISOString(),
+    };
+    setRequests(prev => [req, ...prev]);
+  }, [currentUser]);
+
+  const resolveRequest = useCallback((id) => {
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, status: "対応済" } : r));
+  }, []);
+
+  const markRequestNotified = useCallback((id) => {
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, notified: true } : r));
+    setRequestNotifs(prev => prev.filter(r => r.id !== id));
+  }, []);
+
+  const dismissAllNotifs = useCallback(() => {
+    const ids = requestNotifs.map(r => r.id);
+    setRequests(prev => prev.map(r => ids.includes(r.id) ? { ...r, notified: true } : r));
+    setRequestNotifs([]);
+  }, [requestNotifs]);
+
   return (
     <AppContext.Provider value={{
       /* auth */
@@ -248,6 +286,9 @@ export const AppProvider = ({ children }) => {
       addDeal, updateDeal, deleteDeal, addActivity, deleteActivity, updateActivity,
       updateMember, addMember, deleteMember,
       replaceDeals, replaceMembers,
+      /* requests */
+      requests, addRequest, resolveRequest, markRequestNotified,
+      requestNotifs, dismissAllNotifs,
       /* logo */
       logoDataUrl, saveLogo,
       /* pw prompt */

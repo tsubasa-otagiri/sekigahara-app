@@ -86,10 +86,11 @@ export const PIE_COLORS = ["#fbbf24", "#60a5fa", "#34d399", "#9ca3af"];
 
 /* LocalStorageキー — HONNOJI 統一名称 */
 export const LS_KEYS = {
-  AUTH:    "honnoji_auth",
-  DEALS:   "honnoji_deals",
-  MEMBERS: "honnoji_members",
-  TARGETS: "honnoji_targets",
+  AUTH:     "honnoji_auth",
+  DEALS:    "honnoji_deals",
+  MEMBERS:  "honnoji_members",
+  TARGETS:  "honnoji_targets",
+  REQUESTS: "honnoji_requests",
 };
 
 /* 認証有効時間（ミリ秒）: 24時間 */

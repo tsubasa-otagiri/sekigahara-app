@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Plus, Search, LogOut, HelpCircle } from "lucide-react";
+import { Plus, Search, LogOut, HelpCircle, MessageSquarePlus } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
 import { THEX } from "../constants/index.js";
 import KabutoLogo from "../assets/KabutoLogo.jsx";
 import HelpModal from "./HelpModal.jsx";
+import RequestModal from "./RequestModal.jsx";
 
 const ROLE_BG = {
   admin:  "#9c27b0",
@@ -23,7 +24,8 @@ export default function Header() {
     logoDataUrl,
   } = useApp();
 
-  const [helpOpen, setHelpOpen] = useState(false);
+  const [helpOpen,    setHelpOpen]    = useState(false);
+  const [requestOpen, setRequestOpen] = useState(false);
   const teamColor = THEX[activeTab] ?? SF_BLUE;
 
   return (
@@ -85,8 +87,24 @@ export default function Header() {
 
           <div className="flex-1" />
 
-          {/* ── ヘルプ ＋ 新規案件ボタン ── */}
+          {/* ── 要望 ＋ ヘルプ ＋ 新規案件ボタン ── */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* 要望依頼ボタン */}
+            <button
+              onClick={() => setRequestOpen(true)}
+              title="要望・ご意見"
+              className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-2 rounded-xl
+                transition-all active:scale-95 hover:bg-blue-50"
+              style={{
+                color: SF_BLUE,
+                border: `1.5px solid ${SF_BLUE}`,
+                background: "#fff",
+              }}
+            >
+              <MessageSquarePlus size={13} strokeWidth={2.5} />
+              <span className="hidden sm:inline">要望</span>
+            </button>
+
             {/* ヘルプボタン（アウトラインスタイル） */}
             <button
               onClick={() => setHelpOpen(true)}
@@ -141,6 +159,8 @@ export default function Header() {
 
       {/* ヘルプモーダル */}
       {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
+      {/* 要望モーダル */}
+      {requestOpen && <RequestModal onClose={() => setRequestOpen(false)} />}
     </>
   );
 }

@@ -7,6 +7,7 @@ import PeriodNav from "./components/PeriodNav.jsx";
 import ViewNav from "./components/ViewNav.jsx";
 import DealModal        from "./components/DealModal.jsx";
 import PwChangePrompt  from "./components/PwChangePrompt.jsx";
+import RequestNotif    from "./components/RequestNotif.jsx";
 import SummaryView  from "./components/views/SummaryView.jsx";
 import YomiView     from "./components/views/YomiView.jsx";
 import KanbanView   from "./components/views/KanbanView.jsx";
@@ -57,8 +58,11 @@ function MainApp() {
         <DealModal deal={editingDeal} onClose={closeDealModal} />
       )}
 
-      {/* 初回パスワード変更案内 — 初期パスワード「1111」のままのユーザーに表示 */}
+      {/* 初回パスワード変更案内 */}
       {showPwPrompt && <PwChangePrompt />}
+
+      {/* 要望対応通知バナー */}
+      <RequestNotif />
     </div>
   );
 }
