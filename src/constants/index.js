@@ -1,5 +1,6 @@
-export const REAL_TEAMS = ["杉山T", "鈴木T", "中村T", "渡部T"];
-export const ALL_TABS   = ["全体", "杉山T", "鈴木T", "鈴木Tプレ", "中村T", "渡部T"];
+/* チーム表示順: 杉山T → 中村T → 渡部T → 鈴木T → 鈴木Tプレ */
+export const REAL_TEAMS = ["杉山T", "中村T", "渡部T", "鈴木T"];
+export const ALL_TABS   = ["全体", "杉山T", "中村T", "渡部T", "鈴木T", "鈴木Tプレ"];
 
 /* ══════════════════════════════════════════════
    メンバー表示マスター順
@@ -7,10 +8,10 @@ export const ALL_TABS   = ["全体", "杉山T", "鈴木T", "鈴木Tプレ", "中
    ※ 杉山（全社FS）は表示上「杉山T」グループに含める
 ══════════════════════════════════════════════ */
 export const DISPLAY_GROUPS = [
+  { label: "杉山T", names: ["杉山", "小田切", "早川", "早坂"] },
   { label: "中村T", names: ["中村", "中", "櫻井", "青木"] },
   { label: "渡部T", names: ["渡部", "横井", "上浦", "太田"] },
   { label: "鈴木T", names: ["鈴木", "十文字", "井上"] },
-  { label: "杉山T", names: ["杉山", "小田切", "早川", "早坂"] },
 ];
 export const MEMBER_MASTER_NAMES = DISPLAY_GROUPS.flatMap(g => g.names);
 export const CONF       = ["30%", "50%", "70%", "回収"];
@@ -20,7 +21,7 @@ export const PHASES     = [
   "上長共有", "決済者商談予定", "決済者共有",
   "稟議中", "受注", "失注"
 ];
-export const TEAMS_OPT  = ["杉山T", "鈴木T", "中村T", "渡部T", "全社FS"];
+export const TEAMS_OPT  = ["杉山T", "中村T", "渡部T", "鈴木T", "全社FS"];
 export const ROLE_OPT   = ["IS", "FS", "IS+FS"];
 export const DEF_TGT    = 30;
 

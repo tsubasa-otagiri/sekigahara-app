@@ -1,7 +1,13 @@
 import { useState, useMemo } from "react";
 import { useApp } from "../../contexts/useApp.js";
 import { filterByTab, fmtAmt, isNeglected, getDealCredit } from "../../utils/index.js";
-import { CONF, CTW, THEX } from "../../constants/index.js";
+import { CONF, CTW, THEX, REAL_TEAMS } from "../../constants/index.js";
+
+/* チーム順ソートのインデックス（REAL_TEAMS 基準） */
+const teamIdx = (team) => {
+  const i = REAL_TEAMS.indexOf(team);
+  return i === -1 ? 99 : i;
+};
 import { TeamBadge } from "../ui/Badges.jsx";
 import Confirm from "../ui/Confirm.jsx";
 import DealDetailModal from "../DealDetailModal.jsx";
@@ -299,13 +305,15 @@ export default function KanbanView() {
       {/* カンバン ＋ 達成グラフ */}
       <div className="flex gap-4 items-start">
 
-      {/* 4列ボード */}
+      {/* 4列ボード（各列内をチーム順に並べる） */}
       <div className="flex-1 grid grid-cols-4 gap-2.5" style={{ minWidth: 0 }}>
         {COLS.map((conf) => (
           <KanbanCol
             key={conf}
             conf={conf}
-            deals={filtered.filter((d) => d.confidence === conf)}
+            deals={filtered
+              .filter((d) => d.confidence === conf)
+              .sort((a, b) => teamIdx(a.team) - teamIdx(b.team))}
             draggedId={draggedId}
             dragOverCol={dragOverCol}
             onDragStart={handleDragStart}
