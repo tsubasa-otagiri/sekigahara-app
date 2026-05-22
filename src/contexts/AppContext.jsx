@@ -129,11 +129,12 @@ export const AppProvider = ({ children }) => {
     if (!m) return false;
     authSave(m.id);
     setCurrentUserId(m.id);
-    /* ログイン時は常に当月・月次ビューにリセット */
+    /* ログイン時は常に当月・月次・マイページにリセット */
     const now = new Date();
     setCurrentYear(now.getFullYear());
     setCurrentMonth(now.getMonth() + 1);
     setPeriodType("month");
+    setActiveTab("マイ");
     /* 初期パスワード「1111」のままならパスワード変更を案内 */
     if (pw === "1111") setShowPwPrompt(true);
     return true;
