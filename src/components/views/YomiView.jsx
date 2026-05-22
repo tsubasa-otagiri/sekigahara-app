@@ -73,12 +73,17 @@ function DealRow({ deal, isAdmin, checked, onToggle, onDetail }) {
         {deal.phase}
       </td>
       {/* 最新の行動履歴 */}
-      <td className="px-3 py-3 text-[11px] text-slate-500 max-w-[220px]">
+      <td className="px-3 py-3 min-w-[320px]">
         {(() => {
           const m = lastActivityMemo(deal);
           return m
-            ? <span className="line-clamp-2 leading-snug" title={m}>{m}</span>
-            : <span className="text-slate-300">-</span>;
+            ? (
+              <span
+                className="text-[11px] text-slate-600 leading-relaxed whitespace-normal break-words line-clamp-3"
+                title={m}
+              >{m}</span>
+            )
+            : <span className="text-slate-300 text-[11px]">-</span>;
         })()}
       </td>
     </tr>
@@ -112,16 +117,18 @@ function GroupHeader({ conf, count, total, isAdmin, allChecked, onToggleAll }) {
 }
 
 /* ── テーブルヘッダー ── */
+/* sticky top: Header(56) + TeamTabs(43) + PeriodNav(41) + ViewNav(42) = 182px */
+const STICKY_TOP = "top-[182px]";
+const TH_BASE = `sticky ${STICKY_TOP} z-20 bg-[#f8fafc] px-3 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap`;
+
 function TableHead({ isAdmin }) {
   const TH = ({ children, cls = "" }) => (
-    <th className={`px-3 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap ${cls}`}>
-      {children}
-    </th>
+    <th className={`${TH_BASE} ${cls}`}>{children}</th>
   );
   return (
     <thead>
-      <tr className="border-b border-slate-200" style={{ background: "#f8fafc" }}>
-        {isAdmin && <th className="px-3 py-2.5 w-8" />}
+      <tr className="border-b border-slate-200">
+        {isAdmin && <th className={`${TH_BASE} w-8`} />}
         <TH cls="text-center w-16">最終行動日</TH>
         <TH>企業名</TH>
         <TH>プラン</TH>
@@ -129,7 +136,7 @@ function TableHead({ isAdmin }) {
         <TH>チーム</TH>
         <TH>IS / FS</TH>
         <TH>フェーズ</TH>
-        <TH>最新の行動履歴</TH>
+        <TH cls="min-w-[320px]">最新の行動履歴</TH>
       </tr>
     </thead>
   );
