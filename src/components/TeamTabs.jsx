@@ -25,16 +25,41 @@ export default function TeamTabs() {
                 <div key={tab} className="flex items-center px-3 shrink-0">
                   <button
                     onClick={() => setActiveTab(tab)}
-                    className={`flex flex-col items-center justify-center px-3.5 py-1.5 rounded-lg
-                      select-none outline-none cursor-pointer transition-all duration-150
-                      ${isActive
-                        ? "text-white hover:brightness-110"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200"
-                      }`}
-                    style={isActive ? { background: MY_COLOR } : {}}
+                    className="flex flex-col items-center justify-center select-none outline-none cursor-pointer transition-all"
+                    style={isActive ? {
+                      background: MY_COLOR,
+                      color: "#fff",
+                      border: `1.5px solid ${MY_COLOR}`,
+                      borderRadius: "4px",
+                      padding: "4px 12px",
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      letterSpacing: "0.03em",
+                    } : {
+                      background: "#fff",
+                      color: "#374151",     /* gray-700 */
+                      border: "1px solid #c9c7c5",
+                      borderRadius: "4px",
+                      padding: "4px 12px",
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      letterSpacing: "0.03em",
+                    }}
+                    onMouseEnter={e => {
+                      if (!isActive) {
+                        e.currentTarget.style.borderColor = MY_COLOR;
+                        e.currentTarget.style.color = MY_COLOR;
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!isActive) {
+                        e.currentTarget.style.borderColor = "#c9c7c5";
+                        e.currentTarget.style.color = "#374151";
+                      }
+                    }}
                   >
-                    <span className="text-[11px] font-bold leading-tight tracking-wide">マイページ</span>
-                    <span className={`text-[9px] leading-tight mt-px font-medium ${isActive ? "text-blue-100" : "text-gray-400"}`}>
+                    <span className="leading-tight">マイページ</span>
+                    <span style={{ fontSize: "9px", fontWeight: "500", color: isActive ? "rgba(255,255,255,0.7)" : "#9ca3af", marginTop: "1px" }}>
                       {currentUser?.name}
                     </span>
                   </button>

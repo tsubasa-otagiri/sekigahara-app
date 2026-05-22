@@ -268,19 +268,13 @@ export default function SummaryView() {
 
       {/* ── ヒーローカード ── */}
       <div
-        className="rounded-2xl text-white p-6 relative overflow-hidden"
+        className="rounded-2xl text-white p-6"
         style={{
           background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)`,
           boxShadow: `0 8px 32px -8px ${color}88, 0 4px 8px -4px ${color}55`,
         }}
       >
-        {/* 背景装飾 */}
-        <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10"
-          style={{ background: "radial-gradient(circle, white 0%, transparent 70%)", transform: "translate(30%,-30%)" }} />
-        <div className="absolute bottom-0 left-1/3 w-40 h-40 rounded-full opacity-[0.06]"
-          style={{ background: "white", transform: "translateY(40%)" }} />
-
-        <div className="relative flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-8">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-8">
           {/* 左: ヨミ合計 */}
           <div className="flex-1">
             <p className="text-[11px] font-semibold opacity-70 mb-1 uppercase tracking-widest">
