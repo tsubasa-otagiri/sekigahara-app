@@ -256,6 +256,13 @@ export default function SummaryView() {
   const kaishu   = byConf["回収"] || 0;
   const achRate  = teamTarget > 0 ? Math.min(Math.round((kaishu / teamTarget) * 100), 999) : 0;
 
+  /* コンサバ: 70% + 回収 */
+  const conserv      = (byConf["70%"] || 0) + (byConf["回収"] || 0);
+  const conservCount = filtered.filter(d => d.confidence === "70%" || d.confidence === "回収").length;
+  /* アグレッシブ: 50% + 70% + 回収 */
+  const aggress      = (byConf["50%"] || 0) + (byConf["70%"] || 0) + (byConf["回収"] || 0);
+  const agressCount  = filtered.filter(d => ["50%","70%","回収"].includes(d.confidence)).length;
+
   /* バナー色: THEX にないタブ（マイ）→ SF ブルー */
   const color    = THEX[activeTab] ?? "#0070d2";
   const isMulti  = activeTab === "全体" || activeTab === "鈴木Tプレ";
@@ -311,6 +318,24 @@ export default function SummaryView() {
                 <span className="opacity-50 w-8 tabular">{filtered.filter(d => d.confidence === c).length}件</span>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* ── アグレッシブ / コンサバ ── */}
+        <div className="mt-4 pt-4 border-t border-white/20 grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-[10px] font-semibold opacity-60 uppercase tracking-widest mb-1">
+              アグレッシブ（50%以上）
+            </p>
+            <p className="text-2xl font-black tabular leading-none">{fmtAmt(aggress)}</p>
+            <p className="text-[11px] opacity-50 mt-0.5">{agressCount} 件</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold opacity-60 uppercase tracking-widest mb-1">
+              コンサバ（70%以上）
+            </p>
+            <p className="text-2xl font-black tabular leading-none">{fmtAmt(conserv)}</p>
+            <p className="text-[11px] opacity-50 mt-0.5">{conservCount} 件</p>
           </div>
         </div>
       </div>
