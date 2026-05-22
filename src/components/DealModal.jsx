@@ -24,7 +24,7 @@ const BLANK = {
   company: "", plan: "MDC", amount: "",
   team: "", is: "", fs: "",
   confidence: "50%", phase: "未設定", note: "",
-  yomi: "", lossReason: "",
+  yomi: "50%", lossReason: "",
 };
 
 export default function DealModal({ deal, onClose }) {
@@ -74,8 +74,8 @@ export default function DealModal({ deal, onClose }) {
       if (key === "confidence") next.phase = resolvePhase(val, prev.phase);
       /* 確度 → ヨミ度自動連動 */
       if (key === "confidence") {
-        const map = {"回収":"受注","70%":"Aヨミ","50%":"Bヨミ","30%":"Cヨミ"};
-        next.yomi = map[val] || next.yomi || "Bヨミ";
+        const map = {"回収":"受注","70%":"70%","50%":"50%","30%":"30%"};
+        next.yomi = map[val] || next.yomi || "50%";
       }
       /* チーム変更 → IS/FSリセット */
       if (key === "team") { next.is = ""; next.fs = ""; }

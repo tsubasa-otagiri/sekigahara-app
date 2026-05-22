@@ -96,11 +96,11 @@ export const LS_KEYS = {
 export const AUTH_TTL = 24 * 60 * 60 * 1000;
 
 /* ヨミ度 */
-export const YOMI        = ["受注", "Aヨミ", "Bヨミ", "Cヨミ", "失注"];
-export const YOMI_WEIGHT = { "受注":1.0, "Aヨミ":0.7, "Bヨミ":0.5, "Cヨミ":0.3, "失注":0 };
+export const YOMI        = ["受注", "70%", "50%", "30%", "失注"];
+export const YOMI_WEIGHT = { "受注":1.0, "70%":0.7, "50%":0.5, "30%":0.3, "失注":0 };
 export const YOMI_COLOR  = {
-  "受注":"#22c55e", "Aヨミ":"#0070d2", "Bヨミ":"#f59e0b",
-  "Cヨミ":"#94a3b8", "失注":"#ef4444",
+  "受注":"#22c55e", "70%":"#0070d2", "50%":"#f59e0b",
+  "30%":"#94a3b8", "失注":"#ef4444",
 };
 /* 失注要因 */
 export const LOSS_REASONS   = ["価格負け","競合負け","時期尚早","要件不一致","その他"];

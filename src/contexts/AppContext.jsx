@@ -15,10 +15,18 @@ const _TODAY_ISO = new Date().toISOString();
 /** confidence → yomi デフォルト変換 */
 const _confToYomi = (c) => {
   if (c === "回収") return "受注";
-  if (c === "70%")  return "Aヨミ";
-  if (c === "50%")  return "Bヨミ";
-  if (c === "30%")  return "Cヨミ";
-  return "Bヨミ";
+  if (c === "70%")  return "70%";
+  if (c === "50%")  return "50%";
+  if (c === "30%")  return "30%";
+  return "50%";
+};
+
+/** 旧ヨミ度ラベル（Aヨミ/Bヨミ/Cヨミ）を新しい%表記に移行 */
+const _migrateYomi = (y) => {
+  if (y === "Aヨミ") return "70%";
+  if (y === "Bヨミ") return "50%";
+  if (y === "Cヨミ") return "30%";
+  return y;
 };
 
 const resolveYomi = (yomi, conf) => yomi || _confToYomi(conf);
@@ -45,7 +53,7 @@ export const AppProvider = ({ children }) => {
       is: normalizeName(d.is),
       fs: normalizeName(d.fs),
       period: d.period || TODAY_PERIOD,
-      yomi:       d.yomi       || _confToYomi(d.confidence),
+      yomi:       _migrateYomi(d.yomi || _confToYomi(d.confidence)),
       lossReason: d.lossReason || "",
       createdAt:  d.createdAt  || _TODAY_ISO,
       updatedAt:  d.updatedAt  || _TODAY_ISO,

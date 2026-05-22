@@ -91,7 +91,7 @@ export const normalizeName = (name) => {
 export const isNeglected = (deal) => {
   if (!deal) return false;
   const yomi = deal.yomi || "";
-  if (yomi === "受注" || yomi === "失注" || deal.confidence === "回収") return false;
+  if (yomi === "受注" || yomi === "失注" || yomi === "Aヨミ" || deal.confidence === "回収") return false;
   const lastTs = deal.activities?.length > 0
     ? Math.max(...deal.activities.map(a => new Date(a.date).getTime()))
     : new Date(deal.updatedAt || deal.createdAt || Date.now()).getTime();

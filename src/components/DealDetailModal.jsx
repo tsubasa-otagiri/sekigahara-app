@@ -20,7 +20,7 @@ export default function DealDetailModal({ deal, onClose }) {
 
   if (!deal) return null;
 
-  const yomi     = deal.yomi || "Bヨミ";
+  const yomi     = deal.yomi || "50%";
   const weight   = YOMI_WEIGHT[yomi] ?? 0.5;
   const weighted = (deal.amount || 0) * weight;
   const neglect  = isNeglected(deal);
