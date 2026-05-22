@@ -36,7 +36,6 @@ const _PHASE_MAP = {
   "⑥稟議中": "稟議中", "⑦受注": "受注", "⑧失注": "失注",
 };
 const _migratePhase = (p) => _PHASE_MAP[p] ?? p;
-};
 
 const resolveYomi = (yomi, conf) => yomi || _confToYomi(conf);
 
