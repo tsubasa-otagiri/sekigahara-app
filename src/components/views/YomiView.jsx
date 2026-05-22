@@ -148,6 +148,7 @@ export default function YomiView() {
     deleteDeal, setEditingDeal,
     activeTab, searchQuery, activePeriods,
   } = useApp();
+  const myName = currentUser?.name ?? "";
 
   const isAdmin = currentUser?.role === "admin";
 
@@ -164,7 +165,7 @@ export default function YomiView() {
   /* ── フィルター + 検索 ── */
   const filtered = useMemo(() => {
     const pdDeals = deals.filter(d => activePeriods.includes(d.period));
-    let ds = filterByTab(pdDeals, activeTab);
+    let ds = filterByTab(pdDeals, activeTab, myName);
     const q = searchQuery.trim().toLowerCase();
     if (q) {
       ds = ds.filter((d) =>

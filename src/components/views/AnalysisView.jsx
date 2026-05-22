@@ -256,7 +256,8 @@ function TeamBarChart({ stats, color }) {
    メインコンポーネント
 ══════════════════════════════════════════════ */
 export default function AnalysisView() {
-  const { deals, members, activeTab, activePeriods } = useApp();
+  const { deals, members, currentUser, activeTab, activePeriods } = useApp();
+  const myName = currentUser?.name ?? "";
 
   /* 表示メンバー（admin・退職者除外）— DISPLAY_GROUPS ベースでフィルタ */
   const teamMembers = useMemo(() => {
@@ -277,7 +278,7 @@ export default function AnalysisView() {
   /* チーム案件 */
   const teamDeals = useMemo(() => {
     const pdDeals = deals.filter(d => activePeriods.includes(d.period));
-    return filterByTab(pdDeals, activeTab);
+    return filterByTab(pdDeals, activeTab, myName);
   }, [deals, activeTab, activePeriods]);
 
   /* チーム目標合計 */

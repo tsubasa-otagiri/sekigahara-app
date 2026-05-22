@@ -144,7 +144,8 @@ function KanbanCol({
 
 /* ── メインコンポーネント ── */
 export default function KanbanView() {
-  const { deals, updateDeal, activeTab, searchQuery, activePeriods } = useApp();
+  const { deals, updateDeal, currentUser, activeTab, searchQuery, activePeriods } = useApp();
+  const myName = currentUser?.name ?? "";
 
   const [draggedId,   setDraggedId]   = useState(null);
   const [dragOverCol, setDragOverCol] = useState(null);
@@ -153,7 +154,7 @@ export default function KanbanView() {
 
   const filtered = useMemo(() => {
     const pdDeals = deals.filter(d => activePeriods.includes(d.period));
-    let ds = filterByTab(pdDeals, activeTab);
+    let ds = filterByTab(pdDeals, activeTab, myName);
     const q = searchQuery.trim().toLowerCase();
     if (q) {
       ds = ds.filter((d) =>

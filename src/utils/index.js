@@ -28,9 +28,12 @@ export const lsSet = (k, v) => {
   try { localStorage.setItem(k, JSON.stringify(v)); } catch {}
 };
 
-/* ── チームフィルタ: 鈴木Tプレ = 杉山T + 鈴木T ── */
-export const filterByTab = (deals, tab) => {
+/* ── チームフィルタ: 鈴木Tプレ = 杉山T + 鈴木T / マイ = 自分担当案件 ── */
+export const filterByTab = (deals, tab, myName = "") => {
   if (tab === "全体") return deals;
+  if (tab === "マイ") return myName
+    ? deals.filter(d => d.is === myName || d.fs === myName)
+    : deals;
   if (tab === "鈴木Tプレ") return deals.filter(d => d.team === "杉山T" || d.team === "鈴木T");
   return deals.filter(d => d.team === tab);
 };
