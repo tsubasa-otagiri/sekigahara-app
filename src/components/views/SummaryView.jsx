@@ -16,12 +16,18 @@ const CONF_HEX = { "30%":"#f59e0b", "50%":"#3b82f6", "70%":"#10b981", "回収":"
 const CONF_ORDER = [...CONF].reverse(); // 回収→70%→50%→30%
 
 /* ── Stat カード ── */
-function StatCard({ conf, amt, count, total }) {
+function StatCard({ conf, amt, count, total, onClick }) {
   const tw  = CTW[conf] ?? CTW["30%"];
   const hex = CONF_HEX[conf];
   const pct = total > 0 ? Math.round((amt / total) * 100) : 0;
   return (
-    <div className="bg-white rounded-2xl p-4 flex flex-col gap-2 card-shadow hover:card-shadow-md transition-shadow">
+    <div
+      className="bg-white rounded-2xl p-4 flex flex-col gap-2 card-shadow
+        hover:card-shadow-md hover:-translate-y-0.5 hover:ring-2 transition-all duration-150
+        cursor-pointer active:scale-[0.98] select-none"
+      style={{ "--tw-ring-color": hex + "40" }}
+      onClick={onClick}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full flex-none" style={{ background: hex }} />
@@ -134,86 +140,6 @@ function TeamStackBar({ deals, teams }) {
   );
 }
 
-/* ══════════════════════════════════════════════
-   マイダッシュボード
-   ログインユーザーが IS / FS として関与している案件を
-   ヨミ度ごとに集計して表示（ヨミは分類ラベル、重み計算なし）
-══════════════════════════════════════════════ */
-const MY_YOMI = [
-  { val: "受注", label: "受注", color: YOMI_COLOR["受注"] },
-  { val: "70%",  label: "70%",  color: YOMI_COLOR["70%"]  },
-  { val: "50%",  label: "50%",  color: YOMI_COLOR["50%"]  },
-  { val: "30%",  label: "30%",  color: YOMI_COLOR["30%"]  },
-];
-
-function MyDashboard({ deals, activePeriods, currentUser }) {
-  const name = currentUser?.name;
-
-  /* 期間内で自分が IS or FS の案件（失注除く） */
-  const myDeals = useMemo(() => {
-    if (!name) return [];
-    return deals.filter(d =>
-      activePeriods.includes(d.period) &&
-      (d.is === name || d.fs === name) &&
-      d.yomi !== "失注"
-    );
-  }, [deals, name, activePeriods]);
-
-  /* ヨミ度ごとに集計（件数・金額のみ） */
-  const groups = useMemo(() =>
-    MY_YOMI.map(({ val, label, color }) => {
-      const ds  = myDeals.filter(d => d.yomi === val);
-      const amt = ds.reduce((s, d) => s + (d.amount || 0), 0);
-      return { val, label, color, count: ds.length, amount: amt };
-    }),
-  [myDeals]);
-
-  const totalAmt = groups.reduce((s, g) => s + g.amount, 0);
-
-  if (!name) return null;
-
-  return (
-    <div className="bg-white rounded-2xl card-shadow overflow-hidden">
-      {/* ヘッダーバー */}
-      <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase">MY Dashboard</span>
-          <span className="text-[11px] font-bold text-slate-600">— {name}</span>
-        </div>
-        <span className="text-[11px] font-semibold text-slate-400">{myDeals.length} 件 / {fmtAmt(totalAmt)}</span>
-      </div>
-
-      <div className="p-4 sm:p-5">
-        {myDeals.length === 0 ? (
-          <p className="text-xs text-slate-400 text-center py-4">担当案件がありません</p>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {groups.map(({ val, label, color, count, amount }) => (
-              <div
-                key={val}
-                className="rounded-xl p-3.5 flex flex-col gap-2"
-                style={{ background: color + "0d", border: `1.5px solid ${color}30` }}
-              >
-                {/* ヨミラベル */}
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
-                  <span className="text-[13px] font-black" style={{ color }}>{label}</span>
-                </div>
-
-                {/* 合計金額（大きく） */}
-                <p className="text-xl font-black text-slate-800 tabular leading-none">{fmtAmt(amount)}</p>
-
-                {/* 件数 */}
-                <p className="text-[11px] text-slate-400 tabular">{count} 件</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /* ── 加重パイプライン ── */
 function WeightedPipeline({ filtered }) {
   const yomiData = useMemo(() => {
@@ -301,32 +227,38 @@ function LossReasonChart({ filtered }) {
 
 /* ── メイン ── */
 export default function SummaryView() {
-  const { deals, members, activeTab, activePeriods, currentUser } = useApp();
+  const { deals, members, activeTab, activePeriods, currentUser, setActiveView } = useApp();
+
+  /* ── チーム集計（グラフ用） ── */
   const filtered = useMemo(() => {
     const pd = deals.filter(d => activePeriods.includes(d.period));
     return filterByTab(pd, activeTab);
   }, [deals, activeTab, activePeriods]);
 
-  const byConf = useMemo(() => {
+  /* ── 個人集計（バナー・ミニカード用） ── */
+  const myDeals = useMemo(() => {
+    const name = currentUser?.name;
+    if (!name) return [];
+    return deals.filter(d =>
+      activePeriods.includes(d.period) &&
+      (d.is === name || d.fs === name)
+    );
+  }, [deals, currentUser, activePeriods]);
+
+  const myByConf = useMemo(() => {
     const acc = { "30%": 0, "50%": 0, "70%": 0, "回収": 0 };
-    filtered.forEach(d => { acc[d.confidence] = (acc[d.confidence] || 0) + (d.amount || 0); });
+    myDeals.forEach(d => { acc[d.confidence] = (acc[d.confidence] || 0) + (d.amount || 0); });
     return acc;
-  }, [filtered]);
+  }, [myDeals]);
 
-  /* チーム目標合計 */
-  const teamTarget = useMemo(() => {
-    return members
-      .filter(m => m.role !== "admin" && m.status === "active" &&
-        (activeTab === "全体" || m.team === activeTab ||
-         (activeTab === "鈴木Tプレ" && (m.team === "杉山T" || m.team === "鈴木T"))))
-      .reduce((s, m) => s + (m.target || 0), 0);
-  }, [members, activeTab]);
+  const myTotal       = Object.values(myByConf).reduce((a, b) => a + b, 0);
+  const myKaishu      = myByConf["回収"] || 0;
+  const personalTarget = currentUser?.target || 0;
+  const myAchRate     = personalTarget > 0 ? Math.min(Math.round((myKaishu / personalTarget) * 100), 999) : 0;
 
-  const total    = Object.values(byConf).reduce((a, b) => a + b, 0);
-  const kaishu   = byConf["回収"] || 0;
-  const achRate  = teamTarget > 0 ? Math.min(Math.round((kaishu / teamTarget) * 100), 999) : 0;
-  const color    = THEX[activeTab] ?? "#7c3aed";
-  const isMulti  = activeTab === "全体" || activeTab === "鈴木Tプレ";
+  /* バナー色 = ログインユーザーのチームカラー */
+  const color     = THEX[currentUser?.team] ?? "#0070d2";
+  const isMulti   = activeTab === "全体" || activeTab === "鈴木Tプレ";
   const teamsShow = activeTab === "鈴木Tプレ" ? ["杉山T", "鈴木T"] : REAL_TEAMS;
 
   return (
@@ -347,58 +279,61 @@ export default function SummaryView() {
           style={{ background: "white", transform: "translateY(40%)" }} />
 
         <div className="relative flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-8">
-          {/* 左: メイン数値 */}
+          {/* 左: 個人ヨミ合計 */}
           <div className="flex-1">
             <p className="text-[11px] font-semibold opacity-70 mb-1 uppercase tracking-widest">
-              {activeTab} — ヨミ合計
+              {currentUser?.name} — ヨミ合計
             </p>
-            <p className="text-5xl font-black leading-none tabular">{fmtAmt(total)}</p>
-            <p className="text-sm opacity-60 mt-2">{filtered.length} 案件</p>
+            <p className="text-5xl font-black leading-none tabular">{fmtAmt(myTotal)}</p>
+            <p className="text-sm opacity-60 mt-2">{myDeals.length} 案件</p>
           </div>
 
-          {/* 右: 目標達成率 */}
-          {teamTarget > 0 && (
+          {/* 右: 個人目標達成率 */}
+          {personalTarget > 0 && (
             <div className="sm:text-right">
-              <p className="text-[11px] opacity-70 mb-1.5 uppercase tracking-widest">回収 / 目標</p>
+              <p className="text-[11px] opacity-70 mb-1.5 uppercase tracking-widest">受注 / 目標</p>
               <p className="text-2xl font-black tabular leading-none">
-                {fmtAmt(kaishu)}
-                <span className="text-sm font-semibold opacity-60 ml-1">/ {fmtAmt(teamTarget)}</span>
+                {fmtAmt(myKaishu)}
+                <span className="text-sm font-semibold opacity-60 ml-1">/ {fmtAmt(personalTarget)}</span>
               </p>
               <div className="mt-2 h-2 w-36 bg-white/20 rounded-full overflow-hidden ml-auto">
                 <div
                   className="h-full bg-white rounded-full transition-all duration-700"
-                  style={{ width: `${Math.min(achRate, 100)}%`, opacity: 0.9 }}
+                  style={{ width: `${Math.min(myAchRate, 100)}%`, opacity: 0.9 }}
                 />
               </div>
-              <p className="text-xs mt-1 font-bold opacity-80 tabular">{achRate}% 達成</p>
+              <p className="text-xs mt-1 font-bold opacity-80 tabular">{myAchRate}% 達成</p>
             </div>
           )}
 
-          {/* 右: 確度内訳 mini */}
+          {/* 右: 個人確度内訳 mini */}
           <div className="hidden lg:flex flex-col gap-1 text-right border-l border-white/20 pl-6">
             {CONF_ORDER.map(c => (
               <div key={c} className="flex items-center gap-2 justify-end text-[11px]">
                 <span className="opacity-70">{c}</span>
-                <span className="font-black tabular opacity-90 w-14">{fmtAmt(byConf[c] || 0)}</span>
-                <span className="opacity-50 w-8 tabular">{filtered.filter(d => d.confidence === c).length}件</span>
+                <span className="font-black tabular opacity-90 w-14">{fmtAmt(myByConf[c] || 0)}</span>
+                <span className="opacity-50 w-8 tabular">{myDeals.filter(d => d.confidence === c).length}件</span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ── 確度別カード ── */}
+      {/* ── 個人確度別ミニカード（クリックでヨミ一覧へ） ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {CONF_ORDER.map(conf => (
-          <StatCard key={conf} conf={conf} amt={byConf[conf] || 0}
-            count={filtered.filter(d => d.confidence === conf).length} total={total} />
+          <StatCard
+            key={conf}
+            conf={conf}
+            amt={myByConf[conf] || 0}
+            count={myDeals.filter(d => d.confidence === conf).length}
+            total={myTotal}
+            onClick={() => setActiveView("list")}
+          />
         ))}
       </div>
 
-      {/* ── マイダッシュボード ── */}
-      <MyDashboard deals={deals} activePeriods={activePeriods} currentUser={currentUser} />
-
-      {/* ── グラフ ── */}
+      {/* ── グラフ（チーム集計） ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white rounded-2xl p-5 card-shadow">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">確度別 金額内訳</p>
