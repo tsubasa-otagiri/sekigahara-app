@@ -51,7 +51,14 @@ export const AppProvider = ({ children }) => {
   const [members, setMembers] = useState(() => {
     const stored = lsGet(LS_KEYS.MEMBERS, DEF_MEMBERS);
     /* 旧ニックネーム → 正式名 に自動変換 */
-    return stored.map(m => ({ ...m, name: normalizeName(m.name) }));
+    let result = stored.map(m => ({ ...m, name: normalizeName(m.name) }));
+    /* 一回限りパスワードリセット: 全員「1111」に統一 */
+    const PW_RESET_KEY = "honnoji_pw_reset_v1";
+    if (!localStorage.getItem(PW_RESET_KEY)) {
+      result = result.map(m => ({ ...m, pw: "1111" }));
+      localStorage.setItem(PW_RESET_KEY, "1");
+    }
+    return result;
   });
   const [deals, setDeals] = useState(() => {
     const stored = lsGet(LS_KEYS.DEALS, DEF_DEALS);
