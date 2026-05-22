@@ -109,6 +109,33 @@ export default function PeriodNav() {
             <Chevron color={isMonthMode ? SF : "#706e6b"} />
           </div>
 
+          {/* 当月ボタン */}
+          <button
+            onClick={() => {
+              const now = new Date();
+              setCurrentYear(now.getFullYear());
+              setCurrentMonth(now.getMonth() + 1);
+              setPeriodType("month");
+            }}
+            style={{
+              borderRadius: "4px",
+              border: `1.5px solid ${SF}`,
+              padding: "4px 10px",
+              fontSize: "11px",
+              fontWeight: "700",
+              background: SF,
+              color: "#fff",
+              cursor: "pointer",
+              transition: "all 0.12s",
+              letterSpacing: "0.03em",
+              flexShrink: 0,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#005a9e"; e.currentTarget.style.borderColor = "#005a9e"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = SF; e.currentTarget.style.borderColor = SF; }}
+          >
+            当月
+          </button>
+
           <div className="w-px h-4 bg-slate-200 shrink-0" />
 
           {/* Q1〜Q4 */}
