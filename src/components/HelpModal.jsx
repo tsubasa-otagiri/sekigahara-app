@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, LogIn, CalendarDays, LayoutKanban, Database, RefreshCw, AlertTriangle } from "lucide-react";
+import { X, LogIn, CalendarDays, Kanban, Database, RefreshCw, AlertTriangle } from "lucide-react";
 
 const Section = ({ icon: Icon, color, title, children }) => (
   <div className="rounded-xl border border-slate-100 overflow-hidden">
@@ -85,7 +85,7 @@ export default function HelpModal({ onClose }) {
           </Section>
 
           {/* 3. カンバン・案件 */}
-          <Section icon={LayoutKanban} color="#7c3aed" title="3. カンバン画面と案件の登録・編集">
+          <Section icon={Kanban} color="#7c3aed" title="3. カンバン画面と案件の登録・編集">
             <Tip>右上の<strong>「新規案件」ボタン</strong>で案件を登録。月は「対象年月」プルダウンで設定します。</Tip>
             <Tip>カンバンのカードをドラッグ＆ドロップすると確度（列）を変更できます（確認ダイアログあり）。</Tip>
             <Tip>案件行（またはカード）をクリックすると詳細モーダルが開きます。詳細モーダル内から案件名・担当・金額・プランの編集、フェーズ変更、活動履歴の記録ができます。</Tip>
