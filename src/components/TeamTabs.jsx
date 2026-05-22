@@ -6,10 +6,8 @@ const MY_COLOR = "#0070d2"; // SF ブルー（マイタブ専用）
 export default function TeamTabs() {
   const { activeTab, setActiveTab, currentUser } = useApp();
 
-  /* 全タブ: ALL_TABS に「マイ」を「全体」の直後に挿入 */
-  const tabs = currentUser
-    ? [ALL_TABS[0], "マイ", ...ALL_TABS.slice(1)]
-    : ALL_TABS;
+  /* 全タブ: 「マイ」を一番左端に配置 */
+  const tabs = currentUser ? ["マイ", ...ALL_TABS] : ALL_TABS;
 
   return (
     <div className="bg-white" style={{ borderBottom: "1px solid #f1f5f9" }}>
@@ -20,8 +18,42 @@ export default function TeamTabs() {
             const isActive = tab === activeTab;
             const color    = isMy ? MY_COLOR : (THEX[tab] ?? "#6d28d9");
             const isPre    = tab === "鈴木Tプレ";
-            const label    = isMy ? `マイ（${currentUser?.name}）` : tab;
 
+            /* マイタブ: 2行レイアウト（マイページ＋名前） */
+            if (isMy) {
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className="relative shrink-0 flex flex-col items-start justify-center px-4 py-2
+                    select-none outline-none transition-colors duration-150"
+                  style={{ color: isActive ? color : "#94a3b8", minHeight: "48px" }}
+                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = "#64748b"; }}
+                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = "#94a3b8"; }}
+                >
+                  <span className="text-[12px] font-bold leading-tight">マイページ</span>
+                  <span
+                    className="text-[10px] leading-tight mt-0.5"
+                    style={{ color: isActive ? color + "bb" : "#c0c8d4" }}
+                  >
+                    {currentUser?.name}
+                  </span>
+                  {/* アクティブ下線 */}
+                  <span
+                    className="absolute bottom-0 left-0 right-0 transition-all duration-200"
+                    style={{
+                      height: 2,
+                      background: isActive ? color : "transparent",
+                      borderRadius: "2px 2px 0 0",
+                      transform: isActive ? "scaleX(1)" : "scaleX(0)",
+                      transformOrigin: "center",
+                    }}
+                  />
+                </button>
+              );
+            }
+
+            /* 通常タブ */
             return (
               <button
                 key={tab}
@@ -32,20 +64,17 @@ export default function TeamTabs() {
                 onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = "#64748b"; }}
                 onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = "#94a3b8"; }}
               >
-                {/* カラードット */}
                 <span
                   className="w-1.5 h-1.5 rounded-full flex-none transition-opacity duration-150"
                   style={{ background: color, opacity: isActive ? 1 : 0.35 }}
                 />
-                {label}
-                {/* 合算バッジ */}
+                {tab}
                 {isPre && (
                   <span className="text-[9px] font-bold px-1 py-0.5 rounded-full leading-none"
                     style={{ background: color + "22", color }}>
                     合算
                   </span>
                 )}
-                {/* アクティブ下線 */}
                 <span
                   className="absolute bottom-0 left-0 right-0 transition-all duration-200"
                   style={{
