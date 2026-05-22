@@ -1,17 +1,17 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, Plus, MessageSquare, Phone, Mail, FileText, Users, Clock } from "lucide-react";
+import { X, Trash2, MessageSquare, Phone, Mail, FileText, Users, Clock } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
 import { ACTIVITY_TYPES, YOMI_COLOR, YOMI_WEIGHT } from "../constants/index.js";
 import { fmtAmt, isNeglected } from "../utils/index.js";
 
 const TYPE_ICON = {
-  "商談":     <Users size={12} />,
-  "電話":     <Phone size={12} />,
-  "メール":   <Mail size={12} />,
+  "商談":       <Users size={12} />,
+  "電話":       <Phone size={12} />,
+  "メール":     <Mail size={12} />,
   "提案書提出": <FileText size={12} />,
-  "社内MTG":  <MessageSquare size={12} />,
-  "その他":   <Clock size={12} />,
+  "社内MTG":    <MessageSquare size={12} />,
+  "その他":     <Clock size={12} />,
 };
 
 /* 今日の日付を "YYYY-MM-DD" で返す */
@@ -23,22 +23,26 @@ const dateStrToIso = (s) => {
   return new Date(y, m - 1, d, 12, 0, 0).toISOString();
 };
 
-/* ISO → "YYYY/MM/DD HH:MM"（日付のみの場合は時刻なし） */
+/* ISO → "YYYY/MM/DD HH:MM"（正午入力=日付のみ表示） */
 const fmtDate = (iso) => {
   if (!iso) return "";
   const dt = new Date(iso);
   const date = `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,"0")}/${String(dt.getDate()).padStart(2,"0")}`;
   const h = dt.getHours(), mi = dt.getMinutes();
-  /* 正午±30分なら「日付のみ入力」とみなして時刻省略 */
-  const isDateOnly = h === 12 && mi === 0;
-  return isDateOnly ? date : `${date} ${String(h).padStart(2,"0")}:${String(mi).padStart(2,"0")}`;
+  return (h === 12 && mi === 0) ? date : `${date} ${String(h).padStart(2,"0")}:${String(mi).padStart(2,"0")}`;
 };
 
-export default function DealDetailModal({ deal, onClose }) {
-  const { addActivity } = useApp();
-  const [type, setType]   = useState("商談");
-  const [memo, setMemo]   = useState("");
-  const [date, setDate]   = useState(todayStr);   // "YYYY-MM-DD"
+/* 共通 input スタイル */
+const INP = "text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition";
+
+export default function DealDetailModal({ deal: dealProp, onClose }) {
+  /* ── contextから最新の deal を常に参照（即時反映） ── */
+  const { deals, addActivity, deleteActivity } = useApp();
+  const deal = deals.find(d => d.id === dealProp.id) ?? dealProp;
+
+  const [type, setType] = useState("商談");
+  const [memo, setMemo] = useState("");
+  const [date, setDate] = useState(todayStr);
 
   /* ── スクロールロック ── */
   useEffect(() => {
@@ -65,19 +69,23 @@ export default function DealDetailModal({ deal, onClose }) {
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
+  /* ── 活動追加 ── */
   const handleAdd = () => {
     if (!memo.trim()) return;
     addActivity(deal.id, {
       type,
-      memo:  memo.trim(),
-      date:  dateStrToIso(date),     // 選択日付をISO変換して渡す
+      memo: memo.trim(),
+      date: dateStrToIso(date),
     });
     setMemo("");
-    setDate(todayStr());             // 入力後に今日へリセット
+    setDate(todayStr());
   };
 
-  /* ── 日付入力欄の共通スタイル ── */
-  const INP_CLS = "text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100";
+  /* ── 活動削除（確認あり） ── */
+  const handleDelete = (actId) => {
+    if (!window.confirm("この活動履歴を削除してもよろしいですか？")) return;
+    deleteActivity(deal.id, actId);
+  };
 
   return createPortal(
     /* ── オーバーレイ（背景クリックで閉じる） ── */
@@ -128,7 +136,7 @@ export default function DealDetailModal({ deal, onClose }) {
           {sorted.length === 0 ? (
             <p className="text-xs text-slate-400 text-center py-6">まだ活動履歴がありません</p>
           ) : sorted.map(a => (
-            <div key={a.id} className="flex gap-3 p-3 bg-slate-50 rounded-xl">
+            <div key={a.id} className="group flex gap-3 p-3 bg-slate-50 rounded-xl hover:bg-slate-100/70 transition-colors">
               <div className="mt-0.5 text-slate-400 shrink-0">{TYPE_ICON[a.type] || <Clock size={12} />}</div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -137,6 +145,14 @@ export default function DealDetailModal({ deal, onClose }) {
                 </div>
                 <p className="text-xs text-slate-700 mt-0.5 leading-relaxed whitespace-pre-wrap">{a.memo}</p>
               </div>
+              {/* 削除ボタン（ホバー時に表示） */}
+              <button
+                onClick={() => handleDelete(a.id)}
+                className="shrink-0 self-start p-1 rounded-md text-slate-300 hover:text-red-500 hover:bg-red-50 transition opacity-0 group-hover:opacity-100"
+                title="削除"
+              >
+                <Trash2 size={12} />
+              </button>
             </div>
           ))}
         </div>
@@ -146,22 +162,19 @@ export default function DealDetailModal({ deal, onClose }) {
 
           {/* 1行目: 種別 ＋ 日付 */}
           <div className="flex gap-2">
-            {/* 種別セレクト */}
             <select
               value={type}
               onChange={e => setType(e.target.value)}
-              className={`shrink-0 ${INP_CLS}`}
+              className={`shrink-0 ${INP}`}
             >
               {ACTIVITY_TYPES.map(t => <option key={t}>{t}</option>)}
             </select>
-
-            {/* 日付ピッカー */}
             <input
               type="date"
               value={date}
-              max={todayStr()}          // 未来日は選択不可
+              max={todayStr()}
               onChange={e => setDate(e.target.value)}
-              className={`shrink-0 ${INP_CLS}`}
+              className={`shrink-0 ${INP}`}
             />
           </div>
 
@@ -170,17 +183,19 @@ export default function DealDetailModal({ deal, onClose }) {
             <input
               value={memo}
               onChange={e => setMemo(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleAdd()}
-              placeholder="活動内容を入力（Enter で追加）"
-              className={`flex-1 ${INP_CLS}`}
+              /* Enter キーでの暴発防止 — ボタンクリックのみで追加 */
+              onKeyDown={e => { if (e.key === "Enter") e.preventDefault(); }}
+              placeholder="活動内容を入力..."
+              className={`flex-1 ${INP}`}
             />
             <button
               onClick={handleAdd}
               disabled={!memo.trim()}
-              className="shrink-0 p-1.5 rounded-lg text-white disabled:opacity-40 transition active:scale-95"
+              className="shrink-0 px-4 py-1.5 rounded-lg text-white text-xs font-bold
+                disabled:opacity-40 transition active:scale-95 hover:brightness-110 whitespace-nowrap"
               style={{ background: "#0070d2" }}
             >
-              <Plus size={14} />
+              追加
             </button>
           </div>
         </div>
