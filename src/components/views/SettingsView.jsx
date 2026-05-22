@@ -548,6 +548,22 @@ const SECTIONS = [
 
 export default function SettingsView() {
   const [section, setSection] = useState("members");
+  const { currentUser } = useApp();
+
+  /* 管理者以外はアクセス不可 */
+  if (currentUser?.role !== "admin") {
+    return (
+      <div className="min-h-full flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <Lock size={28} className="text-gray-300" />
+          </div>
+          <p className="text-sm font-bold text-gray-500">管理者専用エリアです</p>
+          <p className="text-xs text-gray-400 mt-1">管理者アカウントでログインしてください</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     /* 他ビューより濃いグレー背景 */

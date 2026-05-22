@@ -1,17 +1,21 @@
 import { BarChart2, List, Kanban, User, TrendingUp, Settings } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
 
-const VIEWS = [
-  { id: "summary",  label: "サマリー",   Icon: BarChart2  },
-  { id: "list",     label: "ヨミ一覧",   Icon: List        },
-  { id: "kanban",   label: "カンバン",   Icon: Kanban      },
-  { id: "personal", label: "ランキング",  Icon: User        },
-  { id: "analysis", label: "個人数字",   Icon: TrendingUp  },
-  { id: "settings", label: "設定",       Icon: Settings    },
+const ALL_VIEWS = [
+  { id: "summary",  label: "サマリー",   Icon: BarChart2,  adminOnly: false },
+  { id: "list",     label: "ヨミ一覧",   Icon: List,       adminOnly: false },
+  { id: "kanban",   label: "カンバン",   Icon: Kanban,     adminOnly: false },
+  { id: "personal", label: "ランキング",  Icon: User,       adminOnly: false },
+  { id: "analysis", label: "個人数字",   Icon: TrendingUp, adminOnly: false },
+  { id: "settings", label: "設定",       Icon: Settings,   adminOnly: true  }, // 管理者専用
 ];
 
 export default function ViewNav() {
-  const { activeView, setActiveView } = useApp();
+  const { activeView, setActiveView, currentUser } = useApp();
+  const isAdmin = currentUser?.role === "admin";
+
+  /* 管理者以外には adminOnly タブを非表示 */
+  const VIEWS = ALL_VIEWS.filter(v => !v.adminOnly || isAdmin);
 
   return (
     <div className="bg-slate-50/80" style={{ borderBottom: "1px solid #e2e8f0" }}>

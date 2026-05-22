@@ -1,26 +1,21 @@
 import { useState } from "react";
-import { Lock, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Lock, Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
 import KabutoLogo from "../assets/KabutoLogo.jsx";
 import { DISPLAY_GROUPS, MEMBER_MASTER_NAMES } from "../constants/index.js";
 
+const SF = "#0070d2";
+
 export default function Login() {
   const { login, members, logoDataUrl } = useApp();
-
   const activeMembers = members.filter(m => m.status === "active");
 
-  /* マスター順でグループ化 */
+  /* マスター順グループ化 */
   const memberGroups = DISPLAY_GROUPS.map(g => ({
     label: g.label,
-    members: g.names
-      .map(name => activeMembers.find(m => m.name === name))
-      .filter(Boolean),
+    members: g.names.map(name => activeMembers.find(m => m.name === name)).filter(Boolean),
   })).filter(g => g.members.length > 0);
-
-  /* DISPLAY_GROUPS に含まれないメンバー（管理者など）を末尾に追加 */
-  const ungrouped = activeMembers.filter(
-    m => !MEMBER_MASTER_NAMES.includes(m.name)
-  );
+  const ungrouped = activeMembers.filter(m => !MEMBER_MASTER_NAMES.includes(m.name));
 
   const [selectedId, setSelectedId] = useState("");
   const [pw,         setPw]         = useState("");
@@ -39,50 +34,108 @@ export default function Login() {
     if (!ok) setError("パスワードが正しくありません");
   };
 
-  /* Salesforce Blue グラデーション背景 */
-  const BG = "linear-gradient(135deg,#001639 0%,#032d60 50%,#0070d2 100%)";
-  const SF_BLUE = "#0070d2";
-  const SF_DARK = "#005a9e";
+  /* ── 入力フィールド共通スタイル ── */
+  const INP =
+    "w-full px-4 py-3 rounded-xl text-sm bg-white/90 text-slate-800 " +
+    "border border-white/20 focus:outline-none focus:border-blue-400 " +
+    "focus:ring-2 focus:ring-blue-400/20 transition placeholder:text-slate-400";
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: BG }}>
-      <div className="w-full max-w-sm">
+    <div
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: "linear-gradient(150deg,#00101f 0%,#001a38 30%,#002a5c 65%,#0050a0 100%)" }}
+    >
+      {/* 背景: 微細グリッドパターン */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px)," +
+            "linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px)",
+          backgroundSize: "52px 52px",
+        }}
+      />
 
-        {/* ── ロゴエリア ── */}
-        <div className="text-center mb-8">
-          {logoDataUrl && (
-            <div className="inline-flex items-center justify-center mb-4 drop-shadow-xl">
+      {/* 背景: 中央グロー */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          top: "28%", left: "50%", transform: "translate(-50%,-50%)",
+          width: "800px", height: "500px",
+          background: "radial-gradient(ellipse,rgba(0,112,210,0.22) 0%,transparent 68%)",
+        }}
+      />
+
+      {/* ── コンテンツ ── */}
+      <div className="w-full max-w-sm relative z-10">
+
+        {/* ロゴエリア */}
+        <div className="text-center mb-9">
+          {logoDataUrl ? (
+            <div className="inline-flex mb-5">
               <img
                 src={logoDataUrl}
-                alt="HONNOJI logo"
-                className="w-[72px] h-[72px] rounded-2xl object-contain"
+                alt="logo"
+                className="w-20 h-20 rounded-2xl object-contain"
+                style={{ filter: "drop-shadow(0 8px 24px rgba(0,112,210,0.5))" }}
               />
             </div>
+          ) : (
+            <div className="inline-flex mb-5" style={{ filter: "drop-shadow(0 8px 24px rgba(255,255,255,0.15))" }}>
+              <KabutoLogo size={84} transparent />
+            </div>
           )}
-          <h1 className="text-2xl font-black text-white tracking-tight">HONNOJI</h1>
-          <p className="text-gray-400 text-sm mt-1 font-semibold tracking-wide">no HEN</p>
+          <h1
+            className="text-[30px] font-black text-white leading-none"
+            style={{ letterSpacing: "0.22em", textShadow: "0 2px 20px rgba(0,112,210,0.5)" }}
+          >
+            HONNOJI
+          </h1>
+          <p
+            className="mt-2 text-xs font-bold"
+            style={{ letterSpacing: "0.45em", color: "rgba(255,255,255,0.3)" }}
+          >
+            no HEN
+          </p>
         </div>
 
-        {/* ── カード ── */}
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+        {/* ── ログインカード（ガラス） ── */}
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{
+            background: "rgba(0,12,35,0.72)",
+            backdropFilter: "blur(28px)",
+            WebkitBackdropFilter: "blur(28px)",
+            border: "1px solid rgba(255,255,255,0.09)",
+            boxShadow:
+              "0 24px 48px rgba(0,0,0,0.55)," +
+              "0 0 0 1px rgba(255,255,255,0.04)," +
+              "inset 0 1px 0 rgba(255,255,255,0.07)",
+          }}
+        >
           {/* カードヘッダーバー */}
-          <div className="px-6 py-4" style={{ background: SF_BLUE }}>
-            <div className="flex items-center gap-2 text-white">
-              <Lock size={15} />
-              <span className="text-sm font-bold">ログイン</span>
-            </div>
+          <div
+            className="px-6 py-3.5 flex items-center gap-2"
+            style={{
+              background: "rgba(0,100,200,0.55)",
+              borderBottom: "1px solid rgba(255,255,255,0.07)",
+            }}
+          >
+            <Lock size={13} className="text-white/70 flex-none" />
+            <span className="text-[13px] font-bold text-white tracking-wide">ログイン</span>
           </div>
 
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
+
             {/* メンバー選択 */}
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1.5">メンバー</label>
+              <label className="block text-[11px] font-bold tracking-widest text-white/40 mb-1.5 uppercase">
+                メンバー
+              </label>
               <select
                 value={selectedId}
                 onChange={e => { setSelectedId(e.target.value); setError(""); }}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white
-                  focus:outline-none focus:border-[#0070d2] focus:ring-2 focus:ring-[#d8edff]
-                  transition appearance-none cursor-pointer text-slate-700"
+                className={INP + " cursor-pointer appearance-none"}
               >
                 <option value="" disabled>メンバーを選択してください...</option>
                 {memberGroups.map(g => (
@@ -104,7 +157,9 @@ export default function Login() {
 
             {/* パスワード */}
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1.5">パスワード</label>
+              <label className="block text-[11px] font-bold tracking-widest text-white/40 mb-1.5 uppercase">
+                パスワード
+              </label>
               <div className="relative">
                 <input
                   type={showPw ? "text" : "password"}
@@ -112,19 +167,21 @@ export default function Login() {
                   onChange={e => { setPw(e.target.value); setError(""); }}
                   placeholder="パスワード"
                   autoComplete="current-password"
-                  className="w-full px-4 py-2.5 pr-10 rounded-xl border border-slate-200 text-sm
-                    focus:outline-none focus:border-[#0070d2] focus:ring-2 focus:ring-[#d8edff] transition"
+                  className={INP + " pr-10"}
                 />
-                <button type="button" onClick={() => setShowPw(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                  {showPw ? <EyeOff size={16}/> : <Eye size={16}/>}
+                <button
+                  type="button"
+                  onClick={() => setShowPw(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                >
+                  {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
             </div>
 
-            {/* エラー */}
+            {/* エラーメッセージ */}
             {error && (
-              <p className="text-xs text-red-600 font-medium bg-red-50 rounded-lg px-3 py-2">
+              <p className="text-xs font-semibold text-red-300 bg-red-500/15 border border-red-400/25 rounded-xl px-3 py-2.5">
                 {error}
               </p>
             )}
@@ -133,20 +190,33 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 rounded-xl text-white text-sm font-bold shadow
-                hover:brightness-110 active:scale-[.98] transition disabled:opacity-60
-                flex items-center justify-center gap-2"
-              style={{ background: loading ? SF_BLUE : `linear-gradient(135deg,${SF_BLUE},${SF_DARK})` }}
+              className="w-full py-3 rounded-xl text-white text-sm font-bold transition-all
+                active:scale-[.98] disabled:opacity-50 flex items-center justify-center gap-2"
+              style={{
+                background: loading
+                  ? "rgba(0,112,210,0.6)"
+                  : `linear-gradient(135deg,${SF} 0%,#004fa8 100%)`,
+                boxShadow: loading
+                  ? "none"
+                  : "0 4px 20px rgba(0,112,210,0.45),inset 0 1px 0 rgba(255,255,255,0.12)",
+              }}
             >
-              {loading
-                ? <><Loader2 size={15} className="animate-spin" /> ログイン中…</>
-                : "ログイン"
-              }
+              {loading ? (
+                <><Loader2 size={15} className="animate-spin" /> ログイン中…</>
+              ) : (
+                <><span>ログイン</span><ArrowRight size={15} /></>
+              )}
             </button>
           </form>
         </div>
 
-        <p className="text-center text-gray-400 text-xs mt-6">GMO TECH株式会社 / 営業部</p>
+        {/* フッター */}
+        <p
+          className="text-center text-xs mt-5 tracking-wider"
+          style={{ color: "rgba(255,255,255,0.18)" }}
+        >
+          GMO TECH株式会社 / 営業部
+        </p>
       </div>
     </div>
   );
