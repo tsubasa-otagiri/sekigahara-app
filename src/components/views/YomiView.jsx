@@ -10,6 +10,14 @@ import DealDetailModal from "../DealDetailModal.jsx";
 /* 確度の表示順: 回収 → 70% → 50% → 30% */
 const CONF_ORDER = [...CONF].reverse();
 
+/* 最終行動日: activities の最新 date を "M/D" で返す。なければ "-" */
+const lastActionDate = (deal) => {
+  const acts = deal.activities;
+  if (!acts || acts.length === 0) return "-";
+  const latest = new Date(Math.max(...acts.map(a => new Date(a.date).getTime())));
+  return `${latest.getMonth() + 1}/${latest.getDate()}`;
+};
+
 /* ── 1行 ── */
 function DealRow({ deal, isAdmin, checked, onToggle, onEdit, onDelete, onDetail }) {
   return (
@@ -21,6 +29,12 @@ function DealRow({ deal, isAdmin, checked, onToggle, onEdit, onDelete, onDetail 
           </button>
         </td>
       )}
+      {/* 最終行動日 */}
+      <td className="px-3 py-3 text-center whitespace-nowrap w-16">
+        <span className={`text-[12px] font-bold tabular ${lastActionDate(deal) === "-" ? "text-slate-300" : "text-slate-600"}`}>
+          {lastActionDate(deal)}
+        </span>
+      </td>
       <td className="px-4 py-3 min-w-[140px] cursor-pointer" onClick={() => onDetail && onDetail(deal)}>
         <span className="text-[13px] font-semibold text-slate-800">{deal.company}</span>
         {isNeglected(deal) && (
@@ -84,7 +98,7 @@ function GroupHeader({ conf, count, total, isAdmin, allChecked, onToggleAll }) {
           )}
         </th>
       )}
-      <th colSpan={7} className="px-4 py-2 text-left">
+      <th colSpan={8} className="px-4 py-2 text-left">
         <div className="flex items-center gap-3">
           <ConfBadge conf={conf} />
           <span className={`text-[11px] font-bold ${tw.txt}`}>{count} 件</span>
@@ -108,6 +122,7 @@ function TableHead({ isAdmin }) {
     <thead>
       <tr className="border-b border-slate-200" style={{ background: "#f8fafc" }}>
         {isAdmin && <th className="px-3 py-2.5 w-8" />}
+        <TH cls="text-center w-16">最終行動日</TH>
         <TH>企業名</TH>
         <TH>プラン</TH>
         <TH cls="text-right">月額</TH>
