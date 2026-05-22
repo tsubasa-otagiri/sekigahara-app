@@ -5,7 +5,7 @@ export default function TeamTabs() {
   const { activeTab, setActiveTab } = useApp();
 
   return (
-    <div className="bg-white sticky top-14 z-30" style={{ borderBottom: "1px solid #f1f5f9", boxShadow: "0 1px 0 0 rgba(0,0,0,.03)" }}>
+    <div className="bg-white" style={{ borderBottom: "1px solid #f1f5f9" }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex overflow-x-auto no-scrollbar">
           {ALL_TABS.map(tab => {

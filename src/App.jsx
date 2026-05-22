@@ -32,9 +32,16 @@ function MainApp() {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#f4f6f9" }}>
       <Header />
-      <TeamTabs />
-      <PeriodNav />
-      <ViewNav />
+
+      {/* ── 固定ナビ: チームタブ＋対象期間＋ビュー切替 ── */}
+      <div
+        className="sticky top-14 z-30 bg-white"
+        style={{ boxShadow: "0 2px 8px -4px rgba(0,0,0,.12), 0 1px 0 0 rgba(0,0,0,.04)" }}
+      >
+        <TeamTabs />
+        <PeriodNav />
+        <ViewNav />
+      </div>
 
       <main className="flex-1">
         {activeView === "summary"  && <SummaryView />}

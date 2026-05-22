@@ -176,9 +176,10 @@ export const AppProvider = ({ children }) => {
 
   const addActivity = useCallback((dealId, act) => {
     const now = new Date().toISOString();
+    /* act.date が渡された場合はそれを優先、なければ現在時刻 */
     setDeals(prev => prev.map(d => d.id !== dealId ? d : {
       ...d,
-      activities: [...(d.activities || []), { id: nextId(), ...act, date: now }],
+      activities: [...(d.activities || []), { id: nextId(), date: now, ...act }],
       updatedAt: now,
     }));
   }, []);
