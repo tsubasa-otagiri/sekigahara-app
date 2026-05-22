@@ -36,19 +36,19 @@ function DealRow({ deal, isAdmin, checked, onToggle, onDetail }) {
     >
       {isAdmin && (
         /* チェックボックスセルはクリックを伝播させない */
-        <td className="px-3 py-3 w-8" onClick={e => e.stopPropagation()}>
+        <td className="px-3 py-3.5 w-8" onClick={e => e.stopPropagation()}>
           <button onClick={() => onToggle(deal.id)} className="text-slate-300 hover:text-violet-500 transition">
             {checked ? <CheckSquare size={14} className="text-violet-600" /> : <Square size={14} />}
           </button>
         </td>
       )}
       {/* 最終行動日 */}
-      <td className="px-3 py-3 text-center whitespace-nowrap w-16">
+      <td className="px-3 py-3.5 text-center whitespace-nowrap w-16">
         <span className={`text-[12px] font-bold tabular ${lastActionDate(deal) === "-" ? "text-slate-300" : "text-slate-600"}`}>
           {lastActionDate(deal)}
         </span>
       </td>
-      <td className="px-4 py-3 min-w-[140px]">
+      <td className="px-4 py-3.5 min-w-[140px]">
         <span className="text-[13px] font-semibold text-slate-800">{deal.company}</span>
         {isNeglected(deal) && (
           <span className="ml-1.5 text-[9px] font-bold bg-red-100 text-red-500 border border-red-200 rounded px-1 py-0.5 shrink-0">
@@ -56,34 +56,34 @@ function DealRow({ deal, isAdmin, checked, onToggle, onDetail }) {
           </span>
         )}
       </td>
-      <td className="px-3 py-3 whitespace-nowrap">
+      <td className="px-3 py-3.5 whitespace-nowrap">
         <PlanBadge plan={deal.plan} />
       </td>
-      <td className="px-3 py-3 text-right whitespace-nowrap">
+      <td className="px-3 py-3.5 text-right whitespace-nowrap">
         <span className="text-sm font-black text-slate-700 tabular">{fmtAmt(deal.amount)}</span>
       </td>
-      <td className="px-3 py-3 whitespace-nowrap">
+      <td className="px-3 py-3.5 whitespace-nowrap">
         <TeamBadge team={deal.team} />
       </td>
-      <td className="px-3 py-3 text-xs whitespace-nowrap">
+      <td className="px-3 py-3.5 text-xs whitespace-nowrap">
         {deal.is && <span className="mr-2 text-cyan-700 font-semibold">{deal.is}</span>}
         {deal.fs && <span className="text-emerald-700 font-semibold">{deal.fs}</span>}
       </td>
-      <td className="px-3 py-3 text-[11px] text-slate-500 whitespace-nowrap max-w-[160px] truncate">
+      <td className="px-3 py-3.5 text-[11px] text-slate-500 whitespace-nowrap max-w-[160px] truncate">
         {deal.phase}
       </td>
       {/* 最新の行動履歴 */}
-      <td className="px-3 py-3 min-w-[320px]">
+      <td className="px-3 py-3.5 min-w-[350px] max-w-[500px]">
         {(() => {
           const m = lastActivityMemo(deal);
           return m
             ? (
               <span
-                className="text-[11px] text-slate-600 leading-relaxed whitespace-normal break-words line-clamp-3"
+                className="text-[13px] text-gray-600 leading-relaxed whitespace-normal break-all line-clamp-3"
                 title={m}
               >{m}</span>
             )
-            : <span className="text-slate-300 text-[11px]">-</span>;
+            : <span className="text-slate-300 text-[12px]">-</span>;
         })()}
       </td>
     </tr>
@@ -117,9 +117,8 @@ function GroupHeader({ conf, count, total, isAdmin, allChecked, onToggleAll }) {
 }
 
 /* ── テーブルヘッダー ── */
-/* sticky top: Header(56) + TeamTabs(43) + PeriodNav(41) + ViewNav(42) = 182px */
-const STICKY_TOP = "top-[182px]";
-const TH_BASE = `sticky ${STICKY_TOP} z-20 bg-[#f8fafc] px-3 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap`;
+/* overflow-x:auto の親が scroll container になるため top-0 で固定 */
+const TH_BASE = "sticky top-0 z-20 bg-[#f8fafc] border-b border-gray-200 px-3 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap";
 
 function TableHead({ isAdmin }) {
   const TH = ({ children, cls = "" }) => (
@@ -279,7 +278,10 @@ export default function YomiView() {
         </div>
       ) : (
         <div className="bg-white rounded-2xl overflow-hidden card-shadow">
-          <div className="overflow-x-auto">
+          {/* max-height を設定して overflow:auto を縦横両方有効にする
+              → overflow-x:auto 単体では overflow-y も auto になりページ sticky が壊れる
+              → コンテナ自身をスクロールさせることで top-0 sticky が正常動作する */}
+          <div style={{ overflow: "auto", maxHeight: "calc(100vh - 270px)" }}>
             <table className="w-full min-w-[700px] border-collapse">
               <TableHead isAdmin={isAdmin} />
               <tbody>
