@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Edit2, Trash2, CheckSquare, Square, Trash } from "lucide-react";
+import { CheckSquare, Square, Trash } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import { filterByTab, fmtAmt, isNeglected } from "../../utils/index.js";
 import { CONF, CTW } from "../../constants/index.js";
@@ -18,8 +18,17 @@ const lastActionDate = (deal) => {
   return `${latest.getMonth() + 1}/${latest.getDate()}`;
 };
 
+/* 最新の行動履歴メモ */
+const lastActivityMemo = (deal) => {
+  const acts = deal.activities;
+  if (!acts || acts.length === 0) return null;
+  return acts.reduce((prev, curr) =>
+    new Date(curr.date) > new Date(prev.date) ? curr : prev
+  ).memo || null;
+};
+
 /* ── 1行 ── */
-function DealRow({ deal, isAdmin, checked, onToggle, onEdit, onDelete, onDetail }) {
+function DealRow({ deal, isAdmin, checked, onToggle, onDetail }) {
   return (
     <tr className="hover:bg-slate-50/60 transition-colors group border-b border-slate-100 last:border-0">
       {isAdmin && (
@@ -59,26 +68,14 @@ function DealRow({ deal, isAdmin, checked, onToggle, onEdit, onDelete, onDetail 
       <td className="px-3 py-3 text-[11px] text-slate-500 whitespace-nowrap max-w-[160px] truncate">
         {deal.phase}
       </td>
-      <td className="px-3 py-3 text-[11px] text-slate-400 max-w-[120px] truncate">
-        {deal.note}
-      </td>
-      <td className="px-3 py-3 whitespace-nowrap">
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={() => onEdit(deal)}
-            className="p-1.5 rounded-lg hover:bg-violet-50 text-slate-400 hover:text-violet-600 transition"
-            title="編集"
-          >
-            <Edit2 size={13} />
-          </button>
-          <button
-            onClick={() => onDelete(deal.id)}
-            className="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition"
-            title="削除"
-          >
-            <Trash2 size={13} />
-          </button>
-        </div>
+      {/* 最新の行動履歴 */}
+      <td className="px-3 py-3 text-[11px] text-slate-500 max-w-[220px]">
+        {(() => {
+          const m = lastActivityMemo(deal);
+          return m
+            ? <span className="line-clamp-2 leading-snug" title={m}>{m}</span>
+            : <span className="text-slate-300">-</span>;
+        })()}
       </td>
     </tr>
   );
@@ -106,7 +103,6 @@ function GroupHeader({ conf, count, total, isAdmin, allChecked, onToggleAll }) {
           <span className={`text-sm font-black ${tw.txt} tabular`}>{fmtAmt(total)}</span>
         </div>
       </th>
-      <th />
     </tr>
   );
 }
@@ -129,8 +125,7 @@ function TableHead({ isAdmin }) {
         <TH>チーム</TH>
         <TH>IS / FS</TH>
         <TH>フェーズ</TH>
-        <TH>メモ</TH>
-        <TH>操作</TH>
+        <TH>最新の行動履歴</TH>
       </tr>
     </thead>
   );
@@ -298,8 +293,6 @@ export default function YomiView() {
                           isAdmin={isAdmin}
                           checked={selected.has(deal.id)}
                           onToggle={toggleSelect}
-                          onEdit={setEditingDeal}
-                          onDelete={handleDeleteSingle}
                           onDetail={setDetailDeal}
                         />
                       ))}

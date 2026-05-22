@@ -193,6 +193,15 @@ export const AppProvider = ({ children }) => {
     }));
   }, []);
 
+  const updateActivity = useCallback((dealId, actId, patch) => {
+    const now = new Date().toISOString();
+    setDeals(prev => prev.map(d => d.id !== dealId ? d : {
+      ...d,
+      activities: (d.activities || []).map(a => a.id !== actId ? a : { ...a, ...patch }),
+      updatedAt: now,
+    }));
+  }, []);
+
   /* ── メンバー CRUD ── */
   const updateMember = useCallback((id, patch) => {
     setMembers(prev => prev.map(m => m.id === id ? { ...m, ...patch } : m));
@@ -218,7 +227,7 @@ export const AppProvider = ({ children }) => {
       currentUserId, currentUser, login, loginByName, logout,
       /* data */
       members, deals,
-      addDeal, updateDeal, deleteDeal, addActivity, deleteActivity,
+      addDeal, updateDeal, deleteDeal, addActivity, deleteActivity, updateActivity,
       updateMember, addMember, deleteMember,
       replaceDeals, replaceMembers,
       /* logo */
