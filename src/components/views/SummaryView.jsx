@@ -16,10 +16,11 @@ const CONF_HEX = { "30%":"#f59e0b", "50%":"#3b82f6", "70%":"#10b981", "回収":"
 const CONF_ORDER = [...CONF].reverse(); // 回収→70%→50%→30%
 
 /* ── Stat カード ── */
-function StatCard({ conf, amt, count, total, onClick }) {
-  const tw  = CTW[conf] ?? CTW["30%"];
-  const hex = CONF_HEX[conf];
-  const pct = total > 0 ? Math.round((amt / total) * 100) : 0;
+function StatCard({ conf, amt, count, target, onClick }) {
+  const tw     = CTW[conf] ?? CTW["30%"];
+  const hex    = CONF_HEX[conf];
+  const pct    = target > 0 ? Math.min(Math.round((amt / target) * 100), 999) : 0;
+  const barPct = Math.min(pct, 100);
   return (
     <div
       className="bg-white rounded-2xl p-4 flex flex-col gap-2 card-shadow
@@ -35,14 +36,15 @@ function StatCard({ conf, amt, count, total, onClick }) {
         <span className="text-[10px] font-semibold text-slate-400 tabular">{count} 件</span>
       </div>
       <p className="text-2xl font-black text-slate-800 tabular leading-none">{fmtAmt(amt)}</p>
-      {/* 構成比バー */}
       <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-700"
-          style={{ width: `${pct}%`, background: hex }}
+          style={{ width: `${barPct}%`, background: hex }}
         />
       </div>
-      <p className="text-[10px] text-slate-400 tabular">全体の {pct}%</p>
+      <p className="text-[10px] tabular" style={{ color: target > 0 ? hex : "#94a3b8" }}>
+        {target > 0 ? `目標達成率: ${pct}%` : "目標未設定"}
+      </p>
     </div>
   );
 }
@@ -395,7 +397,7 @@ export default function SummaryView() {
             conf={conf}
             amt={byConf[conf] || 0}
             count={filtered.filter(d => d.confidence === conf).length}
-            total={total}
+            target={teamTarget}
             onClick={() => setActiveView("list")}
           />
         ))}
