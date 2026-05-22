@@ -29,6 +29,15 @@ const _migrateYomi = (y) => {
   return y;
 };
 
+/** フェーズの①②番号付き旧表記 → 番号なし新表記に移行 */
+const _PHASE_MAP = {
+  "①2nd": "2nd", "②デモ": "デモ", "③上長共有": "上長共有",
+  "④決済者商談予定": "決済者商談予定", "⑤決済者共有": "決済者共有",
+  "⑥稟議中": "稟議中", "⑦受注": "受注", "⑧失注": "失注",
+};
+const _migratePhase = (p) => _PHASE_MAP[p] ?? p;
+};
+
 const resolveYomi = (yomi, conf) => yomi || _confToYomi(conf);
 
 /* デフォルト旗印 = なし（空データURI）
@@ -50,8 +59,9 @@ export const AppProvider = ({ children }) => {
     /* 案件の IS/FS 担当名も正規化 */
     return stored.map(d => ({
       ...d,
-      is: normalizeName(d.is),
-      fs: normalizeName(d.fs),
+      is:    normalizeName(d.is),
+      fs:    normalizeName(d.fs),
+      phase: _migratePhase(d.phase || "未設定"),
       period: d.period || TODAY_PERIOD,
       yomi:       _migrateYomi(d.yomi || _confToYomi(d.confidence)),
       lossReason: d.lossReason || "",

@@ -231,7 +231,7 @@ export default function DealModal({ deal, onClose }) {
             </select>
             {isKaishu && (
               <p className="text-[11px] text-emerald-600 mt-1 font-medium">
-                確度「回収」→ フェーズ「⑦受注」に自動設定
+                確度「回収」→ フェーズ「受注」に自動設定
               </p>
             )}
           </Fld>

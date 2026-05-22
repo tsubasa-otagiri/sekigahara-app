@@ -16,9 +16,9 @@ export const MEMBER_MASTER_NAMES = DISPLAY_GROUPS.flatMap(g => g.names);
 export const CONF       = ["30%", "50%", "70%", "回収"];
 export const PLANS      = ["MDC", "コンサル", "Dash!", "運用代行", "MDCスモール", "MDCスタンダード"];
 export const PHASES     = [
-  "未設定", "①2nd", "②デモ", "社内資料すり合わせ",
-  "③上長共有", "④決済者商談予定", "⑤決済者共有",
-  "⑥稟議中", "⑦受注", "⑧失注"
+  "未設定", "2nd", "デモ", "社内資料すり合わせ",
+  "上長共有", "決済者商談予定", "決済者共有",
+  "稟議中", "受注", "失注"
 ];
 export const TEAMS_OPT  = ["杉山T", "鈴木T", "中村T", "渡部T", "全社FS"];
 export const ROLE_OPT   = ["IS", "FS", "IS+FS"];

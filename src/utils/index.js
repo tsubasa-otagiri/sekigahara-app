@@ -35,10 +35,10 @@ export const filterByTab = (deals, tab) => {
   return deals.filter(d => d.team === tab);
 };
 
-/* ── 確度→フェーズ連動: 回収になったら⑦受注に固定 ── */
+/* ── 確度→フェーズ連動: 回収になったら「受注」に固定 ── */
 export const resolvePhase = (confidence, currentPhase) => {
-  if (confidence === "回収") return "⑦受注";
-  if (currentPhase === "⑦受注" && confidence !== "回収") return currentPhase;
+  if (confidence === "回収") return "受注";
+  if (currentPhase === "受注" && confidence !== "回収") return currentPhase;
   return currentPhase;
 };
 
