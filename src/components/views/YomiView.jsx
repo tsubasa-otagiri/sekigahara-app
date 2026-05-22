@@ -279,10 +279,7 @@ export default function YomiView() {
         </div>
       ) : (
         <div className="bg-white rounded-2xl overflow-hidden card-shadow">
-          {/* max-height を設定して overflow:auto を縦横両方有効にする
-              → overflow-x:auto 単体では overflow-y も auto になりページ sticky が壊れる
-              → コンテナ自身をスクロールさせることで top-0 sticky が正常動作する */}
-          <div style={{ overflow: "auto", maxHeight: "calc(100vh - 270px)" }}>
+          <div className="overflow-x-auto">
             <table className="w-full min-w-[700px] border-collapse">
               <TableHead isAdmin={isAdmin} />
               <tbody>
