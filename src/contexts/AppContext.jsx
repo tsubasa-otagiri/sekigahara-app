@@ -135,6 +135,7 @@ export const AppProvider = ({ children }) => {
     setCurrentMonth(now.getMonth() + 1);
     setPeriodType("month");
     setActiveTab("マイ");
+    setActiveView("summary");
     /* 初期パスワード「1111」のままならパスワード変更を案内 */
     if (pw === "1111") setShowPwPrompt(true);
     return true;
