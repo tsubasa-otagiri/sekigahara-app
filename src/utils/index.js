@@ -90,6 +90,20 @@ export const normalizeName = (name) => {
   return NAME_MAP[name] ?? name;
 };
 
+/* ──────────────────────────────────────────────
+   IS/FS 折半クレジットルール
+   ・IS = FS（同一人物）       → 1.0（全額）
+   ・IS ≠ FS（両方set・別人）  → 0.5（折半）
+   ・片方のみ                   → 1.0（全額）
+────────────────────────────────────────────── */
+export const getDealCredit = (deal, name) => {
+  const isMe = deal.is === name;
+  const fsMe = deal.fs === name;
+  if (!isMe && !fsMe) return 0;
+  if (deal.is && deal.fs && deal.is !== deal.fs) return 0.5;
+  return 1.0;
+};
+
 /** 14日以上更新なし（受注・失注以外）の案件を検知 */
 export const isNeglected = (deal) => {
   if (!deal) return false;

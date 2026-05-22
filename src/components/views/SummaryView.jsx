@@ -6,7 +6,7 @@ import {
 } from "chart.js";
 import { Doughnut, Bar } from "react-chartjs-2";
 import { useApp } from "../../contexts/useApp.js";
-import { filterByTab, fmtAmt } from "../../utils/index.js";
+import { filterByTab, fmtAmt, getDealCredit } from "../../utils/index.js";
 import { CONF, CTW, THEX, REAL_TEAMS, YOMI, YOMI_WEIGHT, YOMI_COLOR, LOSS_REASONS } from "../../constants/index.js";
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
@@ -275,12 +275,16 @@ export default function SummaryView() {
     return filterByTab(pd, activeTab, currentUser?.name);
   }, [deals, activeTab, activePeriods, currentUser]);
 
-  /* 確度別集計 */
+  /* 確度別集計（マイタブ時は折半クレジットを適用） */
+  const myName = currentUser?.name ?? "";
   const byConf = useMemo(() => {
     const acc = { "30%": 0, "50%": 0, "70%": 0, "回収": 0 };
-    filtered.forEach(d => { acc[d.confidence] = (acc[d.confidence] || 0) + (d.amount || 0); });
+    filtered.forEach(d => {
+      const credit = isMyTab ? getDealCredit(d, myName) : 1.0;
+      acc[d.confidence] = (acc[d.confidence] || 0) + (d.amount || 0) * credit;
+    });
     return acc;
-  }, [filtered]);
+  }, [filtered, isMyTab, myName]);
 
   /* 目標: マイタブ → 個人目標、チームタブ → チーム合計 */
   const teamTarget = useMemo(() => {
@@ -296,12 +300,18 @@ export default function SummaryView() {
   const kaishu   = byConf["回収"] || 0;
   const achRate  = teamTarget > 0 ? Math.min(Math.round((kaishu / teamTarget) * 100), 999) : 0;
 
-  /* コンサバ: 70% + 回収 */
+  /* コンサバ: 70% + 回収（金額は byConf から、件数は折半クレジット合算） */
   const conserv      = (byConf["70%"] || 0) + (byConf["回収"] || 0);
-  const conservCount = filtered.filter(d => d.confidence === "70%" || d.confidence === "回収").length;
+  const conservCount = Math.round(
+    filtered.filter(d => d.confidence === "70%" || d.confidence === "回収")
+      .reduce((s, d) => s + (isMyTab ? getDealCredit(d, myName) : 1), 0) * 10
+  ) / 10;
   /* アグレッシブ: 50% + 70% + 回収 */
   const aggress      = (byConf["50%"] || 0) + (byConf["70%"] || 0) + (byConf["回収"] || 0);
-  const agressCount  = filtered.filter(d => ["50%","70%","回収"].includes(d.confidence)).length;
+  const agressCount  = Math.round(
+    filtered.filter(d => ["50%","70%","回収"].includes(d.confidence))
+      .reduce((s, d) => s + (isMyTab ? getDealCredit(d, myName) : 1), 0) * 10
+  ) / 10;
 
   /* バナー色: THEX にないタブ（マイ）→ SF ブルー */
   const color    = THEX[activeTab] ?? "#0070d2";
@@ -396,7 +406,10 @@ export default function SummaryView() {
             key={conf}
             conf={conf}
             amt={byConf[conf] || 0}
-            count={filtered.filter(d => d.confidence === conf).length}
+            count={Math.round(
+              filtered.filter(d => d.confidence === conf)
+                .reduce((s, d) => s + (isMyTab ? getDealCredit(d, myName) : 1), 0) * 10
+            ) / 10}
             target={teamTarget}
             onClick={() => setActiveView("list")}
           />
