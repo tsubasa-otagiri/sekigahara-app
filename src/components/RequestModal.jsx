@@ -10,12 +10,16 @@ const fmtDate = (iso) => {
 };
 
 export default function RequestModal({ onClose }) {
-  const { currentUser, requests, addRequest, resolveRequest } = useApp();
+  const { currentUser, members, requests, addRequest, resolveRequest } = useApp();
 
   /* 管理者 or 小田切（チームリーダー）が管理画面を見られる */
   const canManage = currentUser?.role === "admin" || currentUser?.name === "小田切";
 
-  const [tab,     setTab]     = useState("submit");   // "submit" | "manage"
+  /* アクティブメンバー一覧 */
+  const activeMembers = members.filter(m => m.status === "active" && m.role !== "admin");
+
+  const [tab,     setTab]     = useState("submit");
+  const [requester, setRequester] = useState(currentUser?.name ?? "");
   const [content, setContent] = useState("");
   const [sent,    setSent]    = useState(false);
 
@@ -34,7 +38,7 @@ export default function RequestModal({ onClose }) {
 
   const handleSend = () => {
     if (!content.trim()) return;
-    addRequest(content.trim());
+    addRequest(content.trim(), requester);
     setContent("");
     setSent(true);
     setTimeout(() => { setSent(false); onClose(); }, 1800);
@@ -114,6 +118,23 @@ export default function RequestModal({ onClose }) {
                     要望があればこちらに記載ください。<br />
                     <span className="text-[11px] text-slate-400">機能の改善・追加・不具合報告などなんでもお気軽にどうぞ。</span>
                   </p>
+
+                  {/* 要望者セレクト */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <label className="text-xs font-semibold text-slate-500 shrink-0 w-14">要望者</label>
+                    <select
+                      value={requester}
+                      onChange={e => setRequester(e.target.value)}
+                      className="flex-1 text-sm border border-slate-200 rounded-xl px-3 py-2
+                        bg-white focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition"
+                    >
+                      <option value="">-- 選択してください --</option>
+                      {activeMembers.map(m => (
+                        <option key={m.id} value={m.name}>{m.name}（{m.team}）</option>
+                      ))}
+                    </select>
+                  </div>
+
                   <textarea
                     value={content}
                     onChange={e => setContent(e.target.value)}
@@ -126,7 +147,7 @@ export default function RequestModal({ onClose }) {
                     <p className="text-[11px] text-slate-400">{content.length} 文字</p>
                     <button
                       onClick={handleSend}
-                      disabled={!content.trim()}
+                      disabled={!content.trim() || !requester}
                       className="flex items-center gap-2 px-5 py-2 rounded-xl text-white text-sm font-bold
                         disabled:opacity-40 transition hover:brightness-110 active:scale-[0.98]"
                       style={{ background: "#0070d2" }}

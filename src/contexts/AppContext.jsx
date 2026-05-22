@@ -250,10 +250,10 @@ export const AppProvider = ({ children }) => {
   const replaceMembers = useCallback((ms) => setMembers(ms), []);
 
   /* ── 要望 CRUD ── */
-  const addRequest = useCallback((content) => {
+  const addRequest = useCallback((content, requester) => {
     const req = {
       id:        `req_${Date.now()}`,
-      user:      currentUser?.name ?? "",
+      user:      requester || currentUser?.name || "",
       content,
       status:    "未対応",
       notified:  false,
