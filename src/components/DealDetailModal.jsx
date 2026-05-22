@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, Trash2, Pencil, Check, Ban, MessageSquare, Phone, Mail, FileText, Users, Clock } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
-import { ACTIVITY_TYPES, YOMI_COLOR, YOMI_WEIGHT } from "../constants/index.js";
+import { ACTIVITY_TYPES, YOMI_COLOR, YOMI_WEIGHT, PHASES, MEMBER_MASTER_NAMES } from "../constants/index.js";
 import { fmtAmt, isNeglected } from "../utils/index.js";
 
 const TYPE_ICON = {
@@ -29,21 +29,31 @@ const fmtDate = (iso) => {
   return (h === 12 && mi === 0) ? date : `${date} ${String(h).padStart(2,"0")}:${String(mi).padStart(2,"0")}`;
 };
 
-/* 共通入力スタイル */
 const INP = "text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition";
 
+/* マスター順でメンバーを並べるヘルパー */
+const sortByMaster = (arr) =>
+  [...arr].sort((a, b) => {
+    const ai = MEMBER_MASTER_NAMES.indexOf(a.name);
+    const bi = MEMBER_MASTER_NAMES.indexOf(b.name);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
+
 export default function DealDetailModal({ deal: dealProp, onClose }) {
-  const { deals, addActivity, deleteActivity, updateActivity } = useApp();
+  const { deals, members, addActivity, deleteActivity, updateActivity, updateDeal } = useApp();
+
+  /* 常に最新の deal を参照（即時反映） */
   const deal = deals.find(d => d.id === dealProp.id) ?? dealProp;
 
   /* 新規追加フォーム */
-  const [type, setType] = useState("商談");
-  const [memo, setMemo] = useState("");
-  const [date, setDate] = useState(todayStr);
+  const [type,   setType]   = useState("商談");
+  const [memo,   setMemo]   = useState("");
+  const [date,   setDate]   = useState(todayStr);
+  const [member, setMember] = useState("");      // 担当者（実施者）
 
   /* インライン編集 */
-  const [editingId,   setEditingId]   = useState(null);
-  const [editMemo,    setEditMemo]    = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [editMemo,  setEditMemo]  = useState("");
 
   /* スクロールロック */
   useEffect(() => {
@@ -51,7 +61,7 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
     return () => { document.body.style.overflow = ""; };
   }, []);
 
-  /* Escape で閉じる（編集中は編集キャンセル優先） */
+  /* Escape で閉じる（編集中はキャンセル優先） */
   useEffect(() => {
     const fn = (e) => {
       if (e.key === "Escape") {
@@ -70,7 +80,10 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
   const weighted = (deal.amount || 0) * weight;
   const neglect  = isNeglected(deal);
 
-  /* 日付降順 */
+  /* 担当者選択肢: アクティブメンバーをマスター順で */
+  const activeMembers = sortByMaster(members.filter(m => m.status === "active"));
+
+  /* 活動履歴: 日付降順 */
   const sorted = [...(deal.activities || [])].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
@@ -78,9 +91,15 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
   /* 追加 */
   const handleAdd = () => {
     if (!memo.trim()) return;
-    addActivity(deal.id, { type, memo: memo.trim(), date: dateStrToIso(date) });
+    addActivity(deal.id, {
+      type,
+      memo:   memo.trim(),
+      date:   dateStrToIso(date),
+      member: member || "",
+    });
     setMemo("");
     setDate(todayStr());
+    /* member はリセットしない（連続入力しやすいよう） */
   };
 
   /* 削除（確認あり） */
@@ -91,23 +110,21 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
   };
 
   /* 編集開始 */
-  const startEdit = (act) => {
-    setEditingId(act.id);
-    setEditMemo(act.memo);
-  };
+  const startEdit = (act) => { setEditingId(act.id); setEditMemo(act.memo); };
 
   /* 保存 */
   const saveEdit = () => {
     if (!editMemo.trim()) return;
     updateActivity(deal.id, editingId, { memo: editMemo.trim() });
-    setEditingId(null);
-    setEditMemo("");
+    setEditingId(null); setEditMemo("");
   };
 
   /* キャンセル */
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditMemo("");
+  const cancelEdit = () => { setEditingId(null); setEditMemo(""); };
+
+  /* フェーズ変更 */
+  const handlePhaseChange = (e) => {
+    updateDeal(deal.id, { phase: e.target.value });
   };
 
   return createPortal(
@@ -121,9 +138,10 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
         onMouseDown={(e) => e.stopPropagation()}
       >
 
-        {/* ヘッダー */}
+        {/* ── ヘッダー ── */}
         <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3 shrink-0">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
+            {/* 会社名 + 放置バッジ */}
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-base font-black text-slate-800 truncate">{deal.company}</h2>
               {neglect && (
@@ -132,6 +150,8 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
                 </span>
               )}
             </div>
+
+            {/* チーム・プラン・金額・ヨミ度・着地 */}
             <div className="flex items-center gap-3 mt-1 flex-wrap">
               <span className="text-xs text-slate-500">{deal.team} / {deal.plan}</span>
               <span className="text-xs font-black text-slate-700">{fmtAmt(deal.amount)}</span>
@@ -143,13 +163,26 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
                 着地: {fmtAmt(weighted)}（×{Math.round(weight * 100)}%）
               </span>
             </div>
+
+            {/* フェーズ変更セレクト */}
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-[10px] font-bold text-slate-400 shrink-0 tracking-wide">フェーズ</span>
+              <select
+                value={deal.phase || "未設定"}
+                onChange={handlePhaseChange}
+                className="flex-1 text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition"
+              >
+                {PHASES.map(p => <option key={p}>{p}</option>)}
+              </select>
+            </div>
           </div>
+
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition shrink-0 mt-0.5">
             <X size={18} />
           </button>
         </div>
 
-        {/* 活動履歴リスト */}
+        {/* ── 活動履歴リスト ── */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
           <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">
             活動履歴（{sorted.length}件）
@@ -162,15 +195,21 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
               {/* アイコン */}
               <div className="mt-0.5 text-slate-400 shrink-0">{TYPE_ICON[a.type] || <Clock size={12} />}</div>
 
-              {/* 本文エリア */}
+              {/* 本文 */}
               <div className="min-w-0 flex-1">
+                {/* メタ情報: 種別 / 日付 / 担当者 */}
                 <div className="flex items-center gap-2 flex-wrap mb-0.5">
                   <span className="text-[10px] font-bold text-slate-500">{a.type}</span>
                   <span className="text-[10px] text-slate-400">{fmtDate(a.date)}</span>
+                  {a.member && (
+                    <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 border border-blue-100 rounded px-1.5 py-px">
+                      👤 {a.member}
+                    </span>
+                  )}
                 </div>
 
                 {editingId === a.id ? (
-                  /* ── インライン編集モード ── */
+                  /* インライン編集 */
                   <div className="space-y-1.5">
                     <textarea
                       value={editMemo}
@@ -197,12 +236,12 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
                     </div>
                   </div>
                 ) : (
-                  /* ── 通常表示（改行対応） ── */
+                  /* 通常表示（改行対応） */
                   <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{a.memo}</p>
                 )}
               </div>
 
-              {/* 操作ボタン（ホバー時表示・編集中は非表示） */}
+              {/* 編集・削除ボタン（ホバー時表示） */}
               {editingId !== a.id && (
                 <div className="flex items-start gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition">
                   <button
@@ -225,11 +264,11 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
           ))}
         </div>
 
-        {/* 追加フォーム */}
+        {/* ── 追加フォーム ── */}
         <div className="px-5 py-4 border-t border-slate-100 space-y-2 shrink-0">
 
-          {/* 種別 + 日付 */}
-          <div className="flex gap-2">
+          {/* 種別 ・ 担当者 ・ 日付 */}
+          <div className="flex gap-2 flex-wrap">
             <select
               value={type}
               onChange={e => setType(e.target.value)}
@@ -237,6 +276,18 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
             >
               {ACTIVITY_TYPES.map(t => <option key={t}>{t}</option>)}
             </select>
+
+            <select
+              value={member}
+              onChange={e => setMember(e.target.value)}
+              className={`flex-1 min-w-[90px] ${INP}`}
+            >
+              <option value="">担当者（任意）</option>
+              {activeMembers.map(m => (
+                <option key={m.id} value={m.name}>{m.name}</option>
+              ))}
+            </select>
+
             <input
               type="date"
               value={date}
@@ -246,13 +297,13 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
             />
           </div>
 
-          {/* メモ（textarea）+ 追加ボタン */}
+          {/* メモ + 追加ボタン */}
           <div className="flex gap-2 items-end">
             <textarea
               value={memo}
               onChange={e => setMemo(e.target.value)}
               rows={3}
-              placeholder="活動内容を入力...&#10;（Shift+Enter で改行、追加ボタンで登録）"
+              placeholder={"活動内容を入力...\n（追加ボタンで登録）"}
               className={`flex-1 resize-none ${INP}`}
             />
             <button

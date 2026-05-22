@@ -30,9 +30,13 @@ const lastActivityMemo = (deal) => {
 /* ── 1行 ── */
 function DealRow({ deal, isAdmin, checked, onToggle, onDetail }) {
   return (
-    <tr className="hover:bg-slate-50/60 transition-colors group border-b border-slate-100 last:border-0">
+    <tr
+      className="hover:bg-blue-50/40 transition-colors group border-b border-slate-100 last:border-0 cursor-pointer"
+      onClick={() => onDetail && onDetail(deal)}
+    >
       {isAdmin && (
-        <td className="px-3 py-3 w-8">
+        /* チェックボックスセルはクリックを伝播させない */
+        <td className="px-3 py-3 w-8" onClick={e => e.stopPropagation()}>
           <button onClick={() => onToggle(deal.id)} className="text-slate-300 hover:text-violet-500 transition">
             {checked ? <CheckSquare size={14} className="text-violet-600" /> : <Square size={14} />}
           </button>
@@ -44,7 +48,7 @@ function DealRow({ deal, isAdmin, checked, onToggle, onDetail }) {
           {lastActionDate(deal)}
         </span>
       </td>
-      <td className="px-4 py-3 min-w-[140px] cursor-pointer" onClick={() => onDetail && onDetail(deal)}>
+      <td className="px-4 py-3 min-w-[140px]">
         <span className="text-[13px] font-semibold text-slate-800">{deal.company}</span>
         {isNeglected(deal) && (
           <span className="ml-1.5 text-[9px] font-bold bg-red-100 text-red-500 border border-red-200 rounded px-1 py-0.5 shrink-0">
