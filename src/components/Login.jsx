@@ -34,11 +34,11 @@ export default function Login() {
     if (!ok) setError("パスワードが正しくありません");
   };
 
-  /* ── 入力フィールド共通スタイル（白ライト系：半透明白 + 白テキスト） ── */
+  /* ── 入力フィールド共通スタイル（白い背景・ダークテキスト） ── */
   const INP =
-    "w-full px-4 py-3 rounded-xl text-sm text-white " +
-    "border border-white/20 focus:outline-none focus:border-blue-300/70 " +
-    "focus:ring-2 focus:ring-blue-400/15 transition placeholder:text-white/35";
+    "w-full px-4 py-3 rounded-xl text-sm bg-white text-slate-800 " +
+    "border border-white/30 focus:outline-none focus:border-blue-400 " +
+    "focus:ring-2 focus:ring-blue-400/25 transition placeholder:text-slate-400";
 
   return (
     <div
@@ -136,7 +136,6 @@ export default function Login() {
                 value={selectedId}
                 onChange={e => { setSelectedId(e.target.value); setError(""); }}
                 className={INP + " cursor-pointer appearance-none"}
-                style={{ background: "rgba(255,255,255,0.10)" }}
               >
                 <option value="" disabled>メンバーを選択してください...</option>
                 {memberGroups.map(g => (
@@ -169,12 +168,11 @@ export default function Login() {
                   placeholder="パスワード"
                   autoComplete="current-password"
                   className={INP + " pr-10"}
-                  style={{ background: "rgba(255,255,255,0.10)" }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPw(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
                 >
                   {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>

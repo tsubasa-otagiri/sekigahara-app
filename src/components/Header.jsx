@@ -32,12 +32,20 @@ export default function Header() {
 
         {/* ── ブランドロゴ ── */}
         <div className="flex items-center gap-2 shrink-0 mr-1">
-          {logoDataUrl && (
+          {logoDataUrl ? (
             <img
               src={logoDataUrl}
               alt="HONNOJI logo"
               className="w-8 h-8 rounded-lg object-contain flex-none"
             />
+          ) : (
+            /* ヘッダーは白背景なので、外側の div で青背景を付与 */
+            <div
+              className="w-8 h-8 rounded-lg flex-none flex items-center justify-center"
+              style={{ background: SF_BLUE }}
+            >
+              <KabutoLogo size={22} />
+            </div>
           )}
           <div className="hidden sm:flex flex-col leading-none">
             <span className="text-[13px] font-black text-slate-800 tracking-tight">HONNOJI</span>
