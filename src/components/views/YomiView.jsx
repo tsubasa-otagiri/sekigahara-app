@@ -1,16 +1,17 @@
 import { useState, useMemo, useEffect } from "react";
 import { Edit2, Trash2, CheckSquare, Square, Trash } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
-import { filterByTab, fmtAmt } from "../../utils/index.js";
+import { filterByTab, fmtAmt, isNeglected } from "../../utils/index.js";
 import { CONF, CTW } from "../../constants/index.js";
 import { TeamBadge, ConfBadge, PlanBadge } from "../ui/Badges.jsx";
 import Confirm from "../ui/Confirm.jsx";
+import DealDetailModal from "../DealDetailModal.jsx";
 
 /* 確度の表示順: 回収 → 70% → 50% → 30% */
 const CONF_ORDER = [...CONF].reverse();
 
 /* ── 1行 ── */
-function DealRow({ deal, isAdmin, checked, onToggle, onEdit, onDelete }) {
+function DealRow({ deal, isAdmin, checked, onToggle, onEdit, onDelete, onDetail }) {
   return (
     <tr className="hover:bg-slate-50/60 transition-colors group border-b border-slate-100 last:border-0">
       {isAdmin && (
@@ -20,8 +21,13 @@ function DealRow({ deal, isAdmin, checked, onToggle, onEdit, onDelete }) {
           </button>
         </td>
       )}
-      <td className="px-4 py-3 min-w-[140px]">
+      <td className="px-4 py-3 min-w-[140px] cursor-pointer" onClick={() => onDetail && onDetail(deal)}>
         <span className="text-[13px] font-semibold text-slate-800">{deal.company}</span>
+        {isNeglected(deal) && (
+          <span className="ml-1.5 text-[9px] font-bold bg-red-100 text-red-500 border border-red-200 rounded px-1 py-0.5 shrink-0">
+            🔥 放置注意
+          </span>
+        )}
       </td>
       <td className="px-3 py-3 whitespace-nowrap">
         <PlanBadge plan={deal.plan} />
@@ -127,6 +133,8 @@ export default function YomiView() {
 
   /* 選択中ID（管理者一括削除用） */
   const [selected, setSelected] = useState(new Set());
+  /* 詳細モーダル */
+  const [detailDeal, setDetailDeal] = useState(null);
   /* 削除確認ダイアログ状態 */
   const [confirmDel, setConfirmDel] = useState(null); // null | {mode:"single",id} | {mode:"bulk",ids:[]}
 
@@ -277,6 +285,7 @@ export default function YomiView() {
                           onToggle={toggleSelect}
                           onEdit={setEditingDeal}
                           onDelete={handleDeleteSingle}
+                          onDetail={setDetailDeal}
                         />
                       ))}
                     </>
@@ -297,6 +306,11 @@ export default function YomiView() {
           onOk={execDelete}
           onCancel={() => setConfirmDel(null)}
         />
+      )}
+
+      {/* 案件詳細モーダル */}
+      {detailDeal && (
+        <DealDetailModal deal={detailDeal} onClose={() => setDetailDeal(null)} />
       )}
     </div>
   );

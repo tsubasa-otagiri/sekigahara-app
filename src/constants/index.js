@@ -94,3 +94,17 @@ export const LS_KEYS = {
 
 /* 認証有効時間（ミリ秒）: 24時間 */
 export const AUTH_TTL = 24 * 60 * 60 * 1000;
+
+/* ヨミ度 */
+export const YOMI        = ["受注", "Aヨミ", "Bヨミ", "Cヨミ", "失注"];
+export const YOMI_WEIGHT = { "受注":1.0, "Aヨミ":0.7, "Bヨミ":0.5, "Cヨミ":0.3, "失注":0 };
+export const YOMI_COLOR  = {
+  "受注":"#22c55e", "Aヨミ":"#0070d2", "Bヨミ":"#f59e0b",
+  "Cヨミ":"#94a3b8", "失注":"#ef4444",
+};
+/* 失注要因 */
+export const LOSS_REASONS   = ["価格負け","競合負け","時期尚早","要件不一致","その他"];
+/* 活動履歴タイプ */
+export const ACTIVITY_TYPES = ["商談","電話","メール","提案書提出","社内MTG","その他"];
+/* 放置アラート日数 */
+export const NEGLECT_DAYS   = 14;

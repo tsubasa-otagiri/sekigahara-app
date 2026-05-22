@@ -7,7 +7,7 @@ import {
 import { Doughnut, Bar } from "react-chartjs-2";
 import { useApp } from "../../contexts/useApp.js";
 import { filterByTab, fmtAmt } from "../../utils/index.js";
-import { CONF, CTW, THEX, REAL_TEAMS } from "../../constants/index.js";
+import { CONF, CTW, THEX, REAL_TEAMS, YOMI, YOMI_WEIGHT, YOMI_COLOR, LOSS_REASONS } from "../../constants/index.js";
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
@@ -134,6 +134,91 @@ function TeamStackBar({ deals, teams }) {
   );
 }
 
+/* ── 加重パイプライン ── */
+function WeightedPipeline({ filtered }) {
+  const yomiData = useMemo(() => {
+    return YOMI.filter(y => y !== "失注").map(y => {
+      const yDeals = filtered.filter(d => d.yomi === y);
+      const total    = yDeals.reduce((s, d) => s + (d.amount || 0), 0);
+      const weighted = total * (YOMI_WEIGHT[y] ?? 0);
+      return { y, total, weighted };
+    });
+  }, [filtered]);
+
+  const maxAmt = Math.max(...yomiData.map(d => d.total), 1);
+
+  if (filtered.length === 0) return null;
+
+  return (
+    <div className="bg-white rounded-2xl card-shadow p-5">
+      <h3 className="text-sm font-bold text-slate-700 mb-4">加重パイプライン（着地予想）</h3>
+      <div className="space-y-2">
+        {yomiData.map(({ y, total, weighted }) => (
+          <div key={y} className="flex items-center gap-3">
+            <span className="text-xs font-bold w-12 shrink-0" style={{color: YOMI_COLOR[y]}}>{y}</span>
+            <div className="flex-1 bg-slate-100 rounded-full h-2 relative overflow-hidden">
+              <div
+                className="absolute left-0 top-0 h-full rounded-full opacity-30"
+                style={{width: `${maxAmt > 0 ? (total / maxAmt) * 100 : 0}%`, background: YOMI_COLOR[y]}}
+              />
+              <div
+                className="absolute left-0 top-0 h-full rounded-full"
+                style={{width: `${maxAmt > 0 ? (weighted / maxAmt) * 100 : 0}%`, background: YOMI_COLOR[y]}}
+              />
+            </div>
+            <span className="text-xs text-slate-500 w-20 text-right shrink-0">{fmtAmt(weighted)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── 失注要因ドーナツ ── */
+function LossReasonChart({ filtered }) {
+  const lostDeals = filtered.filter(d => d.yomi === "失注");
+  const counts = useMemo(() => {
+    const acc = {};
+    lostDeals.forEach(d => {
+      const r = d.lossReason || "その他";
+      acc[r] = (acc[r] || 0) + 1;
+    });
+    return acc;
+  }, [lostDeals]);
+
+  if (lostDeals.length === 0) return null;
+
+  const labels  = Object.keys(counts);
+  const data    = Object.values(counts);
+  const bgColors = ["#ef4444","#f97316","#f59e0b","#8b5cf6","#94a3b8"];
+
+  const chartData = {
+    labels,
+    datasets: [{
+      data,
+      backgroundColor: labels.map((_, i) => bgColors[i % bgColors.length]),
+      borderWidth: 3,
+      borderColor: "#fff",
+      hoverOffset: 8,
+    }],
+  };
+
+  return (
+    <div className="bg-white rounded-2xl card-shadow p-5">
+      <h3 className="text-sm font-bold text-slate-700 mb-4">失注要因分析（{lostDeals.length}件）</h3>
+      <div style={{ height: 200 }}>
+        <Doughnut data={chartData} options={{
+          responsive: true, maintainAspectRatio: false, cutout: "60%",
+          plugins: {
+            legend: { position: "right", labels: { boxWidth: 10, font: { size: 11, family: "Noto Sans JP" }, padding: 12 } },
+            tooltip: { callbacks: { label: c => ` ${c.label}: ${c.raw}件` }, bodyFont: { family: "Noto Sans JP" } },
+          },
+        }} />
+      </div>
+    </div>
+  );
+}
+
 /* ── メイン ── */
 export default function SummaryView() {
   const { deals, members, activeTab, activePeriods } = useApp();
@@ -252,6 +337,12 @@ export default function SummaryView() {
           </div>
         </div>
       </div>
+
+      {/* ── 加重パイプライン分析 ── */}
+      <WeightedPipeline filtered={filtered} />
+
+      {/* ── 失注要因分析 ── */}
+      <LossReasonChart filtered={filtered} />
     </div>
   );
 }

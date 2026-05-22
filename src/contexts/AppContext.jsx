@@ -10,6 +10,19 @@ const _NOW = new Date();
 const _PAD = (n) => String(n).padStart(2, '0');
 export const TODAY_PERIOD = `${_NOW.getFullYear()}-${_PAD(_NOW.getMonth() + 1)}`;
 
+const _TODAY_ISO = new Date().toISOString();
+
+/** confidence → yomi デフォルト変換 */
+const _confToYomi = (c) => {
+  if (c === "回収") return "受注";
+  if (c === "70%")  return "Aヨミ";
+  if (c === "50%")  return "Bヨミ";
+  if (c === "30%")  return "Cヨミ";
+  return "Bヨミ";
+};
+
+const resolveYomi = (yomi, conf) => yomi || _confToYomi(conf);
+
 /* デフォルト旗印 = なし（空データURI）
  * カスタム未設定時はファビコン非表示・ロゴ非表示 */
 const DEFAULT_FAVICON_HREF = "data:,";
@@ -32,6 +45,11 @@ export const AppProvider = ({ children }) => {
       is: normalizeName(d.is),
       fs: normalizeName(d.fs),
       period: d.period || TODAY_PERIOD,
+      yomi:       d.yomi       || _confToYomi(d.confidence),
+      lossReason: d.lossReason || "",
+      createdAt:  d.createdAt  || _TODAY_ISO,
+      updatedAt:  d.updatedAt  || _TODAY_ISO,
+      activities: Array.isArray(d.activities) ? d.activities : [],
     }));
   });
 
@@ -122,6 +140,11 @@ export const AppProvider = ({ children }) => {
       is:     normalizeName(raw.is),
       fs:     normalizeName(raw.fs),
       period: raw.period || currentPeriod,
+      yomi:       resolveYomi(raw.yomi, raw.confidence),
+      lossReason: raw.lossReason || "",
+      createdAt:  raw.createdAt  || new Date().toISOString(),
+      updatedAt:  new Date().toISOString(),
+      activities: raw.activities || [],
     };
     setDeals(prev => [deal, ...prev]);
     return deal;
@@ -134,12 +157,22 @@ export const AppProvider = ({ children }) => {
       next.phase = resolvePhase(next.confidence, next.phase);
       next.is = normalizeName(next.is);
       next.fs = normalizeName(next.fs);
+      next.updatedAt = new Date().toISOString();
       return next;
     }));
   }, []);
 
   const deleteDeal = useCallback((id) => {
     setDeals(prev => prev.filter(d => d.id !== id));
+  }, []);
+
+  const addActivity = useCallback((dealId, act) => {
+    const now = new Date().toISOString();
+    setDeals(prev => prev.map(d => d.id !== dealId ? d : {
+      ...d,
+      activities: [...(d.activities || []), { id: nextId(), ...act, date: now }],
+      updatedAt: now,
+    }));
   }, []);
 
   /* ── メンバー CRUD ── */
@@ -167,7 +200,7 @@ export const AppProvider = ({ children }) => {
       currentUserId, currentUser, login, loginByName, logout,
       /* data */
       members, deals,
-      addDeal, updateDeal, deleteDeal,
+      addDeal, updateDeal, deleteDeal, addActivity,
       updateMember, addMember, deleteMember,
       replaceDeals, replaceMembers,
       /* logo */

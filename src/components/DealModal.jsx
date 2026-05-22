@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Save } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
-import { CONF, PHASES, PLANS, TEAMS_OPT, MEMBER_MASTER_NAMES } from "../constants/index.js";
+import { CONF, PHASES, PLANS, TEAMS_OPT, MEMBER_MASTER_NAMES, YOMI, LOSS_REASONS } from "../constants/index.js";
 import { parseAmt, resolvePhase } from "../utils/index.js";
 import Modal from "./ui/Modal.jsx";
 
@@ -24,6 +24,7 @@ const BLANK = {
   company: "", plan: "MDC", amount: "",
   team: "", is: "", fs: "",
   confidence: "50%", phase: "未設定", note: "",
+  yomi: "", lossReason: "",
 };
 
 export default function DealModal({ deal, onClose }) {
@@ -71,6 +72,11 @@ export default function DealModal({ deal, onClose }) {
       const next = { ...prev, [key]: val };
       /* 確度 → フェーズ自動連動 */
       if (key === "confidence") next.phase = resolvePhase(val, prev.phase);
+      /* 確度 → ヨミ度自動連動 */
+      if (key === "confidence") {
+        const map = {"回収":"受注","70%":"Aヨミ","50%":"Bヨミ","30%":"Cヨミ"};
+        next.yomi = map[val] || next.yomi || "Bヨミ";
+      }
       /* チーム変更 → IS/FSリセット */
       if (key === "team") { next.is = ""; next.fs = ""; }
       return next;
@@ -229,6 +235,24 @@ export default function DealModal({ deal, onClose }) {
               </p>
             )}
           </Fld>
+        </div>
+
+        {/* ヨミ度 */}
+        <div className="grid grid-cols-2 gap-3">
+          <Fld label="ヨミ度">
+            <select className={SEL} value={form.yomi || ""} onChange={e => set("yomi", e.target.value)}>
+              <option value="">-- 選択 --</option>
+              {YOMI.map(y => <option key={y}>{y}</option>)}
+            </select>
+          </Fld>
+          {form.yomi === "失注" && (
+            <Fld label="失注要因">
+              <select className={SEL} value={form.lossReason || ""} onChange={e => set("lossReason", e.target.value)}>
+                <option value="">-- 選択 --</option>
+                {LOSS_REASONS.map(r => <option key={r}>{r}</option>)}
+              </select>
+            </Fld>
+          )}
         </div>
 
         {/* 対象年月 */}

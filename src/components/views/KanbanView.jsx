@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
 import { useApp } from "../../contexts/useApp.js";
-import { filterByTab, fmtAmt } from "../../utils/index.js";
+import { filterByTab, fmtAmt, isNeglected } from "../../utils/index.js";
 import { CONF, CTW } from "../../constants/index.js";
 import { TeamBadge } from "../ui/Badges.jsx";
 import Confirm from "../ui/Confirm.jsx";
+import DealDetailModal from "../DealDetailModal.jsx";
 
 const COLS = CONF; // ["30%","50%","70%","回収"]
 
@@ -15,7 +16,7 @@ const COLS = CONF; // ["30%","50%","70%","回収"]
 const COL_BODY_H = "calc(100vh - 250px)";
 
 /* ── 案件カード ── */
-function DealCard({ deal, isDragging, onDragStart, onDragEnd }) {
+function DealCard({ deal, isDragging, onDragStart, onDragEnd, onDetail }) {
   return (
     <div
       draggable
@@ -37,9 +38,17 @@ function DealCard({ deal, isDragging, onDragStart, onDragEnd }) {
       </div>
 
       {/* 行2: 企業名 */}
-      <p className="text-[11px] font-bold text-slate-800 leading-tight truncate mb-0.5">
+      <p
+        className="text-[11px] font-bold text-slate-800 leading-tight truncate mb-0.5 cursor-pointer hover:text-blue-600 transition-colors"
+        onClick={() => onDetail && onDetail(deal)}
+      >
         {deal.company}
       </p>
+      {isNeglected(deal) && (
+        <span className="text-[9px] font-bold text-red-500 flex items-center gap-0.5">
+          🔥 放置注意
+        </span>
+      )}
 
       {/* 行3: IS / FS */}
       {(deal.is || deal.fs) && (
@@ -65,7 +74,7 @@ function DealCard({ deal, isDragging, onDragStart, onDragEnd }) {
 /* ── カンバン列 ── */
 function KanbanCol({
   conf, deals, draggedId, dragOverCol,
-  onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop,
+  onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop, onDetail,
 }) {
   const tw     = CTW[conf] ?? CTW["30%"];
   const isOver = dragOverCol === conf;
@@ -124,6 +133,7 @@ function KanbanCol({
               isDragging={draggedId === deal.id}
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
+              onDetail={onDetail}
             />
           ))
         )}
@@ -139,6 +149,7 @@ export default function KanbanView() {
   const [draggedId,   setDraggedId]   = useState(null);
   const [dragOverCol, setDragOverCol] = useState(null);
   const [pendingMove, setPendingMove] = useState(null);
+  const [detailDeal,  setDetailDeal]  = useState(null);
 
   const filtered = useMemo(() => {
     const pdDeals = deals.filter(d => activePeriods.includes(d.period));
@@ -204,6 +215,7 @@ export default function KanbanView() {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
+            onDetail={setDetailDeal}
           />
         ))}
       </div>
@@ -215,6 +227,10 @@ export default function KanbanView() {
           onOk={confirmMove}
           onCancel={() => setPendingMove(null)}
         />
+      )}
+
+      {detailDeal && (
+        <DealDetailModal deal={detailDeal} onClose={() => setDetailDeal(null)} />
       )}
     </div>
   );

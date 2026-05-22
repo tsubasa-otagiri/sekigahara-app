@@ -1,4 +1,4 @@
-import { LS_KEYS, AUTH_TTL } from "../constants/index.js";
+import { LS_KEYS, AUTH_TTL, NEGLECT_DAYS } from "../constants/index.js";
 
 /* ── 金額パース: "3.5万円" "1万" "48" など → 万単位の数値 ── */
 export const parseAmt = (v) => {
@@ -85,4 +85,15 @@ export const NAME_MAP = {
 export const normalizeName = (name) => {
   if (!name) return name;
   return NAME_MAP[name] ?? name;
+};
+
+/** 14日以上更新なし（受注・失注以外）の案件を検知 */
+export const isNeglected = (deal) => {
+  if (!deal) return false;
+  const yomi = deal.yomi || "";
+  if (yomi === "受注" || yomi === "失注" || deal.confidence === "回収") return false;
+  const lastTs = deal.activities?.length > 0
+    ? Math.max(...deal.activities.map(a => new Date(a.date).getTime()))
+    : new Date(deal.updatedAt || deal.createdAt || Date.now()).getTime();
+  return (Date.now() - lastTs) / 86400000 >= NEGLECT_DAYS;
 };
