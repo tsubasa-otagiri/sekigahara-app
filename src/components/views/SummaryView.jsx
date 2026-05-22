@@ -49,8 +49,11 @@ function StatCard({ conf, amt, count, total, onClick }) {
 
 /* ── シナリオカード（アグレッシブ / コンサバ） ── */
 const SCENARIO_HEX = { aggress: "#0ea5e9", conserv: "#6366f1" };
-function ScenarioCard({ label, sub, amt, count, total, hex, onClick }) {
-  const pct = total > 0 ? Math.round((amt / total) * 100) : 0;
+function ScenarioCard({ label, sub, amt, count, target, hex, onClick }) {
+  /* 目標達成率（上限 999%、バー幅は 100% キャップ） */
+  const pct     = target > 0 ? Math.min(Math.round((amt / target) * 100), 999) : 0;
+  const barPct  = Math.min(pct, 100);
+  const noTarget = target === 0;
   return (
     <div
       className="bg-white rounded-2xl p-4 flex flex-col gap-2 card-shadow
@@ -72,10 +75,12 @@ function ScenarioCard({ label, sub, amt, count, total, hex, onClick }) {
       <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-700"
-          style={{ width: `${pct}%`, background: hex }}
+          style={{ width: `${barPct}%`, background: hex }}
         />
       </div>
-      <p className="text-[10px] text-slate-400 tabular">全体の {pct}%</p>
+      <p className="text-[10px] tabular font-semibold" style={{ color: hex }}>
+        {noTarget ? "目標未設定" : `目標達成率: ${pct}%`}
+      </p>
     </div>
   );
 }
@@ -339,6 +344,15 @@ export default function SummaryView() {
                 />
               </div>
               <p className="text-xs mt-1 font-bold opacity-80 tabular">{achRate}% 達成</p>
+              {/* アグレッシブ・コンサバ達成率 */}
+              <div className="mt-2 flex flex-col gap-0.5 text-[10px] opacity-70">
+                <span className="tabular">
+                  アグレッシブ {Math.min(Math.round((aggress / teamTarget) * 100), 999)}%
+                </span>
+                <span className="tabular">
+                  コンサバ {Math.min(Math.round((conserv / teamTarget) * 100), 999)}%
+                </span>
+              </div>
             </div>
           )}
 
@@ -394,7 +408,7 @@ export default function SummaryView() {
           sub="50%以上"
           amt={aggress}
           count={agressCount}
-          total={total}
+          target={teamTarget}
           hex={SCENARIO_HEX.aggress}
           onClick={() => setActiveView("list")}
         />
@@ -403,7 +417,7 @@ export default function SummaryView() {
           sub="70%以上"
           amt={conserv}
           count={conservCount}
-          total={total}
+          target={teamTarget}
           hex={SCENARIO_HEX.conserv}
           onClick={() => setActiveView("list")}
         />
