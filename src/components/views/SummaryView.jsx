@@ -256,6 +256,13 @@ export default function SummaryView() {
   const personalTarget = currentUser?.target || 0;
   const myAchRate     = personalTarget > 0 ? Math.min(Math.round((myKaishu / personalTarget) * 100), 999) : 0;
 
+  /* チーム確度集計（グラフ用） */
+  const byConf = useMemo(() => {
+    const acc = { "30%": 0, "50%": 0, "70%": 0, "回収": 0 };
+    filtered.forEach(d => { acc[d.confidence] = (acc[d.confidence] || 0) + (d.amount || 0); });
+    return acc;
+  }, [filtered]);
+
   /* バナー色 = ログインユーザーのチームカラー */
   const color     = THEX[currentUser?.team] ?? "#0070d2";
   const isMulti   = activeTab === "全体" || activeTab === "鈴木Tプレ";
