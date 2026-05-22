@@ -79,7 +79,7 @@ function DealRow({ deal, isAdmin, checked, onToggle, onDetail }) {
           return m
             ? (
               <span
-                className="text-[13px] text-gray-600 leading-relaxed whitespace-normal break-all line-clamp-3"
+                className="text-[13px] text-gray-600 leading-relaxed whitespace-pre-wrap break-all line-clamp-3"
                 title={m}
               >{m}</span>
             )
