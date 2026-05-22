@@ -134,6 +134,113 @@ function TeamStackBar({ deals, teams }) {
   );
 }
 
+/* ══════════════════════════════════════════════
+   マイダッシュボード
+   ログインユーザーが IS / FS として関与している案件を
+   ヨミ度ごとに集計して表示
+══════════════════════════════════════════════ */
+/* ヨミ表示定義: [value, displayLabel, weight, color] */
+const MY_YOMI = [
+  { val: "受注", label: "受注",  pct: "100%", color: YOMI_COLOR["受注"] },
+  { val: "70%",  label: "70%",   pct: "70%",  color: YOMI_COLOR["70%"]  },
+  { val: "50%",  label: "50%",   pct: "50%",  color: YOMI_COLOR["50%"]  },
+  { val: "30%",  label: "30%",   pct: "30%",  color: YOMI_COLOR["30%"]  },
+];
+
+function MyDashboard({ deals, activePeriods, currentUser }) {
+  const name = currentUser?.name;
+
+  /* 期間内で自分が IS or FS の案件（失注除く） */
+  const myDeals = useMemo(() => {
+    if (!name) return [];
+    return deals.filter(d =>
+      activePeriods.includes(d.period) &&
+      (d.is === name || d.fs === name) &&
+      d.yomi !== "失注"
+    );
+  }, [deals, name, activePeriods]);
+
+  /* ヨミ度ごとに集計 */
+  const groups = useMemo(() =>
+    MY_YOMI.map(({ val, label, pct, color }) => {
+      const ds  = myDeals.filter(d => d.yomi === val);
+      const amt = ds.reduce((s, d) => s + (d.amount || 0), 0);
+      const w   = YOMI_WEIGHT[val] ?? 0;
+      return { val, label, pct, color, count: ds.length, amount: amt, weighted: amt * w };
+    }),
+  [myDeals]);
+
+  const totalAmt      = groups.reduce((s, g) => s + g.amount,   0);
+  const weightedTotal = groups.reduce((s, g) => s + g.weighted, 0);
+
+  if (!name) return null;
+
+  return (
+    <div className="bg-white rounded-2xl card-shadow overflow-hidden">
+      {/* ヘッダーバー */}
+      <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase">MY Dashboard</span>
+          <span className="text-[11px] font-bold text-slate-600">— {name}</span>
+        </div>
+        <span className="text-[11px] font-semibold text-slate-400">{myDeals.length} 件 / {fmtAmt(totalAmt)}</span>
+      </div>
+
+      <div className="p-4 sm:p-5 space-y-4">
+        {/* ヨミ度ミニカード */}
+        {myDeals.length === 0 ? (
+          <p className="text-xs text-slate-400 text-center py-4">担当案件がありません</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {groups.map(({ val, label, pct, color, count, amount, weighted }) => (
+              <div
+                key={val}
+                className="rounded-xl p-3.5 flex flex-col gap-1.5"
+                style={{ background: color + "0d", border: `1.5px solid ${color}30` }}
+              >
+                {/* ラベル */}
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+                  <span className="text-[12px] font-black" style={{ color }}>
+                    {label}
+                    {label === "受注" && <span className="text-[9px] font-semibold ml-1 opacity-60">(100%)</span>}
+                  </span>
+                </div>
+
+                {/* 金額 */}
+                <p className="text-xl font-black text-slate-800 tabular leading-none">{fmtAmt(amount)}</p>
+
+                {/* 件数 */}
+                <p className="text-[10px] text-slate-400 tabular">{count} 件</p>
+
+                {/* 着地 */}
+                <div className="mt-0.5 pt-1.5 border-t" style={{ borderColor: color + "25" }}>
+                  <p className="text-[10px] text-slate-500">
+                    着地 <span className="font-black tabular" style={{ color }}>{fmtAmt(weighted)}</span>
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 着地予想合計 */}
+        {myDeals.length > 0 && (
+          <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-slate-50">
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">着地予想（加重合計）</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                受注×100% + 70%案件×70% + 50%案件×50% + 30%案件×30%
+              </p>
+            </div>
+            <p className="text-2xl font-black text-slate-800 tabular">{fmtAmt(weightedTotal)}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── 加重パイプライン ── */
 function WeightedPipeline({ filtered }) {
   const yomiData = useMemo(() => {
@@ -221,7 +328,7 @@ function LossReasonChart({ filtered }) {
 
 /* ── メイン ── */
 export default function SummaryView() {
-  const { deals, members, activeTab, activePeriods } = useApp();
+  const { deals, members, activeTab, activePeriods, currentUser } = useApp();
   const filtered = useMemo(() => {
     const pd = deals.filter(d => activePeriods.includes(d.period));
     return filterByTab(pd, activeTab);
@@ -314,6 +421,9 @@ export default function SummaryView() {
             count={filtered.filter(d => d.confidence === conf).length} total={total} />
         ))}
       </div>
+
+      {/* ── マイダッシュボード ── */}
+      <MyDashboard deals={deals} activePeriods={activePeriods} currentUser={currentUser} />
 
       {/* ── グラフ ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
