@@ -112,7 +112,7 @@ export const AppProvider = ({ children }) => {
     : (_QM[periodType] || []).map(m => `${currentYear}-${_PAD(m)}`);
 
   /* ── UI状態 ── */
-  const [activeTab,     setActiveTab]     = useState("全体");
+  const [activeTab,     setActiveTab]     = useState("マイ");
   const [activeView,    setActiveView]    = useState("summary");
   const [searchQuery,   setSearchQuery]   = useState("");
   const [showNewDeal,   setShowNewDeal]   = useState(false);
