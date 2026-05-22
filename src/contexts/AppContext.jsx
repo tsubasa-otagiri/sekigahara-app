@@ -257,6 +257,7 @@ export const AppProvider = ({ children }) => {
       content,
       status:    "未対応",
       notified:  false,
+      likes:     [],
       createdAt: new Date().toISOString(),
     };
     setRequests(prev => [req, ...prev]);
@@ -264,6 +265,20 @@ export const AppProvider = ({ children }) => {
 
   const resolveRequest = useCallback((id) => {
     setRequests(prev => prev.map(r => r.id === id ? { ...r, status: "対応済" } : r));
+  }, []);
+
+  const toggleLike = useCallback((id) => {
+    const name = currentUser?.name;
+    if (!name) return;
+    setRequests(prev => prev.map(r => {
+      if (r.id !== id) return r;
+      const likes = r.likes ?? [];
+      return { ...r, likes: likes.includes(name) ? likes.filter(n => n !== name) : [...likes, name] };
+    }));
+  }, [currentUser]);
+
+  const deleteRequest = useCallback((id) => {
+    setRequests(prev => prev.filter(r => r.id !== id));
   }, []);
 
   const markRequestNotified = useCallback((id) => {
@@ -287,8 +302,8 @@ export const AppProvider = ({ children }) => {
       updateMember, addMember, deleteMember,
       replaceDeals, replaceMembers,
       /* requests */
-      requests, addRequest, resolveRequest, markRequestNotified,
-      requestNotifs, dismissAllNotifs,
+      requests, addRequest, resolveRequest, toggleLike, deleteRequest,
+      markRequestNotified, requestNotifs, dismissAllNotifs,
       /* logo */
       logoDataUrl, saveLogo,
       /* pw prompt */

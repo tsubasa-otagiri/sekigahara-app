@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, Send, CheckCircle, Clock, MessageSquare } from "lucide-react";
+import { X, Send, CheckCircle, Clock, MessageSquare, Trash2 } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
 
 const fmtDate = (iso) => {
@@ -10,7 +10,8 @@ const fmtDate = (iso) => {
 };
 
 export default function RequestModal({ onClose }) {
-  const { currentUser, members, requests, addRequest, resolveRequest } = useApp();
+  const { currentUser, members, requests, addRequest, resolveRequest, toggleLike, deleteRequest } = useApp();
+  const isAdmin = currentUser?.role === "admin";
 
   /* 管理者 or 小田切（チームリーダー）が管理画面を見られる */
   const canManage = currentUser?.role === "admin" || currentUser?.name === "小田切";
@@ -198,19 +199,59 @@ export default function RequestModal({ onClose }) {
                     {/* 内容 */}
                     <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{r.content}</p>
 
-                    {/* 対応完了ボタン */}
-                    {r.status === "未対応" && (
-                      <div className="pt-1">
-                        <button
-                          onClick={() => resolveRequest(r.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold
-                            text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition"
-                        >
-                          <CheckCircle size={12} />
-                          対応完了にする
-                        </button>
+                    {/* アクションバー */}
+                    <div className="flex items-center justify-between pt-1 flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        {/* 👍 いいねボタン */}
+                        {(() => {
+                          const likes = r.likes ?? [];
+                          const liked = likes.includes(currentUser?.name);
+                          return (
+                            <button
+                              onClick={() => toggleLike(r.id)}
+                              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold
+                                border transition
+                                ${liked
+                                  ? "bg-amber-50 border-amber-300 text-amber-600"
+                                  : "bg-slate-50 border-slate-200 text-slate-500 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-600"
+                                }`}
+                            >
+                              👍 {likes.length > 0 && <span>{likes.length}</span>}
+                            </button>
+                          );
+                        })()}
+
+                        {/* 対応完了ボタン（canManage） */}
+                        {r.status === "未対応" && (
+                          <button
+                            onClick={() => resolveRequest(r.id)}
+                            className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-bold
+                              text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition"
+                          >
+                            <CheckCircle size={12} />
+                            対応完了
+                          </button>
+                        )}
                       </div>
-                    )}
+
+                      {/* 削除ボタン（管理者のみ） */}
+                      {isAdmin && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm("この要望を削除してもよろしいですか？")) {
+                              deleteRequest(r.id);
+                            }
+                          }}
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold
+                            text-slate-300 hover:text-red-500 hover:bg-red-50 border border-transparent
+                            hover:border-red-200 transition"
+                          title="削除（管理者のみ）"
+                        >
+                          <Trash2 size={12} />
+                          削除
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))
               )}
