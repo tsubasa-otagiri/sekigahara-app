@@ -401,7 +401,8 @@ function FaviconSection() {
   const fileRef = useRef(null);
 
   const [status,       setStatus]       = useState("");
-  const [pendingImage, setPendingImage] = useState(null); // トリミング前の raw dataURL
+  const [pendingImage, setPendingImage] = useState(null);
+  const [showFixModal, setShowFixModal] = useState(false);
 
   const flash = (msg) => { setStatus(msg); setTimeout(() => setStatus(""), 3500); };
 
@@ -501,10 +502,19 @@ function FaviconSection() {
             />
           </label>
           {isCustom && (
-            <button onClick={handleReset} className={BTN_GRAY}>
-              <X size={13} />
-              デフォルトに戻す
-            </button>
+            <>
+              <button
+                onClick={() => setShowFixModal(true)}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[11px] font-bold
+                  text-emerald-700 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 transition"
+              >
+                📌 アプリに固定する
+              </button>
+              <button onClick={handleReset} className={BTN_GRAY}>
+                <X size={13} />
+                デフォルトに戻す
+              </button>
+            </>
           )}
         </div>
 
@@ -513,6 +523,56 @@ function FaviconSection() {
           対応形式: PNG / JPG / SVG / WebP　／　サイズ制限: 5MB 以下<br />
           アップロード後にトリミング・白背景透過・自動最大化が可能です
         </p>
+
+        {/* シークレットモード注意 */}
+        <div className="mt-3 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+          <span className="text-amber-500 shrink-0 mt-0.5">⚠️</span>
+          <p className="text-[11px] text-amber-700 leading-relaxed">
+            現在の設定は <strong>このブラウザの LocalStorage</strong> に保存されています。
+            シークレットモードや別のデバイスでは表示されません。<br />
+            全環境で表示するには「📌 アプリに固定する」から開発者にコードを送ってください。
+          </p>
+        </div>
+
+        {/* アプリ固定モーダル */}
+        {showFixModal && logoDataUrl && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50"
+            onClick={() => setShowFixModal(false)}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4"
+              onClick={e => e.stopPropagation()}>
+              <h3 className="text-base font-black text-slate-800">📌 アプリにファビコンを固定する</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                下記のコードを<strong>開発者（Claude）</strong>にそのまま貼り付けて送ってください。<br />
+                コードがアプリに組み込まれると、シークレットモード・どのデバイスでも表示されます。
+              </p>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                <p className="text-[10px] font-mono text-slate-500 break-all line-clamp-4 select-all">
+                  {logoDataUrl.slice(0, 200)}...
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(logoDataUrl).then(() => {
+                      setShowFixModal(false);
+                      flash("✅ クリップボードにコピーしました！開発者に送ってください");
+                    });
+                  }}
+                  className="flex-1 py-2.5 rounded-xl text-white text-sm font-bold transition hover:brightness-110"
+                  style={{ background: "#0070d2" }}
+                >
+                  📋 コードをコピーする
+                </button>
+                <button
+                  onClick={() => setShowFixModal(false)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold hover:bg-slate-200 transition"
+                >
+                  閉じる
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ステータスメッセージ */}

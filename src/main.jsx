@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
+import { BRAND_FAVICON } from './constants/brandConfig.js'
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  *  ① 過去の旗印（sghr_* キー）を焼き尽くし、
@@ -34,8 +35,9 @@ Object.entries(_MIGRATION_MAP).forEach(([oldKey, newKey]) => {
  *     React が描画される前に適用することで
  *     「リロード直後から正しい旗が立っている」状態を保つ
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-const _savedFavicon = localStorage.getItem("honnoji_favicon");
-if (_savedFavicon) {
+/* BRAND_FAVICON（コードに埋め込み）→ LocalStorage の順で優先適用 */
+const _faviconUrl = BRAND_FAVICON || localStorage.getItem("honnoji_favicon");
+if (_faviconUrl) {
   const _link =
     document.querySelector('link[rel="icon"]') ||
     (() => {
@@ -44,7 +46,11 @@ if (_savedFavicon) {
       document.head.appendChild(l);
       return l;
     })();
-  _link.href = _savedFavicon;
+  _link.href = _faviconUrl;
+  /* BRAND_FAVICON が設定されている場合は LocalStorage にも同期して AppContext と整合させる */
+  if (BRAND_FAVICON && !localStorage.getItem("honnoji_favicon")) {
+    localStorage.setItem("honnoji_favicon", BRAND_FAVICON);
+  }
 }
 
 createRoot(document.getElementById('root')).render(
