@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useApp } from "../../contexts/useApp.js";
 import { filterByTab, fmtAmt, isNeglected, getDealCredit } from "../../utils/index.js";
 import { CONF, CTW, THEX, REAL_TEAMS } from "../../constants/index.js";
@@ -238,6 +238,7 @@ export default function KanbanView() {
   const isMyTab = activeTab === "マイ";
 
   const [draggedId,   setDraggedId]   = useState(null);
+  const draggedIdRef = useRef(null); /* stale closure 対策: state と並行管理 */
   const [dragOverCol, setDragOverCol] = useState(null);
   const [pendingMove, setPendingMove] = useState(null);
   const [detailDeal,  setDetailDeal]  = useState(null);
@@ -258,22 +259,27 @@ export default function KanbanView() {
   }, [deals, activeTab, searchQuery, activePeriods]);
 
   /* ── DnD ── */
-  const handleDragStart  = (e, id) => { setDraggedId(id); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", String(id)); };
-  const handleDragEnd    = ()      => { setDraggedId(null); setDragOverCol(null); };
-  const handleDragOver   = (e, c) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDragOverCol(c); };
-  const handleDragLeave  = (e)    => { if (e.currentTarget.contains(e.relatedTarget)) return; setDragOverCol(null); };
+  const handleDragStart = (e, id) => {
+    draggedIdRef.current = id;
+    setDraggedId(id);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(id));
+  };
+  const handleDragEnd   = () => { draggedIdRef.current = null; setDraggedId(null); setDragOverCol(null); };
+  const handleDragOver  = (e, c) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDragOverCol(c); };
+  const handleDragLeave = (e)    => { if (e.currentTarget.contains(e.relatedTarget)) return; setDragOverCol(null); };
 
   const handleDrop = (e, toConf) => {
     e.preventDefault();
     setDragOverCol(null);
-    /* dataTransfer を第一ソースにする（state の stale closure を回避） */
-    const rawId = e.dataTransfer.getData("text/plain");
-    const id = rawId ? Number(rawId) : draggedId;
-    if (!id) return;
-    const deal = deals.find((d) => d.id === id);
-    if (!deal || deal.confidence === toConf) { setDraggedId(null); return; }
-    setPendingMove({ dealId: id, fromConf: deal.confidence, toConf, dealName: deal.company });
+    /* ref → dataTransfer → state の順で ID を取得（型は文字列統一で比較） */
+    const rawId = String(draggedIdRef.current ?? e.dataTransfer.getData("text/plain") ?? draggedId ?? "");
+    if (!rawId) return;
+    const deal = deals.find((d) => String(d.id) === rawId);
+    if (!deal || deal.confidence === toConf) { setDraggedId(null); draggedIdRef.current = null; return; }
+    setPendingMove({ dealId: deal.id, fromConf: deal.confidence, toConf, dealName: deal.company });
     setDraggedId(null);
+    draggedIdRef.current = null;
   };
 
   const confirmMove = () => {
