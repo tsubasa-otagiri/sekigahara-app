@@ -266,10 +266,13 @@ export default function KanbanView() {
   const handleDrop = (e, toConf) => {
     e.preventDefault();
     setDragOverCol(null);
-    if (!draggedId) return;
-    const deal = deals.find((d) => d.id === draggedId);
+    /* dataTransfer を第一ソースにする（state の stale closure を回避） */
+    const rawId = e.dataTransfer.getData("text/plain");
+    const id = rawId ? Number(rawId) : draggedId;
+    if (!id) return;
+    const deal = deals.find((d) => d.id === id);
     if (!deal || deal.confidence === toConf) { setDraggedId(null); return; }
-    setPendingMove({ dealId: draggedId, fromConf: deal.confidence, toConf, dealName: deal.company });
+    setPendingMove({ dealId: id, fromConf: deal.confidence, toConf, dealName: deal.company });
     setDraggedId(null);
   };
 
