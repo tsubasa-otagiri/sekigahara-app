@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, Trash2, Pencil, Check, Ban, MessageSquare, Phone, Mail, FileText, Users, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
-import { ACTIVITY_TYPES, YOMI_COLOR, PLANS, TEAMS_OPT, MEMBER_MASTER_NAMES } from "../constants/index.js";
+import { ACTIVITY_TYPES, YOMI_COLOR, PLANS, TEAMS_OPT, MEMBER_MASTER_NAMES, CONF } from "../constants/index.js";
 import { fmtAmt, isNeglected, parseAmt } from "../utils/index.js";
 
 const TYPE_ICON = {
@@ -58,6 +58,8 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
   const [eAmount,    setEAmount]    = useState("");
   const [eIs,        setEIs]        = useState("");
   const [eFs,        setEFs]        = useState("");
+  const [ePeriod,    setEPeriod]    = useState("");
+  const [eConf,      setEConf]      = useState("");
 
   /* スクロールロック */
   useEffect(() => {
@@ -105,17 +107,21 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
     setEAmount(String(deal.amount || ""));
     setEIs(deal.is || "");
     setEFs(deal.fs || "");
+    setEPeriod(deal.period || "");
+    setEConf(deal.confidence || "30%");
     setShowEdit(true);
   };
 
   /* 案件情報 保存 */
   const saveInfo = () => {
     updateDeal(deal.id, {
-      company: eCompany.trim() || deal.company,
-      plan:    ePlan,
-      amount:  parseAmt(eAmount),
-      is:      eIs,
-      fs:      eFs,
+      company:    eCompany.trim() || deal.company,
+      plan:       ePlan,
+      amount:     parseAmt(eAmount),
+      is:         eIs,
+      fs:         eFs,
+      period:     ePeriod || deal.period,
+      confidence: eConf,
     });
     setShowEdit(false);
   };
@@ -245,6 +251,21 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
               </select>
               <input value={eAmount} onChange={e => setEAmount(e.target.value)}
                 className={`w-24 ${INP}`} placeholder="金額（万）" />
+            </div>
+
+            {/* 対象年月 / 確度 */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-slate-500 w-16 shrink-0">対象年月</span>
+              <input
+                type="month"
+                value={ePeriod}
+                onChange={e => setEPeriod(e.target.value)}
+                className={`flex-1 ${INP}`}
+              />
+              <span className="text-[10px] text-slate-500 shrink-0">確度</span>
+              <select value={eConf} onChange={e => setEConf(e.target.value)} className={`w-20 ${INP}`}>
+                {CONF.map(c => <option key={c}>{c}</option>)}
+              </select>
             </div>
 
             {/* IS / FS */}
