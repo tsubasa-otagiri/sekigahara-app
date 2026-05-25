@@ -6,17 +6,17 @@ export const parseAmt = (v) => {
   const s = String(v).replace(/,/g, "").trim();
   if (s.includes("万")) {
     const n = parseFloat(s.replace(/万円?/, ""));
-    return isNaN(n) ? 0 : Math.round(n * 10) / 10;
+    return isNaN(n) ? 0 : Math.round(n * 100) / 100;
   }
   const n = parseFloat(s);
   if (isNaN(n)) return 0;
   /* 10000以上なら円とみなして万に変換 */
   const result = n >= 10000 ? n / 10000 : n;
-  return Math.round(result * 10) / 10;
+  return Math.round(result * 100) / 100;
 };
 
 export const fmtAmt = (v) => {
-  const n = Math.round((v || 0) * 10) / 10;
+  const n = Math.round((v || 0) * 100) / 100;
   return n + "万";
 };
 
