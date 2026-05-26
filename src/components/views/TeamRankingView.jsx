@@ -175,7 +175,7 @@ export default function TeamRankingView() {
           { label: "目標合計",       val: fmtAmt(totals.target),     color: "#64748b" },
           { label: "回収合計",       val: fmtAmt(totals.kaishu),     color: "#059669" },
           { label: "達成率（平均）", val: avgRate + "%",              color: avgRate >= 100 ? "#059669" : avgRate >= 50 ? "#d97706" : "#dc2626" },
-          { label: "パイプライン",   val: totals.pipeline + " 件",   color: "#4f46e5" },
+          { label: "ヨミ件数",        val: totals.pipeline + " 件",   color: "#4f46e5" },
         ].map(({ label, val, color }) => (
           <div key={label} className="bg-white rounded-2xl px-4 py-4 card-shadow">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{label}</p>
@@ -198,7 +198,7 @@ export default function TeamRankingView() {
                 <SortTh label="受注件数"       col="kaishuCount" {...shProps} right />
                 <SortTh label="一人あたり"     col="perPerson"   {...shProps} right />
                 <SortTh label="アグレッシブ計" col="aggressive"  {...shProps} right />
-                <SortTh label="パイプライン"   col="pipeline"    {...shProps} right />
+                <SortTh label="ヨミ件数"       col="pipeline"    {...shProps} right />
               </tr>
             </thead>
             <tbody>

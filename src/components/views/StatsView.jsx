@@ -205,13 +205,14 @@ export default function StatsView() {
         .reduce((s, d) => s + getDealCredit(d, m.name), 0);
 
       /* 受注件数: 確度=回収の案件（折半クレジット適用） */
-      const kaishuCount = myDeals
-        .filter((d) => d.confidence === "回収")
-        .reduce((s, d) => s + getDealCredit(d, m.name), 0);
+      const kaishuDeals = myDeals.filter((d) => d.confidence === "回収");
+      const kaishuCount = kaishuDeals.reduce((s, d) => s + getDealCredit(d, m.name), 0);
+      /* 実件数（折半なし）: credit < 1 になる案件が存在する場合に表示用 */
+      const kaishuCountRaw = kaishuDeals.length;
 
       const target = m.target ?? 0;
       const rate   = target > 0 ? Math.round((kaishu / target) * 100) : 0;
-      return { m, target, kaishu, aggressive, pipeline, rate, kaishuCount };
+      return { m, target, kaishu, aggressive, pipeline, rate, kaishuCount, kaishuCountRaw };
     });
   }, [visibleMembers, pdDeals]);
 
@@ -298,7 +299,7 @@ export default function StatsView() {
           { label: "目標合計",       val: fmtAmt(totals.target),     color: "#64748b" },
           { label: "回収合計",       val: fmtAmt(totals.kaishu),     color: "#059669" },
           { label: "達成率（平均）", val: avgRate + "%",              color: avgRate >= 100 ? "#059669" : avgRate >= 50 ? "#d97706" : "#dc2626" },
-          { label: "パイプライン",   val: totals.pipeline + " 件",   color: "#4f46e5" },
+          { label: "ヨミ件数",        val: totals.pipeline + " 件",   color: "#4f46e5" },
         ].map(({ label, val, color }) => (
           <div key={label} className="bg-white rounded-2xl px-4 py-4 card-shadow">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{label}</p>
@@ -321,7 +322,7 @@ export default function StatsView() {
                 <SortTh label="達成率"         col="rate"       {...shProps} />
                 <SortTh label="受注件数"       col="kaishuCount" {...shProps} right />
                 <SortTh label="アグレッシブ計" col="aggressive" {...shProps} right />
-                <SortTh label="パイプライン"   col="pipeline"   {...shProps} right />
+                <SortTh label="ヨミ件数"       col="pipeline"   {...shProps} right />
               </tr>
             </thead>
             <tbody>
@@ -332,7 +333,7 @@ export default function StatsView() {
                   </td>
                 </tr>
               )}
-              {sorted.map(({ m, target, kaishu, aggressive, pipeline, rate, kaishuCount }) => {
+              {sorted.map(({ m, target, kaishu, aggressive, pipeline, rate, kaishuCount, kaishuCountRaw }) => {
                 const rank     = rankMap.get(m.id) ?? 99;
                 const rankStyle = RANK_ROW_STYLE[rank] ?? {};
                 const isTop3   = rank <= 3;
@@ -396,6 +397,9 @@ export default function StatsView() {
                       <span className={`text-sm font-black tabular ${kaishuCount > 0 ? "text-emerald-500" : "text-slate-300"}`}>
                         {fmtCount(kaishuCount)} 件
                       </span>
+                      {kaishuCountRaw > kaishuCount && (
+                        <span className="text-[10px] text-slate-400 tabular ml-1">({kaishuCountRaw})</span>
+                      )}
                     </td>
                     <td className="px-3 py-3 text-right">
                       <span className={`text-sm font-bold tabular ${aggressive > 0 ? "text-indigo-600" : "text-slate-300"}`}>
@@ -427,7 +431,7 @@ export default function StatsView() {
       </div>
 
       <p className="text-center text-[10px] text-slate-400 mt-4 tracking-wide">
-        ※ アグレッシブ計 = 70%＋回収の合計　｜　パイプライン = 担当案件の総数
+        ※ アグレッシブ計 = 70%＋回収の合計　｜　ヨミ件数 = 担当案件の総数
       </p>
 
       </>}
