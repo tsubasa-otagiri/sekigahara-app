@@ -166,12 +166,23 @@ export default function StatsView() {
     });
   }, [rows, sortKey, sortDir]);
 
-  /* 回収額ランキング（ソート列に関わらず常に kaishu 降順で確定） */
+  /* 回収額ランキング（同率対応：同じ kaishu なら同順位） */
   const rankMap = useMemo(() => {
     const byKaishu = [...rows].sort(
       (a, b) => b.kaishu - a.kaishu || b.rate - a.rate || b.pipeline - a.pipeline
     );
-    return new Map(byKaishu.map((r, i) => [r.m.id, i + 1]));
+    const map = new Map();
+    let rank = 1;
+    byKaishu.forEach((r, i) => {
+      if (i > 0 && r.kaishu === byKaishu[i - 1].kaishu) {
+        /* 前の人と同値 → 同順位 */
+        map.set(r.m.id, map.get(byKaishu[i - 1].m.id));
+      } else {
+        rank = i + 1; /* 標準順位: 1,1,3,4... */
+        map.set(r.m.id, rank);
+      }
+    });
+    return map;
   }, [rows]);
 
   /* チーム合計 */
@@ -297,7 +308,10 @@ export default function StatsView() {
                       </span>
                     </td>
                     <td className="px-3 py-3 w-40">
-                      <RateBar rate={rate} />
+                      <div className="flex items-center gap-1">
+                        <RateBar rate={rate} />
+                        {rate >= 100 && <span className="text-base leading-none select-none" title="達成！">🎉</span>}
+                      </div>
                     </td>
                     <td className="px-3 py-3 text-right">
                       <span className={`text-sm font-bold tabular ${aggressive > 0 ? "text-indigo-600" : "text-slate-300"}`}>
