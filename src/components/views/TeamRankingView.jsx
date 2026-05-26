@@ -291,8 +291,8 @@ export default function TeamRankingView() {
                 const hex = THEX[team] || "#64748b";
                 return (
                   <tr className="hover:bg-blue-50/40 transition-colors" style={{ borderLeft: "3px solid #2563eb" }}>
-                    <td className="px-3 py-3 text-center w-12">
-                      <span className="text-[10px] font-black text-blue-400 bg-blue-50 border border-blue-200 rounded-md px-1.5 py-0.5">参考</span>
+                    <td className="px-3 py-3 text-center w-12 shrink-0">
+                      <span className="text-[10px] font-black text-blue-400 bg-blue-50 border border-blue-200 rounded-md px-1.5 py-0.5 whitespace-nowrap inline-block">参考</span>
                     </td>
                     <td className="px-4 py-3">
                       <button
