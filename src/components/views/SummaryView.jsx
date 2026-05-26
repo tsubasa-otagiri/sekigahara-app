@@ -272,7 +272,7 @@ export default function SummaryView() {
   /* すべての集計に使うフィルター済みデータ（マイタブでは個人データになる） */
   const filtered = useMemo(() => {
     const pd = deals.filter(d => activePeriods.includes(d.period));
-    return filterByTab(pd, activeTab, currentUser?.name);
+    return filterByTab(pd, activeTab, currentUser?.name).filter(d => d.phase !== "失注");
   }, [deals, activeTab, activePeriods, currentUser]);
 
   /* 確度別集計（マイタブ時は折半クレジットを適用） */

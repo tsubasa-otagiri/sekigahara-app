@@ -251,6 +251,8 @@ export default function KanbanView() {
   const filtered = useMemo(() => {
     const pdDeals = deals.filter(d => activePeriods.includes(d.period));
     let ds = filterByTab(pdDeals, activeTab, myName);
+    /* 失注案件はカンバンから除外 */
+    ds = ds.filter(d => d.phase !== "失注");
     const q = searchQuery.trim().toLowerCase();
     if (q) {
       ds = ds.filter((d) =>
