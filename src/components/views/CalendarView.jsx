@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, CalendarDays, AlertCircle } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
-import { fmtAmt } from "../../utils/index.js";
+import { fmtAmt, filterByTab } from "../../utils/index.js";
 import { TODAY_PERIOD } from "../../contexts/AppContext.jsx";
 import DealDetailModal from "../DealDetailModal.jsx";
 import { TeamBadge, PlanBadge } from "../ui/Badges.jsx";
@@ -172,17 +172,23 @@ function MonthGrid({ ym, dealsByDay, onDayClick }) {
 
 /* ── メイン ── */
 export default function CalendarView() {
-  const { deals } = useApp();
+  const { deals, activeTab, currentUser } = useApp();
+  const myName = currentUser?.name || "";
   const [currentYm, setCurrentYm] = useState(TODAY_PERIOD);
   const [selectedDeal, setSelectedDeal] = useState(null);
   const [dayModal, setDayModal] = useState(null);
 
   const today = todayStr();
 
-  /* NA日がある案件（失注除く） */
+  /* チームタブでフィルター済みの案件（失注除く） */
+  const tabDeals = useMemo(() =>
+    filterByTab(deals.filter(d => d.phase !== "失注"), activeTab, myName),
+  [deals, activeTab, myName]);
+
+  /* NA日がある案件 */
   const allNADeals = useMemo(() =>
-    deals.filter(d => d.nextActionDate && d.phase !== "失注"),
-  [deals]);
+    tabDeals.filter(d => d.nextActionDate),
+  [tabDeals]);
 
   /* 今月のNA日を持つ案件 */
   const monthDeals = useMemo(() =>
@@ -197,8 +203,8 @@ export default function CalendarView() {
 
   /* NA日なし案件 */
   const noNADeals = useMemo(() =>
-    deals.filter(d => !d.nextActionDate && d.phase !== "失注" && d.confidence !== "回収"),
-  [deals]);
+    tabDeals.filter(d => !d.nextActionDate && d.confidence !== "回収"),
+  [tabDeals]);
 
   /* 日別マップ */
   const dealsByDay = useMemo(() => {
