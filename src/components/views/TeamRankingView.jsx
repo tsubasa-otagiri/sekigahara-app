@@ -130,11 +130,14 @@ export default function TeamRankingView() {
     return { team, target, kaishu, aggressive, pipeline, rate, memberCount: teamMembers.length };
   };
 
-  const rows = useMemo(() => [
-    ...REAL_TEAMS.map(team => buildRow(team, [team])),
-    /* 鈴木Tプレ: 杉山T(杉山除く) + 鈴木T の合算 */
+  const rows = useMemo(() =>
+    REAL_TEAMS.map(team => buildRow(team, [team])),
+  [pdDeals, members]);
+
+  /* 鈴木Tプレは4チームランキングとは別枠 */
+  const preRow = useMemo(() =>
     buildRow("鈴木Tプレ", ["杉山T", "鈴木T"], ["杉山"]),
-  ], [pdDeals, members]);
+  [pdDeals, members]);
 
   const sorted = useMemo(() => [...rows].sort((a, b) => {
     const va = a[sortKey] ?? 0, vb = b[sortKey] ?? 0;
@@ -198,11 +201,10 @@ export default function TeamRankingView() {
                 const rank = rankMap.get(team) ?? 99;
                 const rankStyle = RANK_ROW_STYLE[rank] ?? {};
                 const hex = THEX[team] || "#64748b";
-                const isCombo = team === "鈴木Tプレ";
                 return (
                   <tr key={team}
                     className="border-b border-slate-100 last:border-0 hover:brightness-[.97] transition-colors"
-                    style={isCombo ? { ...rankStyle, borderLeft: "3px solid #2563eb", background: "rgba(37,99,235,.04)" } : rankStyle}
+                    style={rankStyle}
                   >
                     <td className="px-3 py-3 text-center"><RankBadge rank={rank} /></td>
                     <td className="px-4 py-3">
@@ -217,7 +219,6 @@ export default function TeamRankingView() {
                         <span className="text-[13px] font-bold group-hover:underline underline-offset-2" style={{ color: rank <= 3 ? "#1e293b" : "#475569" }}>
                           {team}
                         </span>
-                        {isCombo && <span className="text-[9px] font-semibold text-blue-500 bg-blue-50 border border-blue-200 rounded px-1 py-px leading-none">合算</span>}
                       </button>
                     </td>
                     <td className="px-3 py-3 text-right text-sm text-slate-500 tabular">{memberCount}名</td>
@@ -251,6 +252,59 @@ export default function TeamRankingView() {
                 <td className="px-3 py-3 text-right text-sm font-black text-slate-700 tabular">{totals.pipeline} 件</td>
               </tr>
             </tfoot>
+          </table>
+        </div>
+      </div>
+
+      {/* 鈴木Tプレ（別枠） */}
+      <div className="mt-4 bg-white rounded-2xl overflow-hidden card-shadow border-t-4 border-blue-400">
+        <div className="px-4 py-2.5 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0" />
+          <span className="text-[11px] font-black text-blue-700 tracking-wide">鈴木Tプレ（参考）</span>
+          <span className="text-[10px] text-blue-400 ml-1">杉山T（杉山除く） ＋ 鈴木T の合算</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[540px] border-collapse">
+            <tbody>
+              {(() => {
+                const { team, target, kaishu, aggressive, pipeline, rate, memberCount } = preRow;
+                const hex = THEX[team] || "#64748b";
+                return (
+                  <tr className="hover:bg-blue-50/40 transition-colors" style={{ borderLeft: "3px solid #2563eb" }}>
+                    <td className="px-3 py-3 text-center w-12">
+                      <span className="text-[10px] font-black text-blue-400 bg-blue-50 border border-blue-200 rounded-md px-1.5 py-0.5">参考</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => setKaishuModal({ title: team, deals: pdDeals.filter(d => d.confidence === "回収" && ["杉山T","鈴木T"].includes(d.team)) })}
+                        className="flex items-center gap-2 hover:text-blue-600 transition-colors group"
+                      >
+                        <span className="w-3 h-3 rounded-full shrink-0" style={{ background: hex }} />
+                        <span className="text-[13px] font-bold text-slate-700 group-hover:underline underline-offset-2">{team}</span>
+                        <span className="text-[9px] font-semibold text-blue-500 bg-blue-50 border border-blue-200 rounded px-1 py-px leading-none">合算</span>
+                      </button>
+                    </td>
+                    <td className="px-3 py-3 text-right text-sm text-slate-500 tabular">{memberCount}名</td>
+                    <td className="px-3 py-3 text-right text-sm text-slate-500 tabular">{fmtAmt(target)}</td>
+                    <td className="px-3 py-3 text-right">
+                      <span className={`tabular font-black text-base ${kaishu > 0 ? "text-emerald-600" : "text-slate-300"}`}>{fmtAmt(kaishu)}</span>
+                    </td>
+                    <td className="px-3 py-3 w-40">
+                      <div className="flex items-center gap-1">
+                        <RateBar rate={rate} />
+                        {rate >= 100 && <span className="text-base leading-none">🎉</span>}
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-right">
+                      <span className={`text-sm font-bold tabular ${aggressive > 0 ? "text-indigo-600" : "text-slate-300"}`}>{fmtAmt(aggressive)}</span>
+                    </td>
+                    <td className="px-3 py-3 text-right">
+                      <span className="text-[13px] font-semibold text-slate-600 tabular">{pipeline} 件</span>
+                    </td>
+                  </tr>
+                );
+              })()}
+            </tbody>
           </table>
         </div>
       </div>
