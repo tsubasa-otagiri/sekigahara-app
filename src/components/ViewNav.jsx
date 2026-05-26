@@ -1,10 +1,11 @@
-import { BarChart2, List, Kanban, User, Users, TrendingUp, Settings, XCircle } from "lucide-react";
+import { BarChart2, List, Kanban, User, Users, TrendingUp, Settings, XCircle, CalendarDays } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
 
 const ALL_VIEWS = [
   { id: "summary",      label: "サマリー",       Icon: BarChart2,  adminOnly: false },
   { id: "list",         label: "ヨミ一覧",       Icon: List,       adminOnly: false },
   { id: "kanban",       label: "カンバン",       Icon: Kanban,     adminOnly: false },
+  { id: "calendar",     label: "受注予定",        Icon: CalendarDays, adminOnly: false },
   { id: "lost",         label: "失注",           Icon: XCircle,    adminOnly: false },
   { id: "personal",     label: "個人ランキング",  Icon: User,       adminOnly: false },
   { id: "team-ranking", label: "チームランキング", Icon: Users,      adminOnly: false },
