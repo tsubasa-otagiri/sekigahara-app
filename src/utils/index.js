@@ -1,9 +1,10 @@
 import { LS_KEYS, AUTH_TTL, NEGLECT_DAYS } from "../constants/index.js";
 
-/* ── 金額パース: "3.5万円" "1万" "48" など → 万単位の数値 ── */
+/* ── 金額パース: "¥227,200" "3.5万円" "1万" "48" など → 万単位の数値 ── */
 export const parseAmt = (v) => {
   if (v === "" || v == null) return 0;
-  const s = String(v).replace(/,/g, "").trim();
+  /* ¥ / ￥ 記号・カンマを除去してから処理 */
+  const s = String(v).replace(/[¥￥,]/g, "").trim();
   if (s.includes("万")) {
     const n = parseFloat(s.replace(/万円?/, ""));
     return isNaN(n) ? 0 : Math.round(n * 100) / 100;

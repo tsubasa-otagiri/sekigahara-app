@@ -149,8 +149,8 @@ export default function DealModal({ deal, onClose }) {
             <input
               className={INP}
               value={form.amount}
-              onChange={(e) => set("amount", e.target.value)}
-              placeholder="例: 30 または 3.5万円"
+              onChange={(e) => set("amount", e.target.value.replace(/[¥￥]/g, ""))}
+              placeholder="例: 30 / 3.5万円 / ¥227,200"
             />
           </Fld>
         </div>

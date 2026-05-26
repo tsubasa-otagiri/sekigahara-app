@@ -249,8 +249,12 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
               <select value={ePlan} onChange={e => setEPlan(e.target.value)} className={`flex-1 ${INP}`}>
                 {PLANS.map(p => <option key={p}>{p}</option>)}
               </select>
-              <input value={eAmount} onChange={e => setEAmount(e.target.value)}
-                className={`w-24 ${INP}`} placeholder="金額（万）" />
+              <input
+                value={eAmount}
+                onChange={e => setEAmount(e.target.value.replace(/[¥￥]/g, ""))}
+                className={`w-24 ${INP}`}
+                placeholder="金額（万）"
+              />
             </div>
 
             {/* 対象年月 / 確度 */}
