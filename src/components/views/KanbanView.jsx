@@ -43,13 +43,20 @@ function DealCard({ deal, isDragging, onDragStart, onDragEnd, onDetail }) {
         </span>
       </div>
 
-      {/* 行2: 企業名 */}
-      <p
-        className="text-[11px] font-bold text-slate-800 leading-tight truncate mb-0.5 cursor-pointer hover:text-blue-600 transition-colors"
-        onClick={() => onDetail && onDetail(deal)}
-      >
-        {deal.company}
-      </p>
+      {/* 行2: 企業名 ＋ プラン */}
+      <div className="flex items-baseline gap-1 mb-0.5 min-w-0">
+        <p
+          className="text-[11px] font-bold text-slate-800 leading-tight truncate cursor-pointer hover:text-blue-600 transition-colors flex-1 min-w-0"
+          onClick={() => onDetail && onDetail(deal)}
+        >
+          {deal.company}
+        </p>
+        {deal.plan && (
+          <span className="text-[8px] font-semibold text-slate-400 whitespace-nowrap shrink-0 leading-none">
+            {deal.plan}
+          </span>
+        )}
+      </div>
       {isNeglected(deal) && (
         <span className="text-[9px] font-bold text-red-500 flex items-center gap-0.5">
           🔥 放置注意

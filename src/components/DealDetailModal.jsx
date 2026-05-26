@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, Trash2, Pencil, Check, Ban, MessageSquare, Phone, Mail, FileText, Users, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Trash2, Pencil, Check, Ban, MessageSquare, Phone, Mail, FileText, Users, Clock, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
 import { ACTIVITY_TYPES, YOMI_COLOR, PLANS, TEAMS_OPT, MEMBER_MASTER_NAMES, CONF } from "../constants/index.js";
 import { fmtAmt, isNeglected, parseAmt } from "../utils/index.js";
@@ -39,7 +39,8 @@ const sortByMaster = (arr) =>
   });
 
 export default function DealDetailModal({ deal: dealProp, onClose }) {
-  const { deals, members, addActivity, deleteActivity, updateActivity, updateDeal } = useApp();
+  const { deals, members, addActivity, deleteActivity, updateActivity, updateDeal, deleteDeal } = useApp();
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const deal = deals.find(d => d.id === dealProp.id) ?? dealProp;
 
   /* 活動追加フォーム */
@@ -225,6 +226,15 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
               編集
               {showEdit ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
             </button>
+            {/* 案件削除ボタン */}
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold transition
+                text-red-400 hover:bg-red-50 hover:text-red-600"
+              title="案件を削除"
+            >
+              <Trash2 size={12} />
+            </button>
             <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition p-1">
               <X size={18} />
             </button>
@@ -394,6 +404,42 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
         </div>
 
       </div>
+
+      {/* ── 案件削除 確認ダイアログ ── */}
+      {confirmDelete && createPortal(
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.55)" }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4 fade-in">
+            <div className="flex items-center gap-3">
+              <span className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <AlertTriangle size={20} className="text-red-500" />
+              </span>
+              <div>
+                <p className="text-sm font-black text-slate-800">案件を削除しますか？</p>
+                <p className="text-xs text-slate-500 mt-0.5">「{deal.company}」を完全に削除します。この操作は元に戻せません。</p>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold hover:bg-slate-200 transition"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={() => { deleteDeal(deal.id); onClose(); }}
+                className="px-4 py-2 rounded-lg bg-red-500 text-white text-xs font-bold hover:bg-red-600 transition"
+              >
+                削除する
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
     </div>,
     document.body
   );
