@@ -143,7 +143,7 @@ export default function TeamRankingView() {
 
   /* 鈴木Tプレは4チームランキングとは別枠 */
   const preRow = useMemo(() =>
-    buildRow("鈴木Tプレ", ["杉山T", "鈴木T"], ["杉山"]),
+    buildRow("鈴木Tプレ", ["杉山T", "鈴木T"], ["杉山", "渡邉"]),
   [pdDeals, members]);
 
   const sorted = useMemo(() => [...rows].sort((a, b) => {
