@@ -114,9 +114,14 @@ export default function TeamRankingView() {
     else { setSortKey(col); setSortDir("desc"); }
   };
 
-  const buildRow = (team, teamKeys) => {
-    const teamMembers = members.filter(m => teamKeys.includes(m.team) && m.role !== "admin" && m.status === "active");
-    const teamDeals   = pdDeals.filter(d => teamKeys.includes(d.team));
+  const buildRow = (team, teamKeys, excludeNames = []) => {
+    const teamMembers = members.filter(m =>
+      teamKeys.includes(m.team) &&
+      m.role !== "admin" &&
+      m.status === "active" &&
+      !excludeNames.includes(m.name)
+    );
+    const teamDeals = pdDeals.filter(d => teamKeys.includes(d.team));
     const kaishu      = teamDeals.filter(d => d.confidence === "回収").reduce((s, d) => s + (d.amount || 0), 0);
     const aggressive  = teamDeals.filter(d => d.confidence === "70%" || d.confidence === "回収").reduce((s, d) => s + (d.amount || 0), 0);
     const pipeline    = teamDeals.length;
@@ -127,8 +132,8 @@ export default function TeamRankingView() {
 
   const rows = useMemo(() => [
     ...REAL_TEAMS.map(team => buildRow(team, [team])),
-    /* 鈴木Tプレ: 杉山T + 鈴木T の合算 */
-    buildRow("鈴木Tプレ", ["杉山T", "鈴木T"]),
+    /* 鈴木Tプレ: 杉山T(杉山除く) + 鈴木T の合算 */
+    buildRow("鈴木Tプレ", ["杉山T", "鈴木T"], ["杉山"]),
   ], [pdDeals, members]);
 
   const sorted = useMemo(() => [...rows].sort((a, b) => {
