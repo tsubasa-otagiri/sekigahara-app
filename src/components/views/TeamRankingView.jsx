@@ -121,7 +121,11 @@ export default function TeamRankingView() {
       m.status === "active" &&
       !excludeNames.includes(m.name)
     );
-    const teamDeals = pdDeals.filter(d => teamKeys.includes(d.team));
+    /* excludeNames に含まれる人が IS/FS どちらかにいる案件は除外 */
+    const teamDeals = pdDeals.filter(d =>
+      teamKeys.includes(d.team) &&
+      !excludeNames.some(name => d.is === name || d.fs === name)
+    );
     const kaishuDeals = teamDeals.filter(d => d.confidence === "回収");
     const kaishu      = kaishuDeals.reduce((s, d) => s + (d.amount || 0), 0);
     const kaishuCount = kaishuDeals.length;
