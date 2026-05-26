@@ -61,6 +61,7 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
   const [eFs,        setEFs]        = useState("");
   const [ePeriod,    setEPeriod]    = useState("");
   const [eConf,      setEConf]      = useState("");
+  const [eTeam,      setETeam]      = useState("");
 
   /* スクロールロック */
   useEffect(() => {
@@ -110,6 +111,7 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
     setEFs(deal.fs || "");
     setEPeriod(deal.period || "");
     setEConf(deal.confidence || "30%");
+    setETeam(deal.team || "");
     setShowEdit(true);
   };
 
@@ -123,6 +125,7 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
       fs:         eFs,
       period:     ePeriod || deal.period,
       confidence: eConf,
+      team:       eTeam || deal.team,
     });
     setShowEdit(false);
   };
@@ -265,6 +268,15 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
                 className={`w-24 ${INP}`}
                 placeholder="金額（万）"
               />
+            </div>
+
+            {/* チーム */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-slate-500 w-16 shrink-0">チーム</span>
+              <select value={eTeam} onChange={e => setETeam(e.target.value)} className={`flex-1 ${INP}`}>
+                <option value="">未選択</option>
+                {TEAMS_OPT.map(t => <option key={t}>{t}</option>)}
+              </select>
             </div>
 
             {/* 対象年月 / 確度 */}
