@@ -28,11 +28,12 @@ function DealCard({ deal, isDragging, onDragStart, onDragEnd, onDetail }) {
       draggable
       onDragStart={(e) => onDragStart(e, deal.id)}
       onDragEnd={onDragEnd}
+      onClick={() => onDetail && onDetail(deal)}
       className={`bg-white rounded-lg border border-slate-200 px-2 py-1.5 select-none transition-all
-        cursor-grab active:cursor-grabbing
+        cursor-pointer
         ${isDragging
           ? "opacity-25 rotate-1 scale-95 shadow-none"
-          : "shadow-sm hover:shadow-md hover:border-slate-300 hover:-translate-y-px"
+          : "shadow-sm hover:shadow-md hover:border-blue-300 hover:-translate-y-px"
         }`}
     >
       {/* 行1: チームバッジ ＋ 金額 */}
@@ -45,10 +46,7 @@ function DealCard({ deal, isDragging, onDragStart, onDragEnd, onDetail }) {
 
       {/* 行2: 企業名 ＋ プラン */}
       <div className="flex items-baseline gap-1 mb-0.5 min-w-0">
-        <p
-          className="text-[11px] font-bold text-slate-800 leading-tight truncate cursor-pointer hover:text-blue-600 transition-colors flex-1 min-w-0"
-          onClick={() => onDetail && onDetail(deal)}
-        >
+        <p className="text-[11px] font-bold text-slate-800 leading-tight truncate flex-1 min-w-0">
           {deal.company}
         </p>
         {deal.plan && (
