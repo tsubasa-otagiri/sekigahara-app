@@ -103,7 +103,7 @@ function DayModal({ day, ym, deals, onClose, onSelectDeal }) {
 }
 
 /* ── カレンダーグリッド ── */
-function MonthGrid({ ym, dealsByDay, onDayClick }) {
+function MonthGrid({ ym, dealsByDay, kaishuByDay, onDayClick }) {
   const days = getDaysInMonth(ym);
   const firstDow = getFirstDayOfWeek(ym);
   const today = todayStr();
@@ -126,7 +126,9 @@ function MonthGrid({ ym, dealsByDay, onDayClick }) {
       <div className="grid grid-cols-7">
         {cells.map((day, idx) => {
           if (!day) return <div key={`e-${idx}`} className="min-h-[84px] border-b border-r border-slate-50 bg-slate-50/40" />;
-          const ds = dealsByDay[day] || [];
+          const ds  = dealsByDay[day] || [];
+          const kds = (kaishuByDay[day] || []).filter(d => !ds.find(x => x.id === d.id));
+          const allDs = [...ds, ...kds];
           const isToday = dayStr(ym, day) === today;
           const isPast  = dayStr(ym, day) < today;
           const hasOverdue = isPast && ds.length > 0;
@@ -134,9 +136,9 @@ function MonthGrid({ ym, dealsByDay, onDayClick }) {
           return (
             <div
               key={day}
-              onClick={() => ds.length > 0 && onDayClick(day, ds)}
+              onClick={() => allDs.length > 0 && onDayClick(day, allDs)}
               className={`min-h-[84px] p-1.5 border-b border-r border-slate-50 transition-colors
-                ${ds.length > 0 ? "cursor-pointer hover:bg-slate-50" : ""}
+                ${allDs.length > 0 ? "cursor-pointer hover:bg-slate-50" : ""}
                 ${hasOverdue ? "bg-red-50/40" : ""}
               `}
             >
@@ -158,8 +160,16 @@ function MonthGrid({ ym, dealsByDay, onDayClick }) {
                     </div>
                   );
                 })}
-                {ds.length > 3 && (
-                  <div className="text-[9px] text-slate-400 font-semibold text-center">+{ds.length - 3}</div>
+                {/* 受注案件：目立たないグレーで */}
+                {kds.slice(0, 2).map(d => (
+                  <div key={`k-${d.id}`}
+                    className="text-[9px] px-1 py-0.5 rounded truncate leading-tight text-slate-400"
+                    style={{ background: "#f1f5f9", borderLeft: "2px solid #cbd5e1" }}>
+                    ✓ {d.company}
+                  </div>
+                ))}
+                {allDs.length > 3 && (
+                  <div className="text-[9px] text-slate-400 font-semibold text-center">+{allDs.length - 3}</div>
                 )}
               </div>
             </div>
@@ -189,10 +199,32 @@ export default function CalendarView() {
     allNADeals.filter(d => d.nextActionDate.startsWith(currentYm)),
   [allNADeals, currentYm]);
 
-  /* 期限切れNA（今日より前でNA日がある） */
+  /* 期限切れNA（今日より前でNA日がある・回収済みは除外） */
   const overdueDeals = useMemo(() =>
-    allNADeals.filter(d => d.nextActionDate < today),
+    allNADeals.filter(d => d.nextActionDate < today && d.confidence !== "回収"),
   [allNADeals, today]);
+
+  /* 受注案件（回収）: period が今月のもの */
+  const kaishuDeals = useMemo(() =>
+    deals.filter(d => d.confidence === "回収" && d.phase !== "失注" && d.period === currentYm),
+  [deals, currentYm]);
+
+  /* 受注案件を月末日に配置 */
+  const kaishuByDay = useMemo(() => {
+    const daysInMonth = parseInt(currentYm.split("-")[1]) > 0
+      ? new Date(parseInt(currentYm.split("-")[0]), parseInt(currentYm.split("-")[1]), 0).getDate()
+      : 31;
+    const map = {};
+    kaishuDeals.forEach(d => {
+      /* NA日があればその日、なければ月末 */
+      const day = d.nextActionDate && d.nextActionDate.startsWith(currentYm)
+        ? parseInt(d.nextActionDate.slice(8), 10)
+        : daysInMonth;
+      if (!map[day]) map[day] = [];
+      map[day].push(d);
+    });
+    return map;
+  }, [kaishuDeals, currentYm]);
 
   /* NA日なし案件 */
   const noNADeals = useMemo(() =>
@@ -293,7 +325,7 @@ export default function CalendarView() {
       )}
 
       {/* ── カレンダーグリッド ── */}
-      <MonthGrid ym={currentYm} dealsByDay={dealsByDay} onDayClick={(day, ds) => setDayModal({ day, deals: ds })} />
+      <MonthGrid ym={currentYm} dealsByDay={dealsByDay} kaishuByDay={kaishuByDay} onDayClick={(day, ds) => setDayModal({ day, deals: ds })} />
 
       {monthDeals.length === 0 && (
         <div className="text-center py-10">
