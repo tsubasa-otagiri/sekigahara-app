@@ -280,9 +280,15 @@ function BackupSection() {
 
   /* ── CSV エクスポート（管理者限定） ── */
   const exportCSV = () => {
-    /* 列順: 企業名, プラン, 月額, IS担当, FS担当, チーム, 確度, フェーズ, 備考 */
-    const headers = ["企業名","プラン","月額","IS担当","FS担当","チーム","確度","フェーズ","備考"];
-    const rows = deals.map(d=>[d.company,d.plan,Math.round((d.amount||0)*10000),d.is||"",d.fs||"",d.team,d.confidence,d.phase,d.note||""]);
+    /* 列順: id, 企業名, プラン, 月額(円), IS担当, FS担当, チーム, 確度, フェーズ, 備考, 対象年月 */
+    const headers = ["id","企業名","プラン","月額","IS担当","FS担当","チーム","確度","フェーズ","備考","対象年月"];
+    const rows = deals.map(d=>[
+      d.id,
+      d.company, d.plan,
+      Math.round((d.amount||0)*10000),
+      d.is||"", d.fs||"", d.team,
+      d.confidence, d.phase, d.note||"", d.period||"",
+    ]);
     const csv = [headers, ...rows].map(r=>r.map(csvEscape).join(",")).join("\r\n");
     const blob = new Blob(["﻿"+csv], {type:"text/csv;charset=utf-8;"});
     const url  = URL.createObjectURL(blob);
@@ -292,34 +298,67 @@ function BackupSection() {
     flash("✅ CSVエクスポート完了");
   };
 
-  /* ── CSV インポート（管理者限定） ── */
+  /* ── CSV インポート（追加 or 更新） ── */
   const importCSV = (e) => {
     const file = e.target.files[0]; if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
         const text = ev.target.result.replace(/^﻿/, "");
-        const lines = text.split(/\r?\n/).filter(l=>l.trim());
-        const [, ...dataLines] = lines; // ヘッダー行をスキップ
-        /* 列順: 企業名, プラン, 月額, IS担当, FS担当, チーム, 確度, フェーズ, 備考 */
-        const newDeals = dataLines.map((line, i) => {
-          const cols = parseCSVLine(line);
-          return {
-            id:         Date.now() + i,
-            company:    cols[0] || "",
-            plan:       cols[1] || "MDC",
-            amount:     parseAmt(cols[2]),   // 円単位でも万単位でも自動変換
-            is:         cols[3] || "",
-            fs:         cols[4] || "",
-            team:       cols[5] || "",
-            confidence: cols[6] || "30%",
-            phase:      cols[7] || "未設定",
-            note:       cols[8] || "",
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+        const [headerLine, ...dataLines] = lines;
+
+        /* ヘッダーから列インデックスを動的解決（旧フォーマット互換） */
+        const headers = parseCSVLine(headerLine).map(h => h.trim());
+        const col = (name) => headers.indexOf(name);
+        const hasId = col("id") !== -1;
+
+        /* 既存案件をMapに（ID文字列→deal） */
+        const existingMap = new Map(deals.map(d => [String(d.id), d]));
+
+        let added = 0, updated = 0;
+        const updatedDeals = [...deals]; // 既存を複製
+
+        dataLines.forEach((line, i) => {
+          const c = parseCSVLine(line);
+          const company = c[hasId ? col("企業名") : col("企業名") === -1 ? 0 : col("企業名")] || "";
+          if (!company.trim()) return;
+
+          /* フィールドパース */
+          const patch = {
+            company,
+            plan:       c[hasId ? col("プラン")    : 1] || "MDC",
+            amount:     parseAmt(c[hasId ? col("月額")     : 2]),
+            is:         c[hasId ? col("IS担当")  : 3] || "",
+            fs:         c[hasId ? col("FS担当")  : 4] || "",
+            team:       c[hasId ? col("チーム")   : 5] || "",
+            confidence: c[hasId ? col("確度")     : 6] || "30%",
+            phase:      c[hasId ? col("フェーズ") : 7] || "未設定",
+            note:       c[hasId ? col("備考")     : 8] || "",
+            period:     c[hasId ? col("対象年月") : 9] || "",
           };
-        }).filter(d => d.company.trim());
-        replaceDeals([...newDeals, ...deals]);
-        flash(`✅ ${newDeals.length} 件の案件をインポートしました`);
-      } catch { flash("❌ CSVの形式が正しくありません"); }
+
+          const rawId = hasId ? String(c[col("id")] || "").trim() : "";
+          const existing = rawId ? existingMap.get(rawId) : null;
+
+          if (existing) {
+            /* 更新: 活動履歴など既存データは保持しつつ上書き */
+            const idx = updatedDeals.findIndex(d => String(d.id) === rawId);
+            if (idx !== -1) updatedDeals[idx] = { ...existing, ...patch };
+            updated++;
+          } else {
+            /* 新規追加 */
+            updatedDeals.push({ id: Date.now() + i, activities: [], ...patch });
+            added++;
+          }
+        });
+
+        replaceDeals(updatedDeals);
+        flash(`✅ 追加 ${added} 件 / 更新 ${updated} 件`);
+      } catch (err) {
+        console.error(err);
+        flash("❌ CSVの形式が正しくありません");
+      }
     };
     reader.readAsText(file, "UTF-8");
     e.target.value = "";
@@ -355,12 +394,13 @@ function BackupSection() {
               <FileText size={13}/> CSVエクスポート
             </button>
             <label className={BTN_GRAY + " cursor-pointer"}>
-              <Upload size={13}/> CSVインポート（追加）
+              <Upload size={13}/> CSVインポート（追加 / 更新）
               <input ref={csvRef} type="file" accept=".csv" className="hidden" onChange={importCSV} />
             </label>
           </div>
           <p className="text-[11px] text-gray-400 mt-3">
-            CSVフォーマット: 企業名, プラン, 月額, IS担当, FS担当, チーム, 確度, フェーズ, 備考
+            CSVフォーマット: id, 企業名, プラン, 月額, IS担当, FS担当, チーム, 確度, フェーズ, 備考, 対象年月<br />
+            id列が一致する行は更新、id列が空または新規の行は追加。活動履歴は保持されます。
           </p>
         </div>
       ) : (
