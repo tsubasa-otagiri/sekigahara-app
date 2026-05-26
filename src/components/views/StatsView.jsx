@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { ChevronUp, ChevronDown, ChevronsUpDown, X } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import { fmtAmt } from "../../utils/index.js";
-import { REAL_TEAMS, MEMBER_MASTER_NAMES, THEX } from "../../constants/index.js";
+import { REAL_TEAMS, MEMBER_MASTER_NAMES } from "../../constants/index.js";
 import { TeamBadge, PlanBadge } from "../ui/Badges.jsx";
 
 /* ── チームフィルターボタン ── */
@@ -150,148 +150,6 @@ const fmtCount = (n) => {
   return r % 1 === 0 ? String(r | 0) : r.toFixed(1);
 };
 
-/* ── チームランキング ── */
-function TeamRanking({ pdDeals, members, onTeamClick }) {
-  const [sortKey, setSortKey] = useState("kaishu");
-  const [sortDir, setSortDir] = useState("desc");
-
-  const handleSort = (col) => {
-    if (sortKey === col) setSortDir(d => d === "asc" ? "desc" : "asc");
-    else { setSortKey(col); setSortDir("desc"); }
-  };
-
-  const rows = useMemo(() => {
-    return REAL_TEAMS.map(team => {
-      const teamMembers = members.filter(m => m.team === team && m.role !== "admin" && m.status === "active");
-      const teamDeals   = pdDeals.filter(d => d.team === team && d.phase !== "失注");
-
-      const kaishu     = teamDeals.filter(d => d.confidence === "回収").reduce((s, d) => s + (d.amount || 0), 0);
-      const aggressive = teamDeals.filter(d => d.confidence === "70%" || d.confidence === "回収").reduce((s, d) => s + (d.amount || 0), 0);
-      const pipeline   = teamDeals.length;
-      const target     = teamMembers.reduce((s, m) => s + (m.target || 0), 0);
-      const rate       = target > 0 ? Math.round((kaishu / target) * 100) : 0;
-      return { team, target, kaishu, aggressive, pipeline, rate, memberCount: teamMembers.length };
-    });
-  }, [pdDeals, members]);
-
-  const sorted = useMemo(() => {
-    return [...rows].sort((a, b) => {
-      const va = a[sortKey] ?? 0, vb = b[sortKey] ?? 0;
-      if (va < vb) return sortDir === "asc" ? -1 : 1;
-      if (va > vb) return sortDir === "asc" ?  1 : -1;
-      return 0;
-    });
-  }, [rows, sortKey, sortDir]);
-
-  /* 同率対応ランキング（kaishu基準） */
-  const rankMap = useMemo(() => {
-    const byKaishu = [...rows].sort((a, b) => b.kaishu - a.kaishu || b.rate - a.rate);
-    const map = new Map();
-    byKaishu.forEach((r, i) => {
-      if (i > 0 && r.kaishu === byKaishu[i - 1].kaishu) {
-        map.set(r.team, map.get(byKaishu[i - 1].team));
-      } else {
-        map.set(r.team, i + 1);
-      }
-    });
-    return map;
-  }, [rows]);
-
-  const totals = {
-    target:     sorted.reduce((s, r) => s + r.target, 0),
-    kaishu:     sorted.reduce((s, r) => s + r.kaishu, 0),
-    aggressive: sorted.reduce((s, r) => s + r.aggressive, 0),
-    pipeline:   sorted.reduce((s, r) => s + r.pipeline, 0),
-  };
-  const avgRate = totals.target > 0 ? Math.round((totals.kaishu / totals.target) * 100) : 0;
-  const shProps = { sortKey, sortDir, onSort: handleSort };
-
-  return (
-    <>
-      {/* サマリーカード */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-        {[
-          { label: "目標合計",       val: fmtAmt(totals.target),     color: "#64748b" },
-          { label: "回収合計",       val: fmtAmt(totals.kaishu),     color: "#059669" },
-          { label: "達成率（平均）", val: avgRate + "%",              color: avgRate >= 100 ? "#059669" : avgRate >= 50 ? "#d97706" : "#dc2626" },
-          { label: "パイプライン",   val: totals.pipeline + " 件",   color: "#4f46e5" },
-        ].map(({ label, val, color }) => (
-          <div key={label} className="bg-white rounded-2xl px-4 py-4 card-shadow">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{label}</p>
-            <p className="text-2xl font-black tabular leading-none" style={{ color }}>{val}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="bg-white rounded-2xl overflow-hidden card-shadow">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[540px] border-collapse">
-            <thead>
-              <tr className="border-b border-slate-200" style={{ background: "#f8fafc" }}>
-                <th className="px-3 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center w-12">順位</th>
-                <SortTh label="チーム"         col="team"       {...shProps} />
-                <SortTh label="人数"           col="memberCount" {...shProps} right />
-                <SortTh label="目標"           col="target"     {...shProps} right />
-                <SortTh label="回収額"         col="kaishu"     {...shProps} right />
-                <SortTh label="達成率"         col="rate"       {...shProps} />
-                <SortTh label="アグレッシブ計" col="aggressive" {...shProps} right />
-                <SortTh label="パイプライン"   col="pipeline"   {...shProps} right />
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map(({ team, target, kaishu, aggressive, pipeline, rate, memberCount }) => {
-                const rank = rankMap.get(team) ?? 99;
-                const rankStyle = RANK_ROW_STYLE[rank] ?? {};
-                const hex = THEX[team] || "#64748b";
-                return (
-                  <tr key={team} className="border-b border-slate-100 last:border-0 hover:brightness-[.97] transition-colors" style={rankStyle}>
-                    <td className="px-3 py-3 text-center"><RankBadge rank={rank} /></td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => onTeamClick && onTeamClick(team)}
-                        className="flex items-center gap-2 hover:text-blue-600 transition-colors group"
-                      >
-                        <span className="w-3 h-3 rounded-full shrink-0" style={{ background: hex }} />
-                        <span className="text-[13px] font-bold group-hover:underline underline-offset-2" style={{ color: rank <= 3 ? "#1e293b" : "#475569" }}>{team}</span>
-                      </button>
-                    </td>
-                    <td className="px-3 py-3 text-right text-sm text-slate-500 tabular">{memberCount}名</td>
-                    <td className="px-3 py-3 text-right text-sm text-slate-500 tabular">{fmtAmt(target)}</td>
-                    <td className="px-3 py-3 text-right">
-                      <span className={`tabular font-black text-base ${kaishu > 0 ? "text-emerald-600" : "text-slate-300"}`}>{fmtAmt(kaishu)}</span>
-                    </td>
-                    <td className="px-3 py-3 w-40">
-                      <div className="flex items-center gap-1">
-                        <RateBar rate={rate} />
-                        {rate >= 100 && <span className="text-base leading-none">🎉</span>}
-                      </div>
-                    </td>
-                    <td className="px-3 py-3 text-right">
-                      <span className={`text-sm font-bold tabular ${aggressive > 0 ? "text-indigo-600" : "text-slate-300"}`}>{fmtAmt(aggressive)}</span>
-                    </td>
-                    <td className="px-3 py-3 text-right">
-                      <span className="text-[13px] font-semibold text-slate-600 tabular">{pipeline} 件</span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-slate-200" style={{ background: "#f8fafc" }}>
-                <td className="px-4 py-3 text-[11px] font-black text-slate-500" colSpan={3}>合計 / 平均</td>
-                <td className="px-3 py-3 text-right text-sm font-black text-slate-700 tabular">{fmtAmt(totals.target)}</td>
-                <td className="px-3 py-3 text-right text-sm font-black text-emerald-600 tabular">{fmtAmt(totals.kaishu)}</td>
-                <td className="px-3 py-3"><RateBar rate={avgRate} /></td>
-                <td className="px-3 py-3 text-right text-sm font-black text-indigo-600 tabular">{fmtAmt(totals.aggressive)}</td>
-                <td className="px-3 py-3 text-right text-sm font-black text-slate-700 tabular">{totals.pipeline} 件</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
-    </>
-  );
-}
 
 /* ── メイン ── */
 export default function StatsView() {
@@ -299,21 +157,16 @@ export default function StatsView() {
 
   const pdDeals = useMemo(() => deals.filter(d => activePeriods.includes(d.period)), [deals, activePeriods]);
 
-  const [rankingTab, setRankingTab] = useState("personal"); /* "personal" | "team" */
   const [teamFilter, setTeamFilter] = useState("全体");
   const [sortKey,    setSortKey]    = useState("kaishu");
   const [sortDir,    setSortDir]    = useState("desc");
 
   /* 受注案件モーダル */
-  const [kaishuModal, setKaishuModal] = useState(null); /* null | { title, deals } */
+  const [kaishuModal, setKaishuModal] = useState(null);
 
   const openMemberKaishu = (memberName) => {
     const ds = pdDeals.filter(d => d.confidence === "回収" && (d.is === memberName || d.fs === memberName));
     setKaishuModal({ title: memberName, deals: ds });
-  };
-  const openTeamKaishu = (team) => {
-    const ds = pdDeals.filter(d => d.confidence === "回収" && d.team === team);
-    setKaishuModal({ title: team, deals: ds });
   };
 
   const handleSort = (col) => {
@@ -412,28 +265,8 @@ export default function StatsView() {
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto fade-in">
 
-      {/* 個人 / チーム タブ */}
-      <div className="flex gap-1 mb-5 bg-slate-100 rounded-xl p-1 w-fit">
-        {[{ id: "personal", label: "👤 個人ランキング" }, { id: "team", label: "🏢 チームランキング" }].map(({ id, label }) => (
-          <button
-            key={id}
-            onClick={() => setRankingTab(id)}
-            className="px-4 py-1.5 rounded-lg text-[12px] font-bold transition-all"
-            style={rankingTab === id
-              ? { background: "#fff", color: "#0070d2", boxShadow: "0 1px 4px rgba(0,0,0,.12)" }
-              : { color: "#64748b" }
-            }
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* チームランキング */}
-      {rankingTab === "team" && <TeamRanking pdDeals={pdDeals} members={members} onTeamClick={openTeamKaishu} />}
-
       {/* 個人ランキング */}
-      {rankingTab === "personal" && <>
+      {<>
 
       {/* チームフィルター */}
       <div className="flex items-center gap-2 mb-5 flex-wrap">
@@ -584,7 +417,7 @@ export default function StatsView() {
         ※ アグレッシブ計 = 70%＋回収の合計　｜　パイプライン = 担当案件の総数
       </p>
 
-      </>} {/* 個人ランキング end */}
+      </>}
 
       {/* 受注案件モーダル */}
       {kaishuModal && (

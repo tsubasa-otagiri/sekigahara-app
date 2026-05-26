@@ -14,7 +14,8 @@ import KanbanView   from "./components/views/KanbanView.jsx";
 import StatsView    from "./components/views/StatsView.jsx";
 import AnalysisView from "./components/views/AnalysisView.jsx";
 import SettingsView from "./components/views/SettingsView.jsx";
-import LostView     from "./components/views/LostView.jsx";
+import LostView          from "./components/views/LostView.jsx";
+import TeamRankingView  from "./components/views/TeamRankingView.jsx";
 
 function MainApp() {
   const {
@@ -50,7 +51,8 @@ function MainApp() {
         {activeView === "list"     && <YomiView />}
         {activeView === "kanban"   && <KanbanView />}
         {activeView === "lost"     && <LostView />}
-        {activeView === "personal" && <StatsView />}
+        {activeView === "personal"     && <StatsView />}
+        {activeView === "team-ranking" && <TeamRankingView />}
         {activeView === "analysis" && <AnalysisView />}
         {activeView === "settings" && <SettingsView />}
       </main>
