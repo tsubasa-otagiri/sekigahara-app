@@ -204,9 +204,14 @@ export default function StatsView() {
       const pipeline = myDeals
         .reduce((s, d) => s + getDealCredit(d, m.name), 0);
 
+      /* 受注件数: 確度=回収の案件（折半クレジット適用） */
+      const kaishuCount = myDeals
+        .filter((d) => d.confidence === "回収")
+        .reduce((s, d) => s + getDealCredit(d, m.name), 0);
+
       const target = m.target ?? 0;
       const rate   = target > 0 ? Math.round((kaishu / target) * 100) : 0;
-      return { m, target, kaishu, aggressive, pipeline, rate };
+      return { m, target, kaishu, aggressive, pipeline, rate, kaishuCount };
     });
   }, [visibleMembers, pdDeals]);
 
@@ -220,8 +225,9 @@ export default function StatsView() {
         case "target":     va = a.target;  vb = b.target;  break;
         case "kaishu":     va = a.kaishu;  vb = b.kaishu;  break;
         case "rate":       va = a.rate;    vb = b.rate;    break;
-        case "aggressive": va = a.aggressive; vb = b.aggressive; break;
-        case "pipeline":   va = a.pipeline; vb = b.pipeline; break;
+        case "aggressive":   va = a.aggressive;   vb = b.aggressive;   break;
+        case "pipeline":     va = a.pipeline;     vb = b.pipeline;     break;
+        case "kaishuCount":  va = a.kaishuCount;  vb = b.kaishuCount;  break;
         default:           va = a.kaishu;  vb = b.kaishu;
       }
       if (va < vb) return sortDir === "asc" ? -1 : 1;
@@ -313,6 +319,7 @@ export default function StatsView() {
                 <SortTh label="目標"           col="target"     {...shProps} right />
                 <SortTh label="回収額"         col="kaishu"     {...shProps} right />
                 <SortTh label="達成率"         col="rate"       {...shProps} />
+                <SortTh label="受注件数"       col="kaishuCount" {...shProps} right />
                 <SortTh label="アグレッシブ計" col="aggressive" {...shProps} right />
                 <SortTh label="パイプライン"   col="pipeline"   {...shProps} right />
               </tr>
@@ -325,7 +332,7 @@ export default function StatsView() {
                   </td>
                 </tr>
               )}
-              {sorted.map(({ m, target, kaishu, aggressive, pipeline, rate }) => {
+              {sorted.map(({ m, target, kaishu, aggressive, pipeline, rate, kaishuCount }) => {
                 const rank     = rankMap.get(m.id) ?? 99;
                 const rankStyle = RANK_ROW_STYLE[rank] ?? {};
                 const isTop3   = rank <= 3;
@@ -386,6 +393,11 @@ export default function StatsView() {
                       </div>
                     </td>
                     <td className="px-3 py-3 text-right">
+                      <span className={`text-sm font-black tabular ${kaishuCount > 0 ? "text-emerald-500" : "text-slate-300"}`}>
+                        {fmtCount(kaishuCount)} 件
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 text-right">
                       <span className={`text-sm font-bold tabular ${aggressive > 0 ? "text-indigo-600" : "text-slate-300"}`}>
                         {fmtAmt(aggressive)}
                       </span>
@@ -404,6 +416,7 @@ export default function StatsView() {
                   <td className="px-3 py-3 text-right text-sm font-black text-slate-700 tabular">{fmtAmt(totals.target)}</td>
                   <td className="px-3 py-3 text-right text-sm font-black text-emerald-600 tabular">{fmtAmt(totals.kaishu)}</td>
                   <td className="px-3 py-3"><RateBar rate={avgRate} /></td>
+                  <td className="px-3 py-3 text-right text-sm font-black text-emerald-500 tabular">{fmtCount(sorted.reduce((s,r)=>s+r.kaishuCount,0))} 件</td>
                   <td className="px-3 py-3 text-right text-sm font-black text-indigo-600 tabular">{fmtAmt(totals.aggressive)}</td>
                   <td className="px-3 py-3 text-right text-sm font-black text-slate-700 tabular">{fmtCount(totals.pipeline)} 件</td>
                 </tr>

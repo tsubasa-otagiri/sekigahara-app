@@ -122,13 +122,15 @@ export default function TeamRankingView() {
       !excludeNames.includes(m.name)
     );
     const teamDeals = pdDeals.filter(d => teamKeys.includes(d.team));
-    const kaishu      = teamDeals.filter(d => d.confidence === "回収").reduce((s, d) => s + (d.amount || 0), 0);
+    const kaishuDeals = teamDeals.filter(d => d.confidence === "回収");
+    const kaishu      = kaishuDeals.reduce((s, d) => s + (d.amount || 0), 0);
+    const kaishuCount = kaishuDeals.length;
     const aggressive  = teamDeals.filter(d => d.confidence === "70%" || d.confidence === "回収").reduce((s, d) => s + (d.amount || 0), 0);
     const pipeline    = teamDeals.length;
     const target      = teamMembers.reduce((s, m) => s + (m.target || 0), 0);
     const rate        = target > 0 ? Math.round((kaishu / target) * 100) : 0;
     const perPerson   = teamMembers.length > 0 ? Math.round((kaishu / teamMembers.length) * 100) / 100 : 0;
-    return { team, target, kaishu, aggressive, pipeline, rate, memberCount: teamMembers.length, perPerson };
+    return { team, target, kaishu, kaishuCount, aggressive, pipeline, rate, memberCount: teamMembers.length, perPerson };
   };
 
   const rows = useMemo(() =>
@@ -193,13 +195,14 @@ export default function TeamRankingView() {
                 <SortTh label="目標"           col="target"      {...shProps} right />
                 <SortTh label="回収額"         col="kaishu"      {...shProps} right />
                 <SortTh label="達成率"         col="rate"        {...shProps} />
+                <SortTh label="受注件数"       col="kaishuCount" {...shProps} right />
                 <SortTh label="一人あたり"     col="perPerson"   {...shProps} right />
                 <SortTh label="アグレッシブ計" col="aggressive"  {...shProps} right />
                 <SortTh label="パイプライン"   col="pipeline"    {...shProps} right />
               </tr>
             </thead>
             <tbody>
-              {sorted.map(({ team, target, kaishu, aggressive, pipeline, rate, memberCount, perPerson }) => {
+              {sorted.map(({ team, target, kaishu, kaishuCount, aggressive, pipeline, rate, memberCount, perPerson }) => {
                 const rank = rankMap.get(team) ?? 99;
                 const rankStyle = RANK_ROW_STYLE[rank] ?? {};
                 const hex = THEX[team] || "#64748b";
@@ -235,6 +238,9 @@ export default function TeamRankingView() {
                       </div>
                     </td>
                     <td className="px-3 py-3 text-right">
+                      <span className={`text-sm font-black tabular ${kaishuCount > 0 ? "text-emerald-500" : "text-slate-300"}`}>{kaishuCount} 件</span>
+                    </td>
+                    <td className="px-3 py-3 text-right">
                       <span className={`text-sm font-black tabular ${perPerson > 0 ? "text-orange-500" : "text-slate-300"}`}>{fmtAmt(perPerson)}</span>
                     </td>
                     <td className="px-3 py-3 text-right">
@@ -251,12 +257,14 @@ export default function TeamRankingView() {
               {(() => {
                 const totalMembers = sorted.reduce((s, r) => s + r.memberCount, 0);
                 const avgPerPerson = totalMembers > 0 ? Math.round((totals.kaishu / totalMembers) * 100) / 100 : 0;
+                const totalKaishuCount = sorted.reduce((s, r) => s + r.kaishuCount, 0);
                 return (
                   <tr className="border-t-2 border-slate-200" style={{ background: "#f8fafc" }}>
                     <td className="px-4 py-3 text-[11px] font-black text-slate-500" colSpan={3}>合計 / 平均</td>
                     <td className="px-3 py-3 text-right text-sm font-black text-slate-700 tabular">{fmtAmt(totals.target)}</td>
                     <td className="px-3 py-3 text-right text-sm font-black text-emerald-600 tabular">{fmtAmt(totals.kaishu)}</td>
                     <td className="px-3 py-3"><div className="flex items-center gap-1"><RateBar rate={avgRate} />{avgRate >= 100 && <span className="text-base">🎉</span>}</div></td>
+                    <td className="px-3 py-3 text-right text-sm font-black text-emerald-500 tabular">{totalKaishuCount} 件</td>
                     <td className="px-3 py-3 text-right text-sm font-black text-orange-500 tabular">{fmtAmt(avgPerPerson)}</td>
                     <td className="px-3 py-3 text-right text-sm font-black text-indigo-600 tabular">{fmtAmt(totals.aggressive)}</td>
                     <td className="px-3 py-3 text-right text-sm font-black text-slate-700 tabular">{totals.pipeline} 件</td>
