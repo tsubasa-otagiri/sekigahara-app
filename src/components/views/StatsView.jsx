@@ -201,8 +201,8 @@ export default function StatsView() {
         .reduce((s, d) => s + (d.amount || 0) * getDealCredit(d, m.name), 0);
 
       /* パイプライン件数: 折半クレジットを件数として加算（0.5件になりうる） */
-      const pipeline = myDeals
-        .reduce((s, d) => s + getDealCredit(d, m.name), 0);
+      const pipeline    = myDeals.reduce((s, d) => s + getDealCredit(d, m.name), 0);
+      const pipelineRaw = myDeals.length;
 
       /* 受注件数: 確度=回収の案件（折半クレジット適用） */
       const kaishuDeals = myDeals.filter((d) => d.confidence === "回収");
@@ -212,7 +212,7 @@ export default function StatsView() {
 
       const target = m.target ?? 0;
       const rate   = target > 0 ? Math.round((kaishu / target) * 100) : 0;
-      return { m, target, kaishu, aggressive, pipeline, rate, kaishuCount, kaishuCountRaw };
+      return { m, target, kaishu, aggressive, pipeline, pipelineRaw, rate, kaishuCount, kaishuCountRaw };
     });
   }, [visibleMembers, pdDeals]);
 
@@ -333,7 +333,7 @@ export default function StatsView() {
                   </td>
                 </tr>
               )}
-              {sorted.map(({ m, target, kaishu, aggressive, pipeline, rate, kaishuCount, kaishuCountRaw }) => {
+              {sorted.map(({ m, target, kaishu, aggressive, pipeline, pipelineRaw, rate, kaishuCount, kaishuCountRaw }) => {
                 const rank     = rankMap.get(m.id) ?? 99;
                 const rankStyle = RANK_ROW_STYLE[rank] ?? {};
                 const isTop3   = rank <= 3;
@@ -408,6 +408,9 @@ export default function StatsView() {
                     </td>
                     <td className="px-3 py-3 text-right">
                       <span className="text-[13px] font-semibold text-slate-600 tabular">{fmtCount(pipeline)} 件</span>
+                      {pipelineRaw > pipeline && (
+                        <span className="text-[10px] text-slate-400 tabular ml-1">({pipelineRaw})</span>
+                      )}
                     </td>
                   </tr>
                 );

@@ -287,7 +287,7 @@ export default function TeamRankingView() {
           <table className="w-full min-w-[540px] border-collapse">
             <tbody>
               {(() => {
-                const { team, target, kaishu, aggressive, pipeline, rate, memberCount, perPerson } = preRow;
+                const { team, target, kaishu, kaishuCount, aggressive, pipeline, rate, memberCount, perPerson } = preRow;
                 const hex = THEX[team] || "#64748b";
                 return (
                   <tr className="hover:bg-blue-50/40 transition-colors" style={{ borderLeft: "3px solid #2563eb" }}>
@@ -314,6 +314,9 @@ export default function TeamRankingView() {
                         <RateBar rate={rate} />
                         {rate >= 100 && <span className="text-base leading-none">🎉</span>}
                       </div>
+                    </td>
+                    <td className="px-3 py-3 text-right">
+                      <span className={`text-sm font-black tabular ${kaishuCount > 0 ? "text-emerald-500" : "text-slate-300"}`}>{kaishuCount} 件</span>
                     </td>
                     <td className="px-3 py-3 text-right">
                       <span className={`text-sm font-black tabular ${perPerson > 0 ? "text-orange-500" : "text-slate-300"}`}>{fmtAmt(perPerson)}</span>
