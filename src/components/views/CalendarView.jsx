@@ -230,6 +230,19 @@ export default function CalendarView() {
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto fade-in">
 
+      {/* ── 凡例 ── */}
+      <div className="flex items-center gap-3 mb-3 flex-wrap">
+        {CONF_ORDER.map(c => {
+          const s = CONF_STYLE[c];
+          return (
+            <div key={c} className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: s.bg, border: `1.5px solid ${s.border}` }} />
+              <span className="text-[10px] font-bold" style={{ color: s.label }}>{c}</span>
+            </div>
+          );
+        })}
+      </div>
+
       {/* ── 期限切れ警告バナー ── */}
       {overdueDeals.length > 0 && (
         <div className="mb-4 flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl">
