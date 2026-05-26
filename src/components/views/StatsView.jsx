@@ -49,8 +49,7 @@ const RANK_ROW_STYLE = {
 
 /* ── 達成率バー ── */
 function RateBar({ rate }) {
-  const clamped = Math.min(rate, 150);
-  const pct     = (clamped / 150) * 100;
+  const pct = Math.min(rate, 100);
   const grad    = rate >= 100
     ? "linear-gradient(90deg,#059669,#10b981)"
     : rate >= 50
