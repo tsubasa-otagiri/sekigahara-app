@@ -268,6 +268,16 @@ export default function DealModal({ deal, onClose }) {
           </select>
         </Fld>
 
+        {/* ネクストアクション日 */}
+        <Fld label="NA日">
+          <input
+            type="date"
+            className={INP}
+            value={form.nextActionDate || ""}
+            onChange={(e) => set("nextActionDate", e.target.value)}
+          />
+        </Fld>
+
         {/* メモ */}
         <Fld label="メモ">
           <textarea

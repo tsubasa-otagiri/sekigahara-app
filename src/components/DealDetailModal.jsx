@@ -62,6 +62,7 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
   const [ePeriod,    setEPeriod]    = useState("");
   const [eConf,      setEConf]      = useState("");
   const [eTeam,      setETeam]      = useState("");
+  const [eNextAction, setENextAction] = useState("");
 
   /* スクロールロック */
   useEffect(() => {
@@ -112,6 +113,7 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
     setEPeriod(deal.period || "");
     setEConf(deal.confidence || "30%");
     setETeam(deal.team || "");
+    setENextAction(deal.nextActionDate || "");
     setShowEdit(true);
   };
 
@@ -123,9 +125,10 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
       amount:     parseAmt(eAmount),
       is:         eIs,
       fs:         eFs,
-      period:     ePeriod || deal.period,
-      confidence: eConf,
-      team:       eTeam || deal.team,
+      period:         ePeriod || deal.period,
+      confidence:     eConf,
+      team:           eTeam || deal.team,
+      nextActionDate: eNextAction || null,
     });
     setShowEdit(false);
   };
@@ -201,6 +204,19 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
               <div className="flex items-center gap-2 mt-1 flex-wrap text-[11px]">
                 {deal.is && <span className="text-cyan-700 font-semibold">IS: {deal.is}</span>}
                 {deal.fs && <span className="text-emerald-700 font-semibold">FS: {deal.fs}</span>}
+              </div>
+            )}
+
+            {/* ネクストアクション日 */}
+            {deal.nextActionDate && (
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-[10px]">📅</span>
+                <span className="text-[11px] font-black text-orange-600">
+                  NA: {deal.nextActionDate}
+                </span>
+                {deal.nextActionDate < new Date().toISOString().slice(0,10) && (
+                  <span className="text-[9px] font-bold bg-red-100 text-red-500 border border-red-200 rounded-full px-1.5 py-0.5">期限切れ</span>
+                )}
               </div>
             )}
 
@@ -292,6 +308,23 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
               <select value={eConf} onChange={e => setEConf(e.target.value)} className={`w-20 ${INP}`}>
                 {CONF.map(c => <option key={c}>{c}</option>)}
               </select>
+            </div>
+
+            {/* ネクストアクション日 */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-slate-500 w-16 shrink-0">NA日</span>
+              <input
+                type="date"
+                value={eNextAction}
+                onChange={e => setENextAction(e.target.value)}
+                className={`flex-1 ${INP}`}
+              />
+              {eNextAction && (
+                <button
+                  onClick={() => setENextAction("")}
+                  className="text-[10px] text-slate-400 hover:text-red-400 px-1"
+                >✕ クリア</button>
+              )}
             </div>
 
             {/* IS / FS */}
