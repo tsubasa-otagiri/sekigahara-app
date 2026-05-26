@@ -114,16 +114,22 @@ export default function TeamRankingView() {
     else { setSortKey(col); setSortDir("desc"); }
   };
 
-  const rows = useMemo(() => REAL_TEAMS.map(team => {
-    const teamMembers = members.filter(m => m.team === team && m.role !== "admin" && m.status === "active");
-    const teamDeals   = pdDeals.filter(d => d.team === team);
+  const buildRow = (team, teamKeys) => {
+    const teamMembers = members.filter(m => teamKeys.includes(m.team) && m.role !== "admin" && m.status === "active");
+    const teamDeals   = pdDeals.filter(d => teamKeys.includes(d.team));
     const kaishu      = teamDeals.filter(d => d.confidence === "回収").reduce((s, d) => s + (d.amount || 0), 0);
     const aggressive  = teamDeals.filter(d => d.confidence === "70%" || d.confidence === "回収").reduce((s, d) => s + (d.amount || 0), 0);
     const pipeline    = teamDeals.length;
     const target      = teamMembers.reduce((s, m) => s + (m.target || 0), 0);
     const rate        = target > 0 ? Math.round((kaishu / target) * 100) : 0;
     return { team, target, kaishu, aggressive, pipeline, rate, memberCount: teamMembers.length };
-  }), [pdDeals, members]);
+  };
+
+  const rows = useMemo(() => [
+    ...REAL_TEAMS.map(team => buildRow(team, [team])),
+    /* 鈴木Tプレ: 杉山T + 鈴木T の合算 */
+    buildRow("鈴木Tプレ", ["杉山T", "鈴木T"]),
+  ], [pdDeals, members]);
 
   const sorted = useMemo(() => [...rows].sort((a, b) => {
     const va = a[sortKey] ?? 0, vb = b[sortKey] ?? 0;
@@ -187,18 +193,26 @@ export default function TeamRankingView() {
                 const rank = rankMap.get(team) ?? 99;
                 const rankStyle = RANK_ROW_STYLE[rank] ?? {};
                 const hex = THEX[team] || "#64748b";
+                const isCombo = team === "鈴木Tプレ";
                 return (
-                  <tr key={team} className="border-b border-slate-100 last:border-0 hover:brightness-[.97] transition-colors" style={rankStyle}>
+                  <tr key={team}
+                    className="border-b border-slate-100 last:border-0 hover:brightness-[.97] transition-colors"
+                    style={isCombo ? { ...rankStyle, borderLeft: "3px solid #2563eb", background: "rgba(37,99,235,.04)" } : rankStyle}
+                  >
                     <td className="px-3 py-3 text-center"><RankBadge rank={rank} /></td>
                     <td className="px-4 py-3">
                       <button
-                        onClick={() => setKaishuModal({ title: team, deals: pdDeals.filter(d => d.confidence === "回収" && d.team === team) })}
+                        onClick={() => {
+                          const keys = team === "鈴木Tプレ" ? ["杉山T", "鈴木T"] : [team];
+                          setKaishuModal({ title: team, deals: pdDeals.filter(d => d.confidence === "回収" && keys.includes(d.team)) });
+                        }}
                         className="flex items-center gap-2 hover:text-blue-600 transition-colors group"
                       >
                         <span className="w-3 h-3 rounded-full shrink-0" style={{ background: hex }} />
                         <span className="text-[13px] font-bold group-hover:underline underline-offset-2" style={{ color: rank <= 3 ? "#1e293b" : "#475569" }}>
                           {team}
                         </span>
+                        {isCombo && <span className="text-[9px] font-semibold text-blue-500 bg-blue-50 border border-blue-200 rounded px-1 py-px leading-none">合算</span>}
                       </button>
                     </td>
                     <td className="px-3 py-3 text-right text-sm text-slate-500 tabular">{memberCount}名</td>
