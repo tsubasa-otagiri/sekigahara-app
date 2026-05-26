@@ -1,8 +1,10 @@
 import { useState, useMemo } from "react";
-import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { createPortal } from "react-dom";
+import { ChevronUp, ChevronDown, ChevronsUpDown, X } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import { fmtAmt } from "../../utils/index.js";
 import { REAL_TEAMS, MEMBER_MASTER_NAMES, THEX } from "../../constants/index.js";
+import { TeamBadge, PlanBadge } from "../ui/Badges.jsx";
 
 /* ── チームフィルターボタン ── */
 const TEAM_OPTS = ["全体", ...REAL_TEAMS];
@@ -25,6 +27,61 @@ function SortTh({ label, col, sortKey, sortDir, onSort, right = false }) {
         }
       </span>
     </th>
+  );
+}
+
+/* ── 受注案件モーダル ── */
+function KaishuModal({ title, deals, onClose }) {
+  const sorted = useMemo(() =>
+    [...deals].sort((a, b) => (b.amount || 0) - (a.amount || 0)),
+  [deals]);
+  const total = sorted.reduce((s, d) => s + (d.amount || 0), 0);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.5)" }}
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh]"
+        onMouseDown={e => e.stopPropagation()}
+      >
+        {/* ヘッダー */}
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
+          <div>
+            <p className="text-xs font-black text-slate-800">{title} — 受注案件</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              {sorted.length}件　合計 <span className="font-black text-emerald-600">{fmtAmt(total)}</span>
+            </p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* リスト */}
+        <div className="flex-1 overflow-y-auto px-5 py-3 space-y-1.5">
+          {sorted.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-10">受注案件はありません</p>
+          ) : sorted.map(d => (
+            <div key={d.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50 hover:bg-emerald-50/60 transition-colors">
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-bold text-slate-800 truncate">{d.company}</p>
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  <TeamBadge team={d.team} />
+                  {d.plan && <PlanBadge plan={d.plan} />}
+                  {d.is && <span className="text-[10px] text-cyan-700 font-semibold">IS {d.is}</span>}
+                  {d.fs && <span className="text-[10px] text-emerald-700 font-semibold">FS {d.fs}</span>}
+                </div>
+              </div>
+              <span className="text-sm font-black text-emerald-600 tabular shrink-0">{fmtAmt(d.amount)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -94,7 +151,7 @@ const fmtCount = (n) => {
 };
 
 /* ── チームランキング ── */
-function TeamRanking({ pdDeals, members }) {
+function TeamRanking({ pdDeals, members, onTeamClick }) {
   const [sortKey, setSortKey] = useState("kaishu");
   const [sortDir, setSortDir] = useState("desc");
 
@@ -190,10 +247,13 @@ function TeamRanking({ pdDeals, members }) {
                   <tr key={team} className="border-b border-slate-100 last:border-0 hover:brightness-[.97] transition-colors" style={rankStyle}>
                     <td className="px-3 py-3 text-center"><RankBadge rank={rank} /></td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => onTeamClick && onTeamClick(team)}
+                        className="flex items-center gap-2 hover:text-blue-600 transition-colors group"
+                      >
                         <span className="w-3 h-3 rounded-full shrink-0" style={{ background: hex }} />
-                        <span className="text-[13px] font-bold" style={{ color: rank <= 3 ? "#1e293b" : "#475569" }}>{team}</span>
-                      </div>
+                        <span className="text-[13px] font-bold group-hover:underline underline-offset-2" style={{ color: rank <= 3 ? "#1e293b" : "#475569" }}>{team}</span>
+                      </button>
                     </td>
                     <td className="px-3 py-3 text-right text-sm text-slate-500 tabular">{memberCount}名</td>
                     <td className="px-3 py-3 text-right text-sm text-slate-500 tabular">{fmtAmt(target)}</td>
@@ -243,6 +303,18 @@ export default function StatsView() {
   const [teamFilter, setTeamFilter] = useState("全体");
   const [sortKey,    setSortKey]    = useState("kaishu");
   const [sortDir,    setSortDir]    = useState("desc");
+
+  /* 受注案件モーダル */
+  const [kaishuModal, setKaishuModal] = useState(null); /* null | { title, deals } */
+
+  const openMemberKaishu = (memberName) => {
+    const ds = pdDeals.filter(d => d.confidence === "回収" && (d.is === memberName || d.fs === memberName));
+    setKaishuModal({ title: memberName, deals: ds });
+  };
+  const openTeamKaishu = (team) => {
+    const ds = pdDeals.filter(d => d.confidence === "回収" && d.team === team);
+    setKaishuModal({ title: team, deals: ds });
+  };
 
   const handleSort = (col) => {
     if (sortKey === col) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -358,7 +430,7 @@ export default function StatsView() {
       </div>
 
       {/* チームランキング */}
-      {rankingTab === "team" && <TeamRanking pdDeals={pdDeals} members={members} />}
+      {rankingTab === "team" && <TeamRanking pdDeals={pdDeals} members={members} onTeamClick={openTeamKaishu} />}
 
       {/* 個人ランキング */}
       {rankingTab === "personal" && <>
@@ -437,7 +509,10 @@ export default function StatsView() {
 
                     {/* 名前 */}
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
+                      <button
+                        onClick={() => openMemberKaishu(m.name)}
+                        className="flex items-center gap-2.5 hover:text-blue-600 transition-colors group"
+                      >
                         <div
                           className="flex-none flex items-center justify-center text-white text-[11px] font-black"
                           style={{
@@ -454,12 +529,12 @@ export default function StatsView() {
                           {m.name[0]}
                         </div>
                         <span
-                          className="text-[13px] font-semibold"
+                          className="text-[13px] font-semibold group-hover:underline underline-offset-2"
                           style={{ color: rank === 1 ? "#92400e" : rank <= 3 ? "#1e293b" : "#475569", fontWeight: isTop3 ? 700 : 600 }}
                         >
                           {m.name}
                         </span>
-                      </div>
+                      </button>
                     </td>
 
                     <td className="px-3 py-3">
@@ -510,6 +585,15 @@ export default function StatsView() {
       </p>
 
       </>} {/* 個人ランキング end */}
+
+      {/* 受注案件モーダル */}
+      {kaishuModal && (
+        <KaishuModal
+          title={kaishuModal.title}
+          deals={kaishuModal.deals}
+          onClose={() => setKaishuModal(null)}
+        />
+      )}
     </div>
   );
 }
