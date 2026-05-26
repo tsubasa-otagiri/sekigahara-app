@@ -20,8 +20,8 @@ export const DEF_MEMBERS = [
   { id:"uehara",     name:"上浦",   role:"IS",     team:"渡部T", badge:"IS",    pw:"1111", target:DEF_TGT, status:"active" },
   { id:"ohta",       name:"太田",   role:"IS",     team:"渡部T", badge:"IS",    pw:"1111", target:DEF_TGT, status:"active" },
   { id:"watanabe_f", name:"渡部",   role:"FS",     team:"渡部T", badge:"FS",    pw:"1111", target:DEF_TGT, status:"active" },
-  /* 全社FS */
-  { id:"sugiyama_t", name:"杉山",   role:"FS",     team:"全社FS",badge:"FS",    pw:"1111", target:DEF_TGT, status:"active" },
+  /* 杉山T リーダー */
+  { id:"sugiyama_t", name:"杉山",   role:"leader", team:"杉山T", badge:"IS+FS", pw:"1111", target:DEF_TGT, status:"active" },
 ];
 
 export const DEF_DEALS = [

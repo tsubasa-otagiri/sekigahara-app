@@ -52,6 +52,16 @@ export const AppProvider = ({ children }) => {
     const stored = lsGet(LS_KEYS.MEMBERS, DEF_MEMBERS);
     /* 旧ニックネーム → 正式名 に自動変換 */
     let result = stored.map(m => ({ ...m, name: normalizeName(m.name) }));
+    /* 杉山さんのチームを "全社FS" → "杉山T" に修正（一回限り） */
+    const SUGIYAMA_TEAM_FIX = "honnoji_sugiyama_team_v1";
+    if (!localStorage.getItem(SUGIYAMA_TEAM_FIX)) {
+      result = result.map(m =>
+        m.name === "杉山" && m.team === "全社FS"
+          ? { ...m, team: "杉山T", role: "leader", badge: "IS+FS" }
+          : m
+      );
+      localStorage.setItem(SUGIYAMA_TEAM_FIX, "1");
+    }
     /* 一回限りパスワードリセット: 全員「1111」に統一 */
     const PW_RESET_KEY = "honnoji_pw_reset_v1";
     if (!localStorage.getItem(PW_RESET_KEY)) {
