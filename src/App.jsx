@@ -20,42 +20,88 @@ import TeamRankingView  from "./components/views/TeamRankingView.jsx";
 import CalendarView    from "./components/views/CalendarView.jsx";
 import TaskView       from "./components/views/TaskView.jsx";
 import { requestNotifPermission, fireNotif } from "./utils/desktopNotif.js";
+import { LS_KEYS } from "./constants/index.js";
 
 /* ── 期限監視フック ── */
 function useTaskDeadlineWatcher() {
-  const { tasks, addNotifLog, currentUserId, getMyNotifSettings } = useApp();
-  /* 既に通知済みのタスクIDセットを ref で管理（セッション中） */
-  const notifiedRef = useRef(new Set());
+  const { tasks, addNotifLog, currentUserId, currentUser, getMyNotifSettings } = useApp();
+
+  /*
+   * notifiedRef: セッション中の発火済みキー管理
+   * ★ localStorage にも永続化するため、リロード後に同じ通知が重複発火しない
+   */
+  const notifiedRef = useRef(null); // null = まだ初期化されていない
 
   useEffect(() => {
     if (!currentUserId) return;
+    const myName = currentUser?.name || "";
+    /* currentUser が確定していない間はスキップ（依存配列に currentUser があるので再実行される） */
+    if (!myName) return;
+
+    /* ── 初回のみ: localStorage から発火済みキーを復元 ── */
+    const lsKey = `${LS_KEYS.WATCHER_PFX}${currentUserId}`;
+    if (notifiedRef.current === null) {
+      try {
+        const saved = JSON.parse(localStorage.getItem(lsKey) || "[]");
+        notifiedRef.current = new Set(saved);
+      } catch {
+        notifiedRef.current = new Set();
+      }
+    }
+
+    /* キーを発火済みとしてメモリ + localStorage の両方に保存 */
+    const markFired = (k) => {
+      notifiedRef.current.add(k);
+      try {
+        /* 古いキーが溜まりすぎないよう最新500件に制限 */
+        const arr = [...notifiedRef.current];
+        localStorage.setItem(lsKey, JSON.stringify(arr.slice(-500)));
+      } catch {}
+    };
 
     const check = () => {
       const { notifyOnTaskReminder } = getMyNotifSettings(currentUserId);
       const now = Date.now();
+
       tasks.forEach(t => {
         if (t.completed || !t.dueDate) return;
+
+        /* ★ 自分が担当者のタスクのみを通知対象とする */
+        const isMyTask = (t.assignee === myName);
+
         const due = new Date(t.dueDate + "T23:59:59").getTime();
         const diffH = (due - now) / 3600000;
 
-        /* 1日前アラート */
+        /* 期限1日前アラート */
         const key24 = `${t.id}_24h`;
         if (diffH > 0 && diffH <= 24 && !notifiedRef.current.has(key24)) {
-          notifiedRef.current.add(key24);
-          const body = t.assignee ? `担当: ${t.assignee}` : "担当者未設定";
-          if (notifyOnTaskReminder) fireNotif(`⏰ 期限1日前: ${t.title}`, body, () => window.focus());
-          addNotifLog({ taskId: t.id, type: "task_deadline",
-            title: `⏰ 期限1日前: ${t.title}`, body });
+          markFired(key24); // 担当者不問でキーを記録（重複防止）
+          if (isMyTask) {
+            const body = `担当: ${myName}`;
+            if (notifyOnTaskReminder)
+              fireNotif(`⏰ 期限1日前: ${t.title}`, body, () => window.focus());
+            addNotifLog({
+              taskId: t.id, type: "task_deadline",
+              targetUser: myName, // ★ 必ず自分の名前をセット
+              title: `⏰ 期限1日前: ${t.title}`, body,
+            });
+          }
         }
 
-        /* 1時間前アラート */
-        const key1 = `${t.id}_1h`;
-        if (diffH > 0 && diffH <= 1 && !notifiedRef.current.has(key1)) {
-          notifiedRef.current.add(key1);
-          const body = t.assignee ? `担当: ${t.assignee}` : "担当者未設定";
-          if (notifyOnTaskReminder) fireNotif(`🔴 期限1時間前: ${t.title}`, body, () => window.focus());
-          addNotifLog({ taskId: t.id, type: "task_overdue",
-            title: `🔴 期限1時間前: ${t.title}`, body });
+        /* 期限1時間前アラート */
+        const key1h = `${t.id}_1h`;
+        if (diffH > 0 && diffH <= 1 && !notifiedRef.current.has(key1h)) {
+          markFired(key1h);
+          if (isMyTask) {
+            const body = `担当: ${myName}`;
+            if (notifyOnTaskReminder)
+              fireNotif(`🔴 期限1時間前: ${t.title}`, body, () => window.focus());
+            addNotifLog({
+              taskId: t.id, type: "task_overdue",
+              targetUser: myName,
+              title: `🔴 期限1時間前: ${t.title}`, body,
+            });
+          }
         }
       });
     };
@@ -63,7 +109,7 @@ function useTaskDeadlineWatcher() {
     check();
     const timer = setInterval(check, 60000);
     return () => clearInterval(timer);
-  }, [tasks, currentUserId, addNotifLog, getMyNotifSettings]);
+  }, [tasks, currentUserId, currentUser, addNotifLog, getMyNotifSettings]);
 }
 
 function MainApp() {

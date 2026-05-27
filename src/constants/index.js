@@ -87,14 +87,18 @@ export const PIE_COLORS = ["#fbbf24", "#60a5fa", "#34d399", "#9ca3af"];
 
 /* LocalStorageキー — HONNOJI 統一名称 */
 export const LS_KEYS = {
-  AUTH:     "honnoji_auth",
-  DEALS:    "honnoji_deals",
-  MEMBERS:  "honnoji_members",
-  TARGETS:  "honnoji_targets",
-  REQUESTS: "honnoji_requests",
-  TASKS:    "honnoji_tasks",
+  AUTH:          "honnoji_auth",
+  DEALS:         "honnoji_deals",
+  MEMBERS:       "honnoji_members",
+  TARGETS:       "honnoji_targets",
+  REQUESTS:      "honnoji_requests",
+  TASKS:         "honnoji_tasks",
   NOTIFS:        "honnoji_notif_logs",
   USER_SETTINGS: "honnoji_user_settings",
+  /* 期限ウォッチャー: ユーザーIDを後ろに付けて使用 "honnoji_watcher_<userId>" */
+  WATCHER_PFX:   "honnoji_watcher_",
+  /* マイグレーションフラグ: 古いnotifLogsを一掃済みかどうか */
+  NOTIF_MIGRATED: "honnoji_notif_migrated_v2",
 };
 
 /* 認証有効時間（ミリ秒）: 24時間 */

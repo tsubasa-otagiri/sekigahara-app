@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, CalendarDays, AlertCircle } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
-import { fmtAmt, filterByTab } from "../../utils/index.js";
+import { fmtAmt, filterByTab, filterTasksByTab } from "../../utils/index.js";
 import { TODAY_PERIOD } from "../../contexts/AppContext.jsx";
 import DealDetailModal from "../DealDetailModal.jsx";
 import { TeamBadge, PlanBadge } from "../ui/Badges.jsx";
@@ -48,11 +48,20 @@ function dayStr(ym, day) {
   return `${y}-${m}-${String(day).padStart(2,"0")}`;
 }
 
+/* ── タスク優先度スタイル ── */
+const PRIORITY_STYLE = {
+  high:   { bg: "#fff1f2", border: "#fca5a5", label: "#dc2626", dot: "#ef4444" },
+  medium: { bg: "#fffbeb", border: "#fcd34d", label: "#b45309", dot: "#f59e0b" },
+  low:    { bg: "#f8fafc", border: "#cbd5e1", label: "#64748b", dot: "#94a3b8" },
+};
+const PRIORITY_LABEL = { high: "高", medium: "中", low: "低" };
+
 /* ── 日別ポップオーバー ── */
-function DayModal({ day, ym, deals, onClose, onSelectDeal }) {
+function DayModal({ day, ym, deals, tasks, onClose, onSelectDeal }) {
   const ds = dayStr(ym, day);
   const today = todayStr();
   const isPast = ds < today;
+  const total = deals.length + tasks.length;
   return createPortal(
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center p-4"
@@ -66,35 +75,74 @@ function DayModal({ day, ym, deals, onClose, onSelectDeal }) {
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
           <div>
             <p className="text-sm font-black text-slate-800">
-              {fmtYM(ym)} {day}日 — {deals.length}件
+              {fmtYM(ym)} {day}日 — {total}件
             </p>
             {isPast && <p className="text-[10px] text-red-500 font-semibold mt-0.5">⚠ 過去のNA日（未対応の可能性あり）</p>}
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none px-1">×</button>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-          {deals.map(d => {
-            const s = CONF_STYLE[d.confidence] || CONF_STYLE["30%"];
-            return (
-              <button
-                key={d.id}
-                onClick={() => { onClose(); onSelectDeal(d); }}
-                className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors hover:brightness-95"
-                style={{ background: s.bg, border: `1px solid ${s.border}` }}
-              >
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.dot }} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold text-slate-800 truncate">{d.company}</p>
-                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded" style={{ background: s.border + "33", color: s.label }}>{d.confidence}</span>
-                    <TeamBadge team={d.team} />
-                    {d.plan && <PlanBadge plan={d.plan} />}
+          {/* 案件 */}
+          {deals.length > 0 && (
+            <>
+              {tasks.length > 0 && (
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">📊 案件 NA日</p>
+              )}
+              {deals.map(d => {
+                const s = CONF_STYLE[d.confidence] || CONF_STYLE["30%"];
+                return (
+                  <button
+                    key={d.id}
+                    onClick={() => { onClose(); onSelectDeal(d); }}
+                    className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors hover:brightness-95"
+                    style={{ background: s.bg, border: `1px solid ${s.border}` }}
+                  >
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.dot }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-bold text-slate-800 truncate">{d.company}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded" style={{ background: s.border + "33", color: s.label }}>{d.confidence}</span>
+                        <TeamBadge team={d.team} />
+                        {d.plan && <PlanBadge plan={d.plan} />}
+                      </div>
+                    </div>
+                    <span className="text-sm font-black shrink-0" style={{ color: s.label }}>{fmtAmt(d.amount)}</span>
+                  </button>
+                );
+              })}
+            </>
+          )}
+          {/* タスク */}
+          {tasks.length > 0 && (
+            <>
+              {deals.length > 0 && (
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 pt-1">✅ タスク</p>
+              )}
+              {tasks.map(t => {
+                const ps = PRIORITY_STYLE[t.priority] || PRIORITY_STYLE.medium;
+                return (
+                  <div
+                    key={t.id}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                    style={{ background: ps.bg, border: `1px solid ${ps.border}` }}
+                  >
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: ps.dot }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-bold text-slate-800 truncate">{t.title}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded" style={{ background: ps.border + "55", color: ps.label }}>
+                          優先度:{PRIORITY_LABEL[t.priority] || "中"}
+                        </span>
+                        {t.assignee && (
+                          <span className="text-[10px] text-slate-500 font-semibold">{t.assignee}</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <span className="text-sm font-black shrink-0" style={{ color: s.label }}>{fmtAmt(d.amount)}</span>
-              </button>
-            );
-          })}
+                );
+              })}
+            </>
+          )}
         </div>
       </div>
     </div>,
@@ -103,7 +151,7 @@ function DayModal({ day, ym, deals, onClose, onSelectDeal }) {
 }
 
 /* ── カレンダーグリッド ── */
-function MonthGrid({ ym, dealsByDay, onDayClick }) {
+function MonthGrid({ ym, dealsByDay, tasksByDay, onDayClick }) {
   const days = getDaysInMonth(ym);
   const firstDow = getFirstDayOfWeek(ym);
   const today = todayStr();
@@ -127,16 +175,23 @@ function MonthGrid({ ym, dealsByDay, onDayClick }) {
         {cells.map((day, idx) => {
           if (!day) return <div key={`e-${idx}`} className="min-h-[84px] border-b border-r border-slate-50 bg-slate-50/40" />;
           const ds = dealsByDay[day] || [];
+          const ts = tasksByDay[day] || [];
+          const total = ds.length + ts.length;
           const isToday = dayStr(ym, day) === today;
           const isPast  = dayStr(ym, day) < today;
           const hasOverdue = isPast && ds.length > 0;
           const dow = (firstDow + day - 1) % 7;
+          /* チップ最大3個（案件→タスク順） */
+          const dealChips = ds.slice(0, 3);
+          const remaining = 3 - dealChips.length;
+          const taskChips = ts.slice(0, remaining);
+          const extra = total - dealChips.length - taskChips.length;
           return (
             <div
               key={day}
-              onClick={() => ds.length > 0 && onDayClick(day, ds)}
+              onClick={() => total > 0 && onDayClick(day, ds, ts)}
               className={`min-h-[84px] p-1.5 border-b border-r border-slate-50 transition-colors
-                ${ds.length > 0 ? "cursor-pointer hover:bg-slate-50" : ""}
+                ${total > 0 ? "cursor-pointer hover:bg-slate-50" : ""}
                 ${hasOverdue ? "bg-red-50/40" : ""}
               `}
             >
@@ -148,7 +203,7 @@ function MonthGrid({ ym, dealsByDay, onDayClick }) {
                 {hasOverdue && <AlertCircle size={10} className="text-red-400" />}
               </div>
               <div className="space-y-0.5">
-                {ds.slice(0, 3).map(d => {
+                {dealChips.map(d => {
                   const s = CONF_STYLE[d.confidence] || CONF_STYLE["30%"];
                   return (
                     <div key={d.id}
@@ -158,8 +213,18 @@ function MonthGrid({ ym, dealsByDay, onDayClick }) {
                     </div>
                   );
                 })}
-                {ds.length > 3 && (
-                  <div className="text-[9px] text-slate-400 font-semibold text-center">+{ds.length - 3}</div>
+                {taskChips.map(t => {
+                  const ps = PRIORITY_STYLE[t.priority] || PRIORITY_STYLE.medium;
+                  return (
+                    <div key={t.id}
+                      className="text-[9px] font-semibold px-1 py-0.5 rounded truncate leading-tight"
+                      style={{ background: ps.bg, color: ps.label, borderLeft: `2px solid ${ps.border}` }}>
+                      ✓ {t.title}
+                    </div>
+                  );
+                })}
+                {extra > 0 && (
+                  <div className="text-[9px] text-slate-400 font-semibold text-center">+{extra}</div>
                 )}
               </div>
             </div>
@@ -172,7 +237,7 @@ function MonthGrid({ ym, dealsByDay, onDayClick }) {
 
 /* ── メイン ── */
 export default function CalendarView() {
-  const { deals, activeTab, currentUser } = useApp();
+  const { deals, activeTab, currentUser, tasks, members } = useApp();
   const myName = currentUser?.name || "";
   const [currentYm, setCurrentYm] = useState(TODAY_PERIOD);
   const [selectedDeal, setSelectedDeal] = useState(null);
@@ -206,7 +271,17 @@ export default function CalendarView() {
     tabDeals.filter(d => !d.nextActionDate && d.confidence !== "回収"),
   [tabDeals]);
 
-  /* 日別マップ */
+  /* タスク：チームタブで絞り込み（NA日付きのものをカレンダーに表示） */
+  const filteredTasks = useMemo(() =>
+    filterTasksByTab(tasks.filter(t => !t.completed && t.dueDate), activeTab, members, myName),
+  [tasks, activeTab, members, myName]);
+
+  /* 今月のタスク */
+  const monthTasks = useMemo(() =>
+    filteredTasks.filter(t => t.dueDate.startsWith(currentYm)),
+  [filteredTasks, currentYm]);
+
+  /* 日別マップ（案件） */
   const dealsByDay = useMemo(() => {
     const map = {};
     monthDeals.forEach(d => {
@@ -216,6 +291,17 @@ export default function CalendarView() {
     });
     return map;
   }, [monthDeals]);
+
+  /* 日別マップ（タスク） */
+  const tasksByDay = useMemo(() => {
+    const map = {};
+    monthTasks.forEach(t => {
+      const day = parseInt(t.dueDate.slice(8), 10);
+      if (!map[day]) map[day] = [];
+      map[day].push(t);
+    });
+    return map;
+  }, [monthTasks]);
 
   /* 今月の確度別集計 */
   const summary = useMemo(() => {
@@ -241,6 +327,10 @@ export default function CalendarView() {
             </div>
           );
         })}
+        <span className="text-slate-200 text-[10px]">|</span>
+        <div className="flex items-center gap-1">
+          <span className="text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1 py-0.5 leading-tight">✓ タスク</span>
+        </div>
       </div>
 
       {/* ── 期限切れ警告バナー ── */}
@@ -281,7 +371,7 @@ export default function CalendarView() {
               <span className="text-[10px] font-black text-white bg-[#0070d2] rounded-full px-2 py-0.5">今月</span>
             )}
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">NA日設定 {monthDeals.length}件</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">案件 {monthDeals.length}件 · タスク {monthTasks.length}件</p>
         </div>
         <button onClick={() => setCurrentYm(ym => addMonths(ym, 1))}
           className="p-2 rounded-xl hover:bg-white hover:shadow-sm transition-all text-slate-500 hover:text-slate-700">
@@ -313,13 +403,13 @@ export default function CalendarView() {
       )}
 
       {/* ── カレンダーグリッド ── */}
-      <MonthGrid ym={currentYm} dealsByDay={dealsByDay} onDayClick={(day, ds) => setDayModal({ day, deals: ds })} />
+      <MonthGrid ym={currentYm} dealsByDay={dealsByDay} tasksByDay={tasksByDay} onDayClick={(day, ds, ts) => setDayModal({ day, deals: ds, tasks: ts })} />
 
-      {monthDeals.length === 0 && (
+      {monthDeals.length === 0 && monthTasks.length === 0 && (
         <div className="text-center py-10">
           <CalendarDays size={32} className="text-slate-200 mx-auto mb-2" />
-          <p className="text-sm text-slate-400">この月にNA日が設定された案件はありません</p>
-          <p className="text-[11px] text-slate-300 mt-1">案件の編集からNA日を設定してください</p>
+          <p className="text-sm text-slate-400">この月にNA日が設定された案件・タスクはありません</p>
+          <p className="text-[11px] text-slate-300 mt-1">案件の編集からNA日を、タスク管理から期限日を設定してください</p>
         </div>
       )}
 
@@ -363,6 +453,7 @@ export default function CalendarView() {
           day={dayModal.day}
           ym={currentYm}
           deals={dayModal.deals}
+          tasks={dayModal.tasks || []}
           onClose={() => setDayModal(null)}
           onSelectDeal={d => setSelectedDeal(d)}
         />

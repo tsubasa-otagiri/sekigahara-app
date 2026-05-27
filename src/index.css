@@ -47,3 +47,47 @@ input[type=number] { -moz-appearance: textfield; }
 /* ── カンバン drag ── */
 .drag-over { outline: 2px dashed #0070d2 !important; background: rgba(0,112,210,.05) !important; }
 .card-dragging { opacity: .3; transform: rotate(1.5deg) scale(.98); }
+
+/* ── タスク完了エフェクト ── */
+@keyframes taskBounce {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.04); }
+  60%  { transform: scale(0.97); }
+  80%  { transform: scale(1.015); }
+  100% { transform: scale(1); }
+}
+.task-bounce { animation: taskBounce 0.42s cubic-bezier(.36,.07,.19,.97) both; }
+
+@keyframes strikethrough {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+.task-strike {
+  position: relative;
+  display: inline;
+}
+.task-strike::after {
+  content: "";
+  position: absolute;
+  left: 0; top: 50%;
+  height: 2px;
+  background: #94a3b8;
+  animation: strikethrough 0.3s ease forwards;
+  width: 0%;
+}
+
+@keyframes niceJobPop {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+  40%  { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  70%  { opacity: 1; transform: translate(-50%, -50%) scale(0.97); }
+  85%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+.nice-job-toast {
+  position: fixed;
+  left: 50%; top: 44%;
+  z-index: 9999;
+  pointer-events: none;
+  animation: niceJobPop 1.4s cubic-bezier(.22,.68,0,1.2) forwards;
+  white-space: nowrap;
+}

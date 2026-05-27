@@ -1,4 +1,4 @@
-import { LS_KEYS, AUTH_TTL, NEGLECT_DAYS } from "../constants/index.js";
+import { LS_KEYS, AUTH_TTL, NEGLECT_DAYS, DISPLAY_GROUPS } from "../constants/index.js";
 
 /* ── 金額パース: "¥227,200" "3.5万円" "1万" "48" など → 万単位の数値 ── */
 export const parseAmt = (v) => {
@@ -27,6 +27,51 @@ export const lsGet = (k, d) => {
 };
 export const lsSet = (k, v) => {
   try { localStorage.setItem(k, JSON.stringify(v)); } catch {}
+};
+
+/* ──────────────────────────────────────────────────────────────
+   DISPLAY_GROUPS を単一ソースとして、各タブのメンバー名セットを返す
+   ※ member.team フィールドではなく、DISPLAY_GROUPS の定義を優先することで
+      member データ不整合によるフィルター漏れを防ぐ
+────────────────────────────────────────────────────────────── */
+
+/** DISPLAY_GROUPS から名前→チーム名のマップを生成（例: "早川" → "杉山T"） */
+export const NAME_TO_TEAM = Object.fromEntries(
+  DISPLAY_GROUPS.flatMap(g => g.names.map(n => [n, g.label]))
+);
+
+/* ── チーム別メンバー名リストを返す（タスクフィルター用） ── */
+export const getTabMemberNames = (tab, members, myName = "") => {
+  if (tab === "全体") return null; // null = フィルターなし
+  if (tab === "マイ")  return myName ? [myName] : [];
+
+  /* アクティブかつ管理者でないメンバーが実際にアプリに登録されている名前のセット */
+  const activeNames = new Set(
+    members.filter(m => m.status === "active" && m.role !== "admin").map(m => m.name)
+  );
+
+  if (tab === "鈴木Tプレ") {
+    /* 鈴木T全員 + 杉山T（杉山を除く） — DISPLAY_GROUPS 定義を優先 */
+    const suzukiNames = (DISPLAY_GROUPS.find(g => g.label === "鈴木T")?.names || []);
+    const sugiyamaNames = (DISPLAY_GROUPS.find(g => g.label === "杉山T")?.names || [])
+      .filter(n => n !== "杉山");
+    return [...suzukiNames, ...sugiyamaNames].filter(n => activeNames.has(n));
+  }
+
+  /* 単一チーム: DISPLAY_GROUPS の names を使って確定的に絞る */
+  const group = DISPLAY_GROUPS.find(g => g.label === tab);
+  if (group) return group.names.filter(n => activeNames.has(n));
+
+  return []; // 未知のタブ → 空配列（全件表示しない）
+};
+
+/* ── タスクをチームタブで絞り込む（担当者ベース） ── */
+export const filterTasksByTab = (tasks, tab, members, myName = "") => {
+  const names = getTabMemberNames(tab, members, myName);
+  if (names === null) return tasks; // 全体 → フィルターなし
+  if (names.length === 0) return [];  // ★ バグ修正: 空配列なら0件返す（全件漏洩防止）
+  /* 担当者未設定タスクは「全体」のみ表示 */
+  return tasks.filter(t => t.assignee && names.includes(t.assignee));
 };
 
 /* ── チームフィルタ: 鈴木Tプレ = 杉山T + 鈴木T / マイ = 自分担当案件 ── */

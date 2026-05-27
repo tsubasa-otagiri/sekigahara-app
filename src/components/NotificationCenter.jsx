@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { Bell, Check, CheckCheck, Trash2, X } from "lucide-react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { Bell, Check, CheckCheck, X } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
 
 function timeAgo(iso) {
@@ -19,11 +19,22 @@ const TYPE_ICON = {
 };
 
 export default function NotificationCenter() {
-  const { notifLogs, markNotifRead, markAllNotifsRead, clearNotifLogs } = useApp();
+  const { notifLogs, markNotifRead, markAllNotifsRead, currentUser } = useApp();
+  const myName = currentUser?.name || "";
   const [open, setOpen] = useState(false);
   const panelRef = useRef(null);
 
-  const unread = notifLogs.filter(n => !n.isRead).length;
+  /* ────────────────────────────────────────────
+     【核心】自分宛て（targetUser === myName）の通知のみに絞り込む
+     targetUser が未設定の古いエントリーは表示しない（他人のデータ混入防止）
+  ──────────────────────────────────────────── */
+  const myLogs = useMemo(() => {
+    if (!myName) return [];
+    return notifLogs.filter(n => n.targetUser === myName);
+  }, [notifLogs, myName]);
+
+  /* 未読件数も自分宛てのみカウント */
+  const unread = useMemo(() => myLogs.filter(n => !n.isRead).length, [myLogs]);
 
   /* パネル外クリックで閉じる */
   useEffect(() => {
@@ -34,6 +45,9 @@ export default function NotificationCenter() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
+
+  /* すべて既読: 自分宛てのみ */
+  const handleMarkAll = () => markAllNotifsRead(myName);
 
   return (
     <div className="relative" ref={panelRef}>
@@ -69,88 +83,111 @@ export default function NotificationCenter() {
           style={{ border: "1px solid #e2e8f0", boxShadow: "0 8px 32px -4px rgba(0,0,0,.18)" }}
           onMouseDown={e => e.stopPropagation()}
         >
-          {/* ヘッダー */}
+          {/* ── ヘッダー（✕ 閉じるのみ。削除ボタン完全撤廃） ── */}
           <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between"
             style={{ background: "#0070d2" }}>
             <div className="flex items-center gap-2">
               <Bell size={14} className="text-white" />
               <span className="text-[12px] font-black text-white">通知センター</span>
+              {myName && (
+                <span className="text-[9px] font-bold text-white/60 bg-white/20 rounded-full px-1.5 py-0.5">
+                  {myName}宛て
+                </span>
+              )}
               {unread > 0 && (
                 <span className="text-[9px] font-black bg-red-500 text-white rounded-full px-1.5 py-0.5">
                   {unread}件未読
                 </span>
               )}
             </div>
+            {/* ✕ 閉じるボタンのみ（削除ボタン完全撤廃） */}
             <button onClick={() => setOpen(false)} className="text-white/70 hover:text-white p-0.5">
               <X size={14} />
             </button>
           </div>
 
-          {/* アクションバー */}
-          {notifLogs.length > 0 && (
-            <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+          {/* ── アクションバー: 「すべて既読」のみ（未読がある場合に表示） ── */}
+          {unread > 0 && (
+            <div className="px-3 py-2 border-b border-slate-100 bg-slate-50/80">
               <button
-                onClick={markAllNotifsRead}
+                onClick={handleMarkAll}
                 className="flex items-center gap-1 text-[10px] font-bold text-[#0070d2] hover:text-blue-700 transition-colors"
               >
-                <CheckCheck size={12} /> すべて既読
-              </button>
-              <button
-                onClick={clearNotifLogs}
-                className="flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-red-400 transition-colors"
-              >
-                <Trash2 size={11} /> 全削除
+                <CheckCheck size={12} /> すべて既読にする
               </button>
             </div>
           )}
 
-          {/* 通知リスト */}
-          <div className="flex-1 overflow-y-auto max-h-[360px]">
-            {notifLogs.length === 0 ? (
+          {/* ── 通知リスト（自分宛てのみ表示） ── */}
+          <div className="flex-1 overflow-y-auto max-h-[400px]">
+            {myLogs.length === 0 ? (
               <div className="py-12 text-center">
                 <Bell size={28} className="text-slate-200 mx-auto mb-2" />
                 <p className="text-xs text-slate-400">通知はありません</p>
+                {myName && (
+                  <p className="text-[10px] text-slate-300 mt-1">{myName}宛ての通知が届くとここに表示されます</p>
+                )}
               </div>
             ) : (
-              notifLogs.map(n => {
-                const ti = TYPE_ICON[n.type] || { emoji: "🔔", color: "#64748b" };
-                return (
-                  <div
-                    key={n.id}
-                    className={`flex items-start gap-3 px-4 py-3 border-b border-slate-50 transition-colors
-                      ${n.isRead ? "bg-white" : "bg-blue-50/40"}`}
-                  >
-                    {/* アイコン */}
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm shrink-0 mt-0.5"
-                      style={{ background: ti.color + "18" }}>
-                      <span>{ti.emoji}</span>
-                    </div>
+              <>
+                {myLogs.map(n => {
+                  const ti = TYPE_ICON[n.type] || { emoji: "🔔", color: "#64748b" };
+                  return (
+                    <div
+                      key={n.id}
+                      className={`flex items-start gap-3 px-4 py-3 border-b border-slate-50 transition-colors
+                        ${n.isRead ? "bg-white" : "bg-blue-50/40"}`}
+                    >
+                      {/* アイコン */}
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm shrink-0 mt-0.5"
+                        style={{ background: n.isRead ? "#f1f5f9" : ti.color + "18" }}>
+                        <span style={{ opacity: n.isRead ? 0.45 : 1 }}>{ti.emoji}</span>
+                      </div>
 
-                    {/* 本文 */}
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-[11px] leading-snug ${n.isRead ? "text-slate-500" : "text-slate-800 font-semibold"}`}>
-                        {n.title}
-                      </p>
-                      {n.body && (
-                        <p className="text-[10px] text-slate-400 mt-0.5 truncate">{n.body}</p>
+                      {/* 本文 */}
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-[11px] leading-snug
+                          ${n.isRead ? "text-slate-400 font-normal" : "text-slate-800 font-semibold"}`}>
+                          {n.title}
+                        </p>
+                        {n.body && (
+                          <p className={`text-[10px] mt-0.5 truncate
+                            ${n.isRead ? "text-slate-300" : "text-slate-400"}`}>
+                            {n.body}
+                          </p>
+                        )}
+                        <p className="text-[9px] text-slate-300 mt-1">{timeAgo(n.createdAt)}</p>
+                      </div>
+
+                      {/* 既読インジケーター */}
+                      {n.isRead ? (
+                        /* 既読済み: 緑チェック（操作不可） */
+                        <span
+                          className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center bg-emerald-50 text-emerald-400"
+                          title="既読済み">
+                          <Check size={10} strokeWidth={3} />
+                        </span>
+                      ) : (
+                        /* 未読: 青いボタン → クリックで既読 */
+                        <button
+                          onClick={() => markNotifRead(n.id)}
+                          className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-colors
+                            bg-blue-100 hover:bg-blue-500 text-blue-500 hover:text-white"
+                          title="既読にする"
+                        >
+                          <Check size={10} strokeWidth={3} />
+                        </button>
                       )}
-                      <p className="text-[9px] text-slate-300 mt-1">{timeAgo(n.createdAt)}</p>
                     </div>
-
-                    {/* 既読ボタン */}
-                    {!n.isRead && (
-                      <button
-                        onClick={() => markNotifRead(n.id)}
-                        className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-colors
-                          bg-blue-100 hover:bg-blue-200 text-blue-500"
-                        title="既読にする"
-                      >
-                        <Check size={10} strokeWidth={3} />
-                      </button>
-                    )}
+                  );
+                })}
+                {/* 全件既読済みフッター */}
+                {unread === 0 && myLogs.length > 0 && (
+                  <div className="py-3 text-center">
+                    <p className="text-[10px] text-slate-300 font-semibold">すべて既読です</p>
                   </div>
-                );
-              })
+                )}
+              </>
             )}
           </div>
         </div>

@@ -88,7 +88,22 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   /* ── 通知ログ ── */
-  const [notifLogs, setNotifLogs] = useState(() => lsGet(LS_KEYS.NOTIFS, []));
+  /*
+   * マイグレーション v2: targetUser なしの古いログを完全除去
+   * NOTIF_MIGRATED_v2 フラグが立っていない初回のみ実行し、
+   * 以降は通常の読み込みを行う（毎回フィルターをかけてパフォーマンス低下しない）
+   */
+  const [notifLogs, setNotifLogs] = useState(() => {
+    const migrated = localStorage.getItem(LS_KEYS.NOTIF_MIGRATED);
+    if (!migrated) {
+      /* 古いログを全消去し、マイグレーション済みフラグを立てる */
+      localStorage.removeItem(LS_KEYS.NOTIFS);
+      localStorage.setItem(LS_KEYS.NOTIF_MIGRATED, "1");
+      return [];
+    }
+    /* マイグレーション済み: 念のため targetUser なしは除外 */
+    return lsGet(LS_KEYS.NOTIFS, []).filter(n => !!n.targetUser);
+  });
   useEffect(() => { lsSet(LS_KEYS.NOTIFS, notifLogs); }, [notifLogs]);
 
   const addNotifLog = useCallback((log) => {
@@ -99,8 +114,13 @@ export const AppProvider = ({ children }) => {
   const markNotifRead = useCallback((id) => {
     setNotifLogs(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
   }, []);
-  const markAllNotifsRead = useCallback(() => {
-    setNotifLogs(prev => prev.map(n => ({ ...n, isRead: true })));
+  /* targetUser を指定して、その人宛て通知のみ一括既読にする */
+  const markAllNotifsRead = useCallback((targetUser) => {
+    setNotifLogs(prev => prev.map(n => {
+      /* targetUser が指定されていれば自分宛てのみ、未指定なら全件（後方互換） */
+      if (targetUser && n.targetUser && n.targetUser !== targetUser) return n;
+      return { ...n, isRead: true };
+    }));
   }, []);
   const clearNotifLogs = useCallback(() => setNotifLogs([]), []);
 
