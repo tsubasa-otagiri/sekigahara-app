@@ -15,6 +15,16 @@ const MONTHLY_MEMBERS = [
 
 export const AppContext = createContext(null);
 
+/* ── 月末処理チェックリスト デフォルト定義 ── */
+export const DEFAULT_PANEL_TASKS = [
+  { id: "pt0", emoji: "📄", title: "前月・先々月受注の請求書リマインド", when: "最終営業日5日前" },
+  { id: "pt1", emoji: "📝", title: "リモア登録",                        when: "最終営業日3日前" },
+  { id: "pt2", emoji: "🚚", title: "今月回収案件の役務提供",             when: "最終営業日当日" },
+  { id: "pt3", emoji: "💰", title: "先月・先々月の入金確認",             when: "最終営業日当日" },
+  { id: "pt4", emoji: "💳", title: "経費精算",                          when: "最終営業日当日" },
+  { id: "pt5", emoji: "⏰", title: "勤怠申請",                          when: "最終営業日 18:55締切", isKintai: true },
+];
+
 /* 当月 period 文字列 ("YYYY-MM") */
 const _NOW = new Date();
 const _PAD = (n) => String(n).padStart(2, '0');
@@ -81,8 +91,27 @@ export const AppProvider = ({ children }) => {
     return result;
   });
   /* ── ユーザー別通知設定 { [userId]: { notifyOnTaskAdded, notifyOnTaskReminder } } ── */
-  const [userSettings, setUserSettings] = useState(() => lsGet(LS_KEYS.USER_SETTINGS, {}));
-  useEffect(() => { lsSet(LS_KEYS.USER_SETTINGS, userSettings); }, [userSettings]);
+  const [userSettings, setUserSettings] = useState(() => {
+    const raw = lsGet(LS_KEYS.USER_SETTINGS, {});
+    const { __panelTasks: _, ...rest } = raw; // __panelTasksを除外
+    return rest;
+  });
+
+  /* ── 月末処理タスク定義（管理者が編集可能、全ユーザー共有） ── */
+  const [panelTasks, setPanelTasksRaw] = useState(() => {
+    const raw = lsGet(LS_KEYS.USER_SETTINGS, {});
+    return Array.isArray(raw.__panelTasks) && raw.__panelTasks.length > 0
+      ? raw.__panelTasks
+      : DEFAULT_PANEL_TASKS;
+  });
+  const setPanelTasks = useCallback((tasks) => { setPanelTasksRaw(tasks); }, []);
+
+  /* userSettings + panelTasks を一緒に保存 */
+  useEffect(() => {
+    const toSave = { ...userSettings, __panelTasks: panelTasks };
+    lsSet(LS_KEYS.USER_SETTINGS, toSave);
+    if (apiLoadedRef.current) apiSet("user_settings", toSave).catch(console.error);
+  }, [userSettings, panelTasks]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** 現在ログインユーザーの通知設定を返す（デフォルト: すべてON） */
   const getMyNotifSettings = useCallback((userId) => {
@@ -241,11 +270,20 @@ export const AppProvider = ({ children }) => {
     if (apiLoadedRef.current) apiSet("monthend", monthEndChecks).catch(console.error);
   }, [monthEndChecks]);
 
-  const setMonthEndCheck = useCallback((userId, ym, idx, value) => {
+  /**
+   * monthEndChecks の1項目を更新。
+   * @param {string} userId
+   * @param {string} ym      "YYYY-MM"
+   * @param {string} taskId  タスク定義の id ("pt0" など)
+   * @param {boolean} value
+   */
+  const setMonthEndCheck = useCallback((userId, ym, taskId, value) => {
     setMonthEndChecksState(prev => {
-      const key     = `${userId}_${ym}`;
-      const current = Array.isArray(prev[key]) ? [...prev[key]] : Array(6).fill(false);
-      current[idx]  = value;
+      const key      = `${userId}_${ym}`;
+      const existing = prev[key];
+      // 旧フォーマット(boolean[])をオブジェクトへ移行
+      const current  = (!existing || Array.isArray(existing)) ? {} : { ...existing };
+      current[taskId] = value;
       return { ...prev, [key]: current };
     });
   }, []);
@@ -266,10 +304,11 @@ export const AppProvider = ({ children }) => {
     try {
       const [
         apiDeals, apiTasks, apiMembers,
-        apiRequests, apiNotifs, apiMonthEnd,
+        apiRequests, apiNotifs, apiMonthEnd, apiUserSettings,
       ] = await Promise.all([
         apiGet("deals"),    apiGet("tasks"),   apiGet("members"),
         apiGet("requests"), apiGet("notifs"),  apiGet("monthend"),
+        apiGet("user_settings"),
       ]);
 
       /* deals */
@@ -330,6 +369,16 @@ export const AppProvider = ({ children }) => {
       } else {
         const local = lsGet(LS_KEYS.MONTH_END, {});
         if (Object.keys(local).length > 0) apiSet("monthend", local).catch(console.error);
+      }
+
+      /* user_settings + panelTasks */
+      if (apiUserSettings && typeof apiUserSettings === "object") {
+        const { __panelTasks, ...uSettings } = apiUserSettings;
+        if (Object.keys(uSettings).length > 0) setUserSettings(uSettings);
+        if (Array.isArray(__panelTasks) && __panelTasks.length > 0) setPanelTasksRaw(__panelTasks);
+      } else {
+        const localSettings = lsGet(LS_KEYS.USER_SETTINGS, {});
+        if (Object.keys(localSettings).length > 0) apiSet("user_settings", localSettings).catch(console.error);
       }
 
       apiLoadedRef.current = true;
@@ -569,6 +618,8 @@ export const AppProvider = ({ children }) => {
       currentPeriod, activePeriods,
       /* 月末処理チェックリスト */
       monthEndChecks, setMonthEndCheck,
+      /* 月末処理タスク定義（管理者編集可） */
+      panelTasks, setPanelTasks,
       /* manual refresh / API sync */
       refreshData, fetchAllFromAPI,
       /* ui */

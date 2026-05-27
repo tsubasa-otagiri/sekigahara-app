@@ -1,36 +1,179 @@
 /**
  * MonthEndPanel.jsx
  * 月末処理チェックリスト — 独立した常設UI
- *
- * 構成:
- *  1. 警告バナー    … layout-flow 内（Header の直前）、月末3日以内＆未完了時のみ表示
- *  2. 右端タブ      … fixed、常時表示。未完了バッジ付き
- *  3. スライドパネル … 右からオーバーレイで展開
- *  4. 起動時モーダル … 警告ゾーン突入後の初回セッションのみポップアップ
  */
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
   X, CheckCircle2, AlertTriangle, ClipboardList, ChevronRight,
+  Settings, Plus, Trash2, ChevronUp, ChevronDown, GripVertical,
 } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
+import { DEFAULT_PANEL_TASKS } from "../contexts/AppContext.jsx";
 import { getLastBizDay } from "../utils/monthlyTasks.js";
 import { launchConfetti, showNiceJob } from "../utils/confetti.js";
-
-/* ── チェックリスト定義 ── */
-const PANEL_TASKS = [
-  { idx: 0, emoji: "📄", title: "前月・先々月受注の請求書リマインド", when: "最終営業日5日前" },
-  { idx: 1, emoji: "📝", title: "リモア登録",                        when: "最終営業日3日前" },
-  { idx: 2, emoji: "🚚", title: "今月回収案件の役務提供",             when: "最終営業日当日" },
-  { idx: 3, emoji: "💰", title: "先月・先々月の入金確認",             when: "最終営業日当日" },
-  { idx: 4, emoji: "💳", title: "経費精算",                          when: "最終営業日当日" },
-  { idx: 5, emoji: "⏰", title: "勤怠申請",                          when: "最終営業日 18:55締切", isKintai: true },
-];
 
 const DOW = ["日","月","火","水","木","金","土"];
 function fmtDate(d) {
   return `${d.getMonth()+1}/${d.getDate()}(${DOW[d.getDay()]})`;
+}
+
+/* ── 管理者タスク定義編集モーダル ── */
+function TaskDefModal({ tasks, onSave, onClose }) {
+  const [list, setList] = useState(() => tasks.map(t => ({ ...t })));
+  const [editing, setEditing] = useState(null); // { idx, field, value }
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  const move = (i, dir) => {
+    const next = [...list];
+    const j = i + dir;
+    if (j < 0 || j >= next.length) return;
+    [next[i], next[j]] = [next[j], next[i]];
+    setList(next);
+  };
+
+  const del = (i) => {
+    setList(prev => prev.filter((_, idx) => idx !== i));
+    setDeleteConfirm(null);
+  };
+
+  const addNew = () => {
+    const newTask = {
+      id: `pt_${Date.now()}`,
+      emoji: "📋",
+      title: "新しいタスク",
+      when: "最終営業日当日",
+      isKintai: false,
+    };
+    setList(prev => [...prev, newTask]);
+  };
+
+  const updateField = (i, field, value) => {
+    setList(prev => prev.map((t, idx) => idx === i ? { ...t, [field]: value } : t));
+  };
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.6)" }}
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col"
+        style={{ maxHeight: "90vh" }}
+        onMouseDown={e => e.stopPropagation()}
+      >
+        {/* ヘッダー */}
+        <div className="px-5 py-4 flex items-center gap-3 border-b border-slate-100">
+          <Settings size={18} className="text-slate-600" />
+          <p className="text-[14px] font-black text-slate-800 flex-1">月末処理タスク管理</p>
+          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600">
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* リスト */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+          {list.map((task, i) => (
+            <div key={task.id} className="border border-slate-200 rounded-xl overflow-hidden">
+              {/* タスク行 */}
+              <div className="flex items-center gap-2 px-3 py-2.5 bg-slate-50">
+                <GripVertical size={14} className="text-slate-300 shrink-0" />
+                {/* 順番ボタン */}
+                <div className="flex flex-col gap-0.5">
+                  <button
+                    onClick={() => move(i, -1)}
+                    disabled={i === 0}
+                    className="p-0.5 text-slate-400 hover:text-slate-700 disabled:opacity-20"
+                  ><ChevronUp size={12} /></button>
+                  <button
+                    onClick={() => move(i, 1)}
+                    disabled={i === list.length - 1}
+                    className="p-0.5 text-slate-400 hover:text-slate-700 disabled:opacity-20"
+                  ><ChevronDown size={12} /></button>
+                </div>
+                {/* Emoji */}
+                <input
+                  className="w-9 text-center text-[16px] bg-white border border-slate-200 rounded-lg py-1 shrink-0"
+                  value={task.emoji}
+                  onChange={e => updateField(i, "emoji", e.target.value)}
+                  maxLength={2}
+                />
+                {/* タイトル */}
+                <input
+                  className="flex-1 text-[12px] font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-2 py-1.5 min-w-0"
+                  value={task.title}
+                  onChange={e => updateField(i, "title", e.target.value)}
+                />
+                {/* 削除ボタン */}
+                {deleteConfirm === i ? (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="text-[10px] text-red-500 font-bold">削除?</span>
+                    <button
+                      onClick={() => del(i)}
+                      className="px-2 py-1 text-[10px] font-bold bg-red-500 text-white rounded-lg hover:bg-red-600"
+                    >はい</button>
+                    <button
+                      onClick={() => setDeleteConfirm(null)}
+                      className="px-2 py-1 text-[10px] font-bold bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300"
+                    >No</button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setDeleteConfirm(i)}
+                    className="p-1.5 text-slate-300 hover:text-red-400 shrink-0"
+                  ><Trash2 size={13} /></button>
+                )}
+              </div>
+              {/* 期限テキスト行 */}
+              <div className="px-3 py-1.5 flex items-center gap-2 border-t border-slate-100">
+                <span className="text-[10px] text-slate-400 shrink-0">期限:</span>
+                <input
+                  className="flex-1 text-[11px] text-slate-500 bg-white border border-slate-100 rounded px-2 py-0.5"
+                  value={task.when}
+                  onChange={e => updateField(i, "when", e.target.value)}
+                />
+                <label className="flex items-center gap-1 shrink-0 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!task.isKintai}
+                    onChange={e => updateField(i, "isKintai", e.target.checked)}
+                    className="w-3 h-3"
+                  />
+                  <span className="text-[10px] text-slate-400">勤怠通知</span>
+                </label>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* フッター */}
+        <div className="px-4 py-3 border-t border-slate-100 flex items-center gap-2">
+          <button
+            onClick={addNew}
+            className="flex items-center gap-1.5 px-3 py-2 text-[12px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors"
+          >
+            <Plus size={13} /> タスクを追加
+          </button>
+          <div className="flex-1" />
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-[12px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-xl"
+          >
+            キャンセル
+          </button>
+          <button
+            onClick={() => { onSave(list); onClose(); }}
+            className="px-4 py-2 text-[12px] font-black text-white bg-blue-600 hover:bg-blue-700 rounded-xl"
+          >
+            保存
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
 }
 
 /* ── バナー（layout-flow内に置かれる） ── */
@@ -69,12 +212,15 @@ export default function MonthEndPanel() {
     currentUser, currentUserId,
     currentYear, currentMonth,
     monthEndChecks, setMonthEndCheck,
+    panelTasks, setPanelTasks,
   } = useApp();
 
   const [open,        setOpen]        = useState(false);
   const [showStartup, setShowStartup] = useState(false);
+  const [showAdmin,   setShowAdmin]   = useState(false);
 
-  const myName = currentUser?.name || "";
+  const myName  = currentUser?.name || "";
+  const isAdmin = currentUser?.role === "admin" || currentUser?.role === "leader";
 
   /* 選択中の年月を数値に変換 */
   const month = useMemo(() => {
@@ -99,16 +245,25 @@ export default function MonthEndPanel() {
   const isWarningZone = daysToEnd >= 0 && daysToEnd <= 3;
   const isPastDue     = daysToEnd < 0 && daysToEnd >= -5;
 
-  /* 自分のチェック状態 */
-  const checks = useMemo(() => {
-    if (!currentUserId) return Array(6).fill(false);
+  /* チェック状態（taskId → boolean, 旧フォーマット自動移行） */
+  const checksObj = useMemo(() => {
+    if (!currentUserId) return {};
     const raw = monthEndChecks?.[`${currentUserId}_${ym}`];
-    return Array.from({ length: 6 }, (_, i) => !!(raw?.[i]));
-  }, [monthEndChecks, currentUserId, ym]);
+    if (!raw) return {};
+    if (Array.isArray(raw)) {
+      // 旧フォーマット(boolean[]) → { id: bool }
+      const obj = {};
+      (panelTasks || DEFAULT_PANEL_TASKS).forEach((t, i) => { if (raw[i]) obj[t.id] = true; });
+      return obj;
+    }
+    return raw;
+  }, [monthEndChecks, currentUserId, ym, panelTasks]);
 
+  const checks     = (panelTasks || DEFAULT_PANEL_TASKS).map(t => !!checksObj[t.id]);
   const doneCount  = checks.filter(Boolean).length;
-  const allDone    = doneCount === 6;
-  const incomplete = 6 - doneCount;
+  const totalCount = (panelTasks || DEFAULT_PANEL_TASKS).length;
+  const allDone    = doneCount === totalCount;
+  const incomplete = totalCount - doneCount;
   const activeWarn = (isWarningZone || isPastDue) && !allDone && !!currentUserId;
 
   /* 起動時モーダル — セッション内1回だけ */
@@ -122,18 +277,20 @@ export default function MonthEndPanel() {
   }, [activeWarn, currentUserId, ym]);
 
   /* チェックトグル */
-  const handleCheck = useCallback((idx, e) => {
+  const handleCheck = useCallback((taskId, e) => {
     if (!currentUserId) return;
-    const newVal = !checks[idx];
-    setMonthEndCheck(currentUserId, ym, idx, newVal);
+    const newVal = !checksObj[taskId];
+    setMonthEndCheck(currentUserId, ym, taskId, newVal);
     if (newVal) {
       const rect = e.currentTarget.getBoundingClientRect();
       launchConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2);
       showNiceJob();
     }
-  }, [currentUserId, ym, checks, setMonthEndCheck]);
+  }, [currentUserId, ym, checksObj, setMonthEndCheck]);
 
   if (!currentUserId) return null;
+
+  const tasks = panelTasks || DEFAULT_PANEL_TASKS;
 
   /* ── 右端フローティングタブ ── */
   const tab = (
@@ -161,9 +318,9 @@ export default function MonthEndPanel() {
         </span>
       )}
       <ClipboardList size={14} />
+      {/* 修正: rotate(180deg) を削除し、vertical-rl のみで正しい縦書きに */}
       <span style={{
         writingMode: "vertical-rl",
-        transform: "rotate(180deg)",
         fontSize: "9px",
         fontWeight: 900,
         letterSpacing: "0.08em",
@@ -211,6 +368,16 @@ export default function MonthEndPanel() {
               {year}年{month}月 / 最終営業日 {fmtDate(lastBizDay)}
             </p>
           </div>
+          {/* 管理者用設定ボタン */}
+          {isAdmin && (
+            <button
+              onClick={() => setShowAdmin(true)}
+              className="p-1.5 text-slate-400 hover:text-slate-700 transition-colors"
+              title="タスク定義を編集（管理者）"
+            >
+              <Settings size={14} />
+            </button>
+          )}
           <button onClick={() => setOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors">
             <X size={15} />
           </button>
@@ -221,15 +388,14 @@ export default function MonthEndPanel() {
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold text-slate-500">{myName} さんの進捗</span>
             <span className="text-[12px] font-black" style={{ color: allDone ? "#059669" : activeWarn ? "#dc2626" : "#0070d2" }}>
-              {doneCount} / 6 完了
+              {doneCount} / {totalCount} 完了
             </span>
           </div>
-          {/* プログレスバー */}
           <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-700"
               style={{
-                width: `${(doneCount / 6) * 100}%`,
+                width: `${(doneCount / totalCount) * 100}%`,
                 background: allDone
                   ? "linear-gradient(90deg,#059669,#10b981)"
                   : activeWarn
@@ -251,12 +417,12 @@ export default function MonthEndPanel() {
 
         {/* チェックリスト */}
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-          {PANEL_TASKS.map(({ idx, emoji, title, when }) => {
-            const done = checks[idx];
+          {tasks.map((task) => {
+            const done = !!checksObj[task.id];
             return (
               <button
-                key={idx}
-                onClick={e => handleCheck(idx, e)}
+                key={task.id}
+                onClick={e => handleCheck(task.id, e)}
                 className={`w-full flex items-start gap-3 px-3.5 py-3 rounded-xl border-2 text-left transition-all active:scale-[0.98]
                   ${done
                     ? "bg-emerald-50 border-emerald-200 hover:border-emerald-300"
@@ -265,7 +431,6 @@ export default function MonthEndPanel() {
                       : "bg-white border-slate-200 hover:border-blue-300 hover:bg-blue-50/30"
                   }`}
               >
-                {/* チェックボックス */}
                 <div
                   className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center border-2 mt-0.5 transition-all
                     ${done
@@ -275,14 +440,13 @@ export default function MonthEndPanel() {
                 >
                   {done && <CheckCircle2 size={11} className="text-white" strokeWidth={3} />}
                 </div>
-
                 <div className="flex-1 min-w-0">
                   <p className={`text-[12px] font-bold leading-snug
                     ${done ? "line-through text-slate-400" : "text-slate-800"}`}>
-                    {emoji} {title}
+                    {task.emoji} {task.title}
                   </p>
                   <p className={`text-[10px] mt-0.5 ${done ? "text-slate-300" : "text-slate-400"}`}>
-                    {when}
+                    {task.when}
                   </p>
                 </div>
               </button>
@@ -315,7 +479,6 @@ export default function MonthEndPanel() {
       style={{ background: "rgba(0,0,0,0.6)" }}
     >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-        {/* 上部グラデーション */}
         <div
           className="px-5 py-4 flex items-center gap-3"
           style={{ background: "linear-gradient(135deg,#dc2626 0%,#ea580c 100%)" }}
@@ -325,7 +488,6 @@ export default function MonthEndPanel() {
             月末処理の期限が迫っています
           </p>
         </div>
-
         <div className="px-5 py-5 space-y-3">
           <p className="text-[12px] text-slate-700 leading-relaxed">
             <span className="font-bold text-red-600">{myName} さん</span>、
@@ -337,18 +499,15 @@ export default function MonthEndPanel() {
             最終営業日 <span className="font-bold">{fmtDate(lastBizDay)}</span> までに
             必ず処理してください。
           </p>
-
-          {/* 未完了リスト */}
           <div className="bg-red-50 rounded-xl px-3 py-2.5 space-y-1.5">
-            {PANEL_TASKS.filter((_, i) => !checks[i]).map(({ idx, emoji, title }) => (
-              <div key={idx} className="flex items-center gap-2">
+            {tasks.filter(t => !checksObj[t.id]).map(t => (
+              <div key={t.id} className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-                <span className="text-[11px] font-semibold text-red-700">{emoji} {title}</span>
+                <span className="text-[11px] font-semibold text-red-700">{t.emoji} {t.title}</span>
               </div>
             ))}
           </div>
         </div>
-
         <div className="px-5 pb-5 flex gap-2">
           <button
             onClick={() => { setShowStartup(false); setOpen(true); }}
@@ -371,17 +530,23 @@ export default function MonthEndPanel() {
 
   return (
     <>
-      {/* バナーはMainAppから props-driven で表示（MonthEndBanner を export） */}
       {tab}
       {panel}
       {startupModal}
+      {showAdmin && (
+        <TaskDefModal
+          tasks={tasks}
+          onSave={(updated) => setPanelTasks(updated)}
+          onClose={() => setShowAdmin(false)}
+        />
+      )}
     </>
   );
 }
 
 /* ── バナー表示に必要な計算値を提供するカスタムフック ── */
 export function useMonthEndWarning() {
-  const { currentUserId, currentYear, currentMonth, monthEndChecks } = useApp();
+  const { currentUserId, currentYear, currentMonth, monthEndChecks, panelTasks } = useApp();
 
   const month = useMemo(() => {
     if (!currentMonth) return new Date().getMonth() + 1;
@@ -400,13 +565,21 @@ export function useMonthEndWarning() {
     return Math.round((end - today) / 86400000);
   }, [lastBizDay]);
 
-  const checks = useMemo(() => {
-    if (!currentUserId) return Array(6).fill(false);
-    const raw = monthEndChecks?.[`${currentUserId}_${ym}`];
-    return Array.from({ length: 6 }, (_, i) => !!(raw?.[i]));
-  }, [monthEndChecks, currentUserId, ym]);
+  const tasks = panelTasks || DEFAULT_PANEL_TASKS;
 
-  const incomplete = checks.filter(v => !v).length;
+  const checksObj = useMemo(() => {
+    if (!currentUserId) return {};
+    const raw = monthEndChecks?.[`${currentUserId}_${ym}`];
+    if (!raw) return {};
+    if (Array.isArray(raw)) {
+      const obj = {};
+      tasks.forEach((t, i) => { if (raw[i]) obj[t.id] = true; });
+      return obj;
+    }
+    return raw;
+  }, [monthEndChecks, currentUserId, ym, tasks]);
+
+  const incomplete = tasks.filter(t => !checksObj[t.id]).length;
   const allDone    = incomplete === 0;
   const activeWarn = (daysToEnd >= 0 && daysToEnd <= 3 || daysToEnd < 0 && daysToEnd >= -5)
     && !allDone && !!currentUserId;

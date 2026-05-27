@@ -116,7 +116,7 @@ function useTaskDeadlineWatcher() {
 /* ── 月末チェックリスト: 勤怠申請 18:55 専用ウォッチャー ── */
 function useKintaiPanelWatcher() {
   const { currentUserId, currentUser, currentYear, currentMonth,
-          monthEndChecks, addNotifLog, getMyNotifSettings } = useApp();
+          monthEndChecks, panelTasks, addNotifLog, getMyNotifSettings } = useApp();
   const firedRef = useRef(new Set());
 
   useEffect(() => {
@@ -135,8 +135,11 @@ function useKintaiPanelWatcher() {
     const ym   = `${year}-${String(month).padStart(2, "0")}`;
 
     const check = () => {
-      const raw      = monthEndChecks?.[`${currentUserId}_${ym}`];
-      const kintaiDone = raw?.[5] === true; // idx 5 = 勤怠申請
+      const raw = monthEndChecks?.[`${currentUserId}_${ym}`];
+      // isKintai タスクの ID を動的に取得
+      const kintaiTask = (panelTasks || []).find(t => t.isKintai);
+      const kintaiId   = kintaiTask?.id || "pt5";
+      const kintaiDone = Array.isArray(raw) ? raw[5] === true : !!(raw?.[kintaiId]); // 旧フォーマット互換
       if (kintaiDone) return; // 完了済みなら通知不要
 
       const now = new Date();
