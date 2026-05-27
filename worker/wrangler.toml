@@ -1,0 +1,18 @@
+name            = "kpi-dashboard"
+main            = "index.js"
+compatibility_date = "2024-11-01"
+
+# ── KV Namespace ──────────────────────────────────────
+# 1. Cloudflare Dashboard > Workers & Pages > KV で
+#    "HONNOJI_KV" という名前で Namespace を新規作成する
+# 2. 発行された id を下記 id = "" に貼り付ける
+# 3. wrangler deploy で kpi-dashboard.kpi-gmotech.workers.dev へデプロイ
+# ──────────────────────────────────────────────────────
+[[kv_namespaces]]
+binding = "KV"
+id      = "30733344d83840aabc5e2bd3a59b70a6"
+
+# ── オプション: API キー認証 ───────────────────────────
+# 認証が必要な場合は Cloudflare Dashboard > Workers > Settings >
+# Variables に API_KEY を設定する（設定しなければ認証なし）
+# ──────────────────────────────────────────────────────

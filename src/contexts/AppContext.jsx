@@ -1,8 +1,9 @@
-import { createContext, useState, useEffect, useCallback } from "react";
+import { createContext, useState, useEffect, useCallback, useRef } from "react";
 import { DEF_MEMBERS, DEF_DEALS } from "../constants/defaultData.js";
 import { LS_KEYS } from "../constants/index.js";
 import { lsGet, lsSet, authLoad, authSave, authClear, nextId, parseAmt, resolvePhase, normalizeName } from "../utils/index.js";
 import { buildMonthlyTasks } from "../utils/monthlyTasks.js";
+import { apiGet, apiSet } from "../utils/api.js";
 
 /* 月末タスク対象メンバー（固定15名） */
 const MONTHLY_MEMBERS = [
@@ -113,7 +114,10 @@ export const AppProvider = ({ children }) => {
     /* マイグレーション済み: 念のため targetUser なしは除外 */
     return lsGet(LS_KEYS.NOTIFS, []).filter(n => !!n.targetUser);
   });
-  useEffect(() => { lsSet(LS_KEYS.NOTIFS, notifLogs); }, [notifLogs]);
+  useEffect(() => {
+    lsSet(LS_KEYS.NOTIFS, notifLogs);
+    if (apiLoadedRef.current) apiSet("notifs", notifLogs).catch(console.error);
+  }, [notifLogs]);
 
   const addNotifLog = useCallback((log) => {
     const entry = { id: `nlog_${Date.now()}`, isRead: false, createdAt: new Date().toISOString(), ...log };
@@ -135,7 +139,10 @@ export const AppProvider = ({ children }) => {
 
   /* ── タスク ── */
   const [tasks, setTasks] = useState(() => lsGet(LS_KEYS.TASKS, []));
-  useEffect(() => { lsSet(LS_KEYS.TASKS, tasks); }, [tasks]);
+  useEffect(() => {
+    lsSet(LS_KEYS.TASKS, tasks);
+    if (apiLoadedRef.current) apiSet("tasks", tasks).catch(console.error);
+  }, [tasks]);
 
   const addTask = useCallback((raw) => {
     const t = { ...raw, id: `task_${Date.now()}`, completed: false, createdAt: new Date().toISOString() };
@@ -229,7 +236,10 @@ export const AppProvider = ({ children }) => {
 
   /* ── 月末処理チェック進捗 { "userId_YYYY-MM": boolean[6] } ── */
   const [monthEndChecks, setMonthEndChecksState] = useState(() => lsGet(LS_KEYS.MONTH_END, {}));
-  useEffect(() => { lsSet(LS_KEYS.MONTH_END, monthEndChecks); }, [monthEndChecks]);
+  useEffect(() => {
+    lsSet(LS_KEYS.MONTH_END, monthEndChecks);
+    if (apiLoadedRef.current) apiSet("monthend", monthEndChecks).catch(console.error);
+  }, [monthEndChecks]);
 
   const setMonthEndCheck = useCallback((userId, ym, idx, value) => {
     setMonthEndChecksState(prev => {
@@ -244,14 +254,106 @@ export const AppProvider = ({ children }) => {
   const [requests, setRequests] = useState(() => lsGet(LS_KEYS.REQUESTS, []));
   const [requestNotifs, setRequestNotifs] = useState([]); // ログイン時通知キュー
 
-  /* ── 手動更新: localStorage から最新データを再読み込み（ページリロードなし） ── */
-  const refreshData = useCallback(() => {
-    setTasks(lsGet(LS_KEYS.TASKS, []));
-    setDeals(lsGet(LS_KEYS.DEALS, DEF_DEALS));
-    setMembers(lsGet(LS_KEYS.MEMBERS, DEF_MEMBERS));
-    setRequests(lsGet(LS_KEYS.REQUESTS, []));
-    setNotifLogs(lsGet(LS_KEYS.NOTIFS, []).filter(n => !!n.targetUser));
-  }, []);
+  /* ── API 同期 ── */
+  const apiLoadedRef = useRef(false);
+
+  /**
+   * Cloudflare Workers KV から全データを取得してステートに反映する。
+   * - API が空でローカルにデータがある場合は localStorage → API へ初回マイグレーション
+   * - API 取得済みフラグ (apiLoadedRef) を true にする
+   */
+  const fetchAllFromAPI = useCallback(async () => {
+    try {
+      const [
+        apiDeals, apiTasks, apiMembers,
+        apiRequests, apiNotifs, apiMonthEnd,
+      ] = await Promise.all([
+        apiGet("deals"),    apiGet("tasks"),   apiGet("members"),
+        apiGet("requests"), apiGet("notifs"),  apiGet("monthend"),
+      ]);
+
+      /* deals */
+      if (Array.isArray(apiDeals) && apiDeals.length > 0) {
+        setDeals(apiDeals.map(d => ({
+          ...d,
+          is:    normalizeName(d.is),
+          fs:    normalizeName(d.fs),
+          phase: _migratePhase(d.phase || "未設定"),
+          period: d.period || TODAY_PERIOD,
+          yomi:       _migrateYomi(d.yomi || _confToYomi(d.confidence)),
+          lossReason: d.lossReason || "",
+          createdAt:  d.createdAt  || _TODAY_ISO,
+          updatedAt:  d.updatedAt  || _TODAY_ISO,
+          activities: Array.isArray(d.activities) ? d.activities : [],
+        })));
+      } else {
+        /* API 空 → localStorage から移行 */
+        const local = lsGet(LS_KEYS.DEALS, DEF_DEALS);
+        if (local.length > 0) apiSet("deals", local).catch(console.error);
+      }
+
+      /* tasks */
+      if (Array.isArray(apiTasks) && apiTasks.length > 0) {
+        setTasks(apiTasks);
+      } else {
+        const local = lsGet(LS_KEYS.TASKS, []);
+        if (local.length > 0) apiSet("tasks", local).catch(console.error);
+      }
+
+      /* members */
+      if (Array.isArray(apiMembers) && apiMembers.length > 0) {
+        setMembers(apiMembers.map(m => ({ ...m, name: normalizeName(m.name) })));
+      } else {
+        const local = lsGet(LS_KEYS.MEMBERS, DEF_MEMBERS);
+        if (local.length > 0) apiSet("members", local).catch(console.error);
+      }
+
+      /* requests */
+      if (Array.isArray(apiRequests) && apiRequests.length > 0) {
+        setRequests(apiRequests);
+      } else {
+        const local = lsGet(LS_KEYS.REQUESTS, []);
+        if (local.length > 0) apiSet("requests", local).catch(console.error);
+      }
+
+      /* notifLogs */
+      if (Array.isArray(apiNotifs) && apiNotifs.length > 0) {
+        setNotifLogs(apiNotifs.filter(n => !!n.targetUser));
+      } else {
+        const local = lsGet(LS_KEYS.NOTIFS, []).filter(n => !!n.targetUser);
+        if (local.length > 0) apiSet("notifs", local).catch(console.error);
+      }
+
+      /* monthEndChecks */
+      if (apiMonthEnd && typeof apiMonthEnd === "object" && Object.keys(apiMonthEnd).length > 0) {
+        setMonthEndChecksState(apiMonthEnd);
+      } else {
+        const local = lsGet(LS_KEYS.MONTH_END, {});
+        if (Object.keys(local).length > 0) apiSet("monthend", local).catch(console.error);
+      }
+
+      apiLoadedRef.current = true;
+      return true;
+    } catch (e) {
+      console.warn("API unavailable, using local cache:", e.message);
+      apiLoadedRef.current = true; // ローカルキャッシュで動作継続
+      return false;
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* 初回マウント時にAPI取得 */
+  useEffect(() => {
+    fetchAllFromAPI();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* 30秒ポーリング（他ユーザーの更新を反映） */
+  useEffect(() => {
+    const id = setInterval(fetchAllFromAPI, 30_000);
+    return () => clearInterval(id);
+  }, [fetchAllFromAPI]);
+
+  /* ── 手動更新: API から最新データを再取得 ── */
+  const refreshData = useCallback(() => fetchAllFromAPI(), [fetchAllFromAPI]);
 
   /* ── UI状態 ── */
   const [activeTab,     setActiveTab]     = useState("マイ");
@@ -261,10 +363,19 @@ export const AppProvider = ({ children }) => {
   const [editingDeal,   setEditingDeal]   = useState(null);
   const [showPwPrompt,  setShowPwPrompt]  = useState(false);
 
-  /* LocalStorage 同期 */
-  useEffect(() => { lsSet(LS_KEYS.MEMBERS,  members);  }, [members]);
-  useEffect(() => { lsSet(LS_KEYS.DEALS,    deals);    }, [deals]);
-  useEffect(() => { lsSet(LS_KEYS.REQUESTS, requests); }, [requests]);
+  /* LocalStorage 同期 + API 保存（apiLoadedRef が true になってから） */
+  useEffect(() => {
+    lsSet(LS_KEYS.MEMBERS, members);
+    if (apiLoadedRef.current) apiSet("members", members).catch(console.error);
+  }, [members]);
+  useEffect(() => {
+    lsSet(LS_KEYS.DEALS, deals);
+    if (apiLoadedRef.current) apiSet("deals", deals).catch(console.error);
+  }, [deals]);
+  useEffect(() => {
+    lsSet(LS_KEYS.REQUESTS, requests);
+    if (apiLoadedRef.current) apiSet("requests", requests).catch(console.error);
+  }, [requests]);
 
   /* ── 認証 ── */
   const login = useCallback((userId, pw) => {
@@ -458,8 +569,8 @@ export const AppProvider = ({ children }) => {
       currentPeriod, activePeriods,
       /* 月末処理チェックリスト */
       monthEndChecks, setMonthEndCheck,
-      /* manual refresh */
-      refreshData,
+      /* manual refresh / API sync */
+      refreshData, fetchAllFromAPI,
       /* ui */
       activeTab, setActiveTab,
       activeView, setActiveView,
