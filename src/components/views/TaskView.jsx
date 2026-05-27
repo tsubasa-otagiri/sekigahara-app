@@ -138,6 +138,7 @@ function TaskModal({ task, members, defaultAssignee = "", onSave, onDelete, onCl
   const isEdit = !!task;
   const [title,    setTitle]    = useState(task?.title    || "");
   const [dueDate,  setDueDate]  = useState(task?.dueDate  || "");
+  const [dueTime,  setDueTime]  = useState(task?.dueTime  || "");
   const [assignee, setAssignee] = useState(task?.assignee ?? defaultAssignee);
   const [priority, setPriority] = useState(task?.priority || "medium");
   const [category, setCategory] = useState(task?.category || "");
@@ -155,7 +156,7 @@ function TaskModal({ task, members, defaultAssignee = "", onSave, onDelete, onCl
 
   const handleSave = () => {
     if (!title.trim()) { setErr("タスク名を入力してください"); return; }
-    onSave({ title: title.trim(), dueDate, assignee, priority, category, note });
+    onSave({ title: title.trim(), dueDate, dueTime, assignee, priority, category, note });
     onClose();
   };
 
@@ -220,14 +221,19 @@ function TaskModal({ task, members, defaultAssignee = "", onSave, onDelete, onCl
             </select>
           </div>
 
-          {/* 期限・優先度 */}
+          {/* 期限（日付＋時間）・優先度 */}
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">期限</label>
-              <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
+              <div className="flex gap-2">
+                <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
+                  className="flex-1 min-w-0 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
+                <input type="time" value={dueTime} onChange={e => setDueTime(e.target.value)}
+                  className="w-24 border border-slate-200 rounded-xl px-2 py-2 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  placeholder="--:--" />
+              </div>
             </div>
-            <div className="w-28">
+            <div className="w-24 shrink-0">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">優先度</label>
               <select value={priority} onChange={e => setPriority(e.target.value)}
                 className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white">
@@ -345,30 +351,42 @@ function TaskCard({ task, onToggle, onEdit }) {
           {task.title}
         </p>
 
-        {/* メタ情報: カテゴリ / 担当者 / 期限 のみ */}
-        <div className="flex items-center gap-2 mt-1 flex-wrap">
+        {/* メタ情報行 */}
+        <div className="flex items-center justify-between gap-2 mt-1">
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
 
-          {/* カテゴリ */}
-          {cs && task.category && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
-              style={{ background: cs.bg, color: cs.color }}>
-              {cs.label}
+            {/* カテゴリ */}
+            {cs && task.category && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0"
+                style={{ background: cs.bg, color: cs.color }}>
+                {cs.label}
+              </span>
+            )}
+
+            {/* 担当者 */}
+            {task.assignee && (
+              <span className="text-[11px] text-slate-500 font-medium shrink-0">@ {task.assignee}</span>
+            )}
+
+            {/* 期限＋時間 */}
+            {task.dueDate && (
+              <span className={`text-[10px] font-semibold flex items-center gap-0.5 shrink-0
+                ${isOverdue ? "text-red-500 font-bold" : "text-slate-400"}`}>
+                {isOverdue ? "⚠" : "📅"} {task.dueDate}
+                {task.dueTime && (
+                  <span className="ml-0.5">{task.dueTime}</span>
+                )}
+              </span>
+            )}
+
+          </div>
+
+          {/* 追加者（右端・薄く） */}
+          {task.createdBy && (
+            <span className="text-[9px] text-slate-300 shrink-0 whitespace-nowrap">
+              {task.createdBy}
             </span>
           )}
-
-          {/* 担当者 */}
-          {task.assignee && (
-            <span className="text-[11px] text-slate-500 font-medium">@ {task.assignee}</span>
-          )}
-
-          {/* 期限 */}
-          {task.dueDate && (
-            <span className={`text-[10px] font-semibold flex items-center gap-0.5
-              ${isOverdue ? "text-red-500 font-bold" : "text-slate-400"}`}>
-              {isOverdue ? "⚠" : "📅"} {task.dueDate}
-            </span>
-          )}
-
         </div>
       </div>
 
