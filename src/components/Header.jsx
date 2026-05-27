@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, Search, LogOut, HelpCircle, MessageSquarePlus } from "lucide-react";
+import { useState, useCallback } from "react";
+import { Plus, Search, LogOut, HelpCircle, MessageSquarePlus, RefreshCw } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
 import { THEX } from "../constants/index.js";
 import KabutoLogo from "../assets/KabutoLogo.jsx";
@@ -23,10 +23,18 @@ export default function Header() {
     setShowNewDeal,
     activeTab,
     logoDataUrl,
+    refreshData,
   } = useApp();
 
   const [helpOpen,    setHelpOpen]    = useState(false);
   const [requestOpen, setRequestOpen] = useState(false);
+  const [spinning,    setSpinning]    = useState(false);
+
+  const handleRefresh = useCallback(() => {
+    setSpinning(true);
+    refreshData();
+    setTimeout(() => setSpinning(false), 600);
+  }, [refreshData]);
   const teamColor = THEX[activeTab] ?? SF_BLUE;
 
   return (
@@ -90,6 +98,18 @@ export default function Header() {
 
           {/* ── 要望 ＋ ヘルプ ＋ 新規案件ボタン ── */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* 手動更新ボタン */}
+            <button
+              onClick={handleRefresh}
+              title="データを最新に更新"
+              className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-2 rounded-xl
+                transition-all active:scale-95 hover:bg-blue-50"
+              style={{ color: SF_BLUE, border: `1.5px solid ${SF_BLUE}`, background: "#fff" }}
+            >
+              <RefreshCw size={13} strokeWidth={2.5} className={spinning ? "spin" : ""} />
+              <span className="hidden sm:inline">更新</span>
+            </button>
+
             {/* 通知センター */}
             <NotificationCenter />
 

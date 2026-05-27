@@ -201,6 +201,15 @@ export const AppProvider = ({ children }) => {
   const [requests, setRequests] = useState(() => lsGet(LS_KEYS.REQUESTS, []));
   const [requestNotifs, setRequestNotifs] = useState([]); // ログイン時通知キュー
 
+  /* ── 手動更新: localStorage から最新データを再読み込み（ページリロードなし） ── */
+  const refreshData = useCallback(() => {
+    setTasks(lsGet(LS_KEYS.TASKS, []));
+    setDeals(lsGet(LS_KEYS.DEALS, DEF_DEALS));
+    setMembers(lsGet(LS_KEYS.MEMBERS, DEF_MEMBERS));
+    setRequests(lsGet(LS_KEYS.REQUESTS, []));
+    setNotifLogs(lsGet(LS_KEYS.NOTIFS, []).filter(n => !!n.targetUser));
+  }, []);
+
   /* ── UI状態 ── */
   const [activeTab,     setActiveTab]     = useState("マイ");
   const [activeView,    setActiveView]    = useState("summary");
@@ -404,6 +413,8 @@ export const AppProvider = ({ children }) => {
       currentMonth, setCurrentMonth,
       periodType, setPeriodType,
       currentPeriod, activePeriods,
+      /* manual refresh */
+      refreshData,
       /* ui */
       activeTab, setActiveTab,
       activeView, setActiveView,
