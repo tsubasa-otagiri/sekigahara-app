@@ -293,6 +293,13 @@ function TaskCard({ task, onToggle, onEdit, onDelete }) {
             </span>
           )}
 
+          {/* 追加者 */}
+          {task.createdBy && task.createdBy !== task.assignee && (
+            <span className="text-[9px] text-slate-300">
+              追加: {task.createdBy}
+            </span>
+          )}
+
           {/* メモ */}
           {task.note && (
             <span className="text-[9px] text-slate-300 truncate max-w-[100px]">{task.note}</span>
@@ -722,15 +729,30 @@ export default function TaskView() {
     if (editTask) {
       updateTask(editTask.id, data);
     } else {
-      addTask(data);
-      /* 【担当者限定】自分が担当者の場合のみ通知 */
-      const isMyTask = data.assignee && data.assignee === myName;
-      if (isMyTask) {
-        const body = `担当: ${data.assignee}`;
+      /* 追加者を自動セット */
+      const taskData = { ...data, createdBy: myName };
+      addTask(taskData);
+
+      /* 【通知ルール】
+       *  - 担当者が設定されている
+       *  - 追加者 ≠ 担当者（自分で自分のタスクを追加した場合は通知不要）
+       *  のときだけ担当者の通知センターに記録する
+       */
+      const assignee   = data.assignee;
+      const isSelf     = !assignee || assignee === myName;
+      if (!isSelf) {
+        const body = `${myName} さんがタスクを追加しました`;
+        addNotifLog({
+          taskId: null, type: "task_add", targetUser: assignee,
+          title: `✅ 新規タスク: ${data.title}`, body,
+        });
+      }
+
+      /* 自分が担当の場合はデスクトップ通知のみ（通知センターには記録しない） */
+      if (assignee === myName) {
         const { notifyOnTaskAdded } = getMyNotifSettings(currentUserId);
-        if (notifyOnTaskAdded) fireNotif(`✅ 新規タスク: ${data.title}`, body, () => window.focus());
-        addNotifLog({ taskId: null, type: "task_add", targetUser: data.assignee,
-          title: `✅ 新規タスク: ${data.title}`, body });
+        if (notifyOnTaskAdded)
+          fireNotif(`✅ 新規タスク: ${data.title}`, `担当: ${myName}`, () => window.focus());
       }
     }
     setEditTask(null);
