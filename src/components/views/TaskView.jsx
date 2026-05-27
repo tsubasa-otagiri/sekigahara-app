@@ -229,6 +229,7 @@ function TaskModal({ task, members, defaultAssignee = "", onSave, onDelete, onCl
                 <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
                   className="flex-1 min-w-0 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
                 <input type="time" value={dueTime} onChange={e => setDueTime(e.target.value)}
+                  step="1800"
                   className="w-24 border border-slate-200 rounded-xl px-2 py-2 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                   placeholder="--:--" />
               </div>
