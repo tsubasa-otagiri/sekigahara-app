@@ -112,15 +112,17 @@ export default function Header() {
               style={{ color: SF_BLUE, border: `1.5px solid ${SF_BLUE}`, background: "#fff" }}
             >
               <RefreshCw size={13} strokeWidth={2.5} className={spinning ? "spin" : ""} />
-              <span className="hidden sm:inline">更新</span>
-              {fmtUpdated && (
-                <span
-                  className="hidden sm:inline text-[9px] font-normal"
-                  style={{ color: SF_BLUE, opacity: 0.45 }}
-                >
-                  {fmtUpdated}
-                </span>
-              )}
+              <span className="hidden sm:flex flex-col items-start leading-none gap-0.5">
+                <span>更新</span>
+                {fmtUpdated && (
+                  <span
+                    className="text-[9px] font-normal"
+                    style={{ color: SF_BLUE, opacity: 0.45 }}
+                  >
+                    {fmtUpdated}
+                  </span>
+                )}
+              </span>
             </button>
 
             {/* 通知センター */}
