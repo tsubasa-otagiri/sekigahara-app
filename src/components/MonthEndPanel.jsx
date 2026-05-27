@@ -7,7 +7,6 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
   X, CheckCircle2, AlertTriangle, ClipboardList, ChevronRight,
-  Settings, Plus, Trash2, ChevronUp, ChevronDown, GripVertical,
 } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
 import { DEFAULT_PANEL_TASKS } from "../contexts/AppContext.jsx";
@@ -19,165 +18,22 @@ function fmtDate(d) {
   return `${d.getMonth()+1}/${d.getDate()}(${DOW[d.getDay()]})`;
 }
 
-/* ── 管理者タスク定義編集モーダル ── */
-function TaskDefModal({ tasks, onSave, onClose }) {
-  const [list, setList] = useState(() => tasks.map(t => ({ ...t })));
-  const [editing, setEditing] = useState(null); // { idx, field, value }
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
+/** タスク個別の締切日を計算する（lastBizDay - daysBefore日） */
+function getTaskDueDate(task, lastBizDay) {
+  const date = new Date(lastBizDay);
+  date.setDate(date.getDate() - (task.daysBefore ?? 0));
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
 
-  const move = (i, dir) => {
-    const next = [...list];
-    const j = i + dir;
-    if (j < 0 || j >= next.length) return;
-    [next[i], next[j]] = [next[j], next[i]];
-    setList(next);
-  };
-
-  const del = (i) => {
-    setList(prev => prev.filter((_, idx) => idx !== i));
-    setDeleteConfirm(null);
-  };
-
-  const addNew = () => {
-    const newTask = {
-      id: `pt_${Date.now()}`,
-      emoji: "📋",
-      title: "新しいタスク",
-      when: "最終営業日当日",
-      isKintai: false,
-    };
-    setList(prev => [...prev, newTask]);
-  };
-
-  const updateField = (i, field, value) => {
-    setList(prev => prev.map((t, idx) => idx === i ? { ...t, [field]: value } : t));
-  };
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.6)" }}
-      onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col"
-        style={{ maxHeight: "90vh" }}
-        onMouseDown={e => e.stopPropagation()}
-      >
-        {/* ヘッダー */}
-        <div className="px-5 py-4 flex items-center gap-3 border-b border-slate-100">
-          <Settings size={18} className="text-slate-600" />
-          <p className="text-[14px] font-black text-slate-800 flex-1">月末処理タスク管理</p>
-          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600">
-            <X size={15} />
-          </button>
-        </div>
-
-        {/* リスト */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-          {list.map((task, i) => (
-            <div key={task.id} className="border border-slate-200 rounded-xl overflow-hidden">
-              {/* タスク行 */}
-              <div className="flex items-center gap-2 px-3 py-2.5 bg-slate-50">
-                <GripVertical size={14} className="text-slate-300 shrink-0" />
-                {/* 順番ボタン */}
-                <div className="flex flex-col gap-0.5">
-                  <button
-                    onClick={() => move(i, -1)}
-                    disabled={i === 0}
-                    className="p-0.5 text-slate-400 hover:text-slate-700 disabled:opacity-20"
-                  ><ChevronUp size={12} /></button>
-                  <button
-                    onClick={() => move(i, 1)}
-                    disabled={i === list.length - 1}
-                    className="p-0.5 text-slate-400 hover:text-slate-700 disabled:opacity-20"
-                  ><ChevronDown size={12} /></button>
-                </div>
-                {/* Emoji */}
-                <input
-                  className="w-9 text-center text-[16px] bg-white border border-slate-200 rounded-lg py-1 shrink-0"
-                  value={task.emoji}
-                  onChange={e => updateField(i, "emoji", e.target.value)}
-                  maxLength={2}
-                />
-                {/* タイトル */}
-                <input
-                  className="flex-1 text-[12px] font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-2 py-1.5 min-w-0"
-                  value={task.title}
-                  onChange={e => updateField(i, "title", e.target.value)}
-                />
-                {/* 削除ボタン */}
-                {deleteConfirm === i ? (
-                  <div className="flex items-center gap-1 shrink-0">
-                    <span className="text-[10px] text-red-500 font-bold">削除?</span>
-                    <button
-                      onClick={() => del(i)}
-                      className="px-2 py-1 text-[10px] font-bold bg-red-500 text-white rounded-lg hover:bg-red-600"
-                    >はい</button>
-                    <button
-                      onClick={() => setDeleteConfirm(null)}
-                      className="px-2 py-1 text-[10px] font-bold bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300"
-                    >No</button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setDeleteConfirm(i)}
-                    className="p-1.5 text-slate-300 hover:text-red-400 shrink-0"
-                  ><Trash2 size={13} /></button>
-                )}
-              </div>
-              {/* 期限テキスト行 */}
-              <div className="px-3 py-1.5 flex items-center gap-2 border-t border-slate-100">
-                <span className="text-[10px] text-slate-400 shrink-0">期限:</span>
-                <input
-                  className="flex-1 text-[11px] text-slate-500 bg-white border border-slate-100 rounded px-2 py-0.5"
-                  value={task.when}
-                  onChange={e => updateField(i, "when", e.target.value)}
-                />
-                <label className="flex items-center gap-1 shrink-0 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={!!task.isKintai}
-                    onChange={e => updateField(i, "isKintai", e.target.checked)}
-                    className="w-3 h-3"
-                  />
-                  <span className="text-[10px] text-slate-400">勤怠通知</span>
-                </label>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* フッター */}
-        <div className="px-4 py-3 border-t border-slate-100 flex items-center gap-2">
-          <button
-            onClick={addNew}
-            className="flex items-center gap-1.5 px-3 py-2 text-[12px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors"
-          >
-            <Plus size={13} /> タスクを追加
-          </button>
-          <div className="flex-1" />
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-[12px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-xl"
-          >
-            キャンセル
-          </button>
-          <button
-            onClick={() => { onSave(list); onClose(); }}
-            className="px-4 py-2 text-[12px] font-black text-white bg-blue-600 hover:bg-blue-700 rounded-xl"
-          >
-            保存
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
+/** 今日がタスクの締切日以降かどうか（アラート表示判定） */
+function isTaskCurrentlyDue(task, lastBizDay) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  return today >= getTaskDueDate(task, lastBizDay);
 }
 
 /* ── バナー（layout-flow内に置かれる） ── */
-export function MonthEndBanner({ daysToEnd, incomplete, lastBizDay, onOpen }) {
+export function MonthEndBanner({ daysToEnd, incomplete, doneCount, totalCount, lastBizDay, onOpen }) {
   return (
     <div
       className="flex items-center gap-3 px-4 sm:px-6 py-2 shrink-0"
@@ -196,6 +52,21 @@ export function MonthEndBanner({ daysToEnd, incomplete, lastBizDay, onOpen }) {
           : <span>まであと <span className="font-black text-yellow-200">{daysToEnd}日</span></span>
         }
       </p>
+      {/* 進捗ゲージ */}
+      <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+        <div className="w-20 h-2 bg-white/25 rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${totalCount > 0 ? (doneCount / totalCount) * 100 : 0}%`,
+              background: doneCount === totalCount ? "#4ade80" : "#fde68a",
+            }}
+          />
+        </div>
+        <span className="text-[10px] font-black text-white/90 whitespace-nowrap">
+          {doneCount}/{totalCount}
+        </span>
+      </div>
       <button
         onClick={onOpen}
         className="shrink-0 flex items-center gap-1 px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-[10px] font-bold text-white transition-colors whitespace-nowrap"
@@ -212,15 +83,13 @@ export default function MonthEndPanel() {
     currentUser, currentUserId,
     currentYear, currentMonth,
     monthEndChecks, setMonthEndCheck,
-    panelTasks, setPanelTasks,
+    panelTasks,
   } = useApp();
 
   const [open,        setOpen]        = useState(false);
   const [showStartup, setShowStartup] = useState(false);
-  const [showAdmin,   setShowAdmin]   = useState(false);
 
-  const myName  = currentUser?.name || "";
-  const isAdmin = currentUser?.role === "admin" || currentUser?.role === "leader";
+  const myName = currentUser?.name || "";
 
   /* 選択中の年月を数値に変換 */
   const month = useMemo(() => {
@@ -245,36 +114,43 @@ export default function MonthEndPanel() {
   const isWarningZone = daysToEnd >= 0 && daysToEnd <= 3;
   const isPastDue     = daysToEnd < 0 && daysToEnd >= -5;
 
+  const tasks = panelTasks || DEFAULT_PANEL_TASKS;
+
   /* チェック状態（taskId → boolean, 旧フォーマット自動移行） */
   const checksObj = useMemo(() => {
     if (!currentUserId) return {};
     const raw = monthEndChecks?.[`${currentUserId}_${ym}`];
     if (!raw) return {};
     if (Array.isArray(raw)) {
-      // 旧フォーマット(boolean[]) → { id: bool }
       const obj = {};
-      (panelTasks || DEFAULT_PANEL_TASKS).forEach((t, i) => { if (raw[i]) obj[t.id] = true; });
+      tasks.forEach((t, i) => { if (raw[i]) obj[t.id] = true; });
       return obj;
     }
     return raw;
-  }, [monthEndChecks, currentUserId, ym, panelTasks]);
+  }, [monthEndChecks, currentUserId, ym, tasks]);
 
-  const checks     = (panelTasks || DEFAULT_PANEL_TASKS).map(t => !!checksObj[t.id]);
-  const doneCount  = checks.filter(Boolean).length;
-  const totalCount = (panelTasks || DEFAULT_PANEL_TASKS).length;
+  const doneCount  = tasks.filter(t => !!checksObj[t.id]).length;
+  const totalCount = tasks.length;
   const allDone    = doneCount === totalCount;
   const incomplete = totalCount - doneCount;
   const activeWarn = (isWarningZone || isPastDue) && !allDone && !!currentUserId;
 
-  /* 起動時モーダル — セッション内1回だけ */
+  /* 今日時点で締切を迎えているタスク（未完了のもの）*/
+  const dueTodayIncomplete = useMemo(() =>
+    tasks.filter(t => !checksObj[t.id] && isTaskCurrentlyDue(t, lastBizDay)),
+    [tasks, checksObj, lastBizDay]
+  );
+
+  /* 起動時モーダル — セッション内1回だけ（当日期限のものがある場合のみ） */
   useEffect(() => {
     if (!activeWarn || !currentUserId) return;
+    if (dueTodayIncomplete.length === 0) return; // 今日期限のものがなければ表示しない
     const key = `mep_${currentUserId}_${ym}`;
     if (sessionStorage.getItem(key)) return;
     sessionStorage.setItem(key, "1");
     const t = setTimeout(() => setShowStartup(true), 1000);
     return () => clearTimeout(t);
-  }, [activeWarn, currentUserId, ym]);
+  }, [activeWarn, currentUserId, ym, dueTodayIncomplete.length]);
 
   /* チェックトグル */
   const handleCheck = useCallback((taskId, e) => {
@@ -289,8 +165,6 @@ export default function MonthEndPanel() {
   }, [currentUserId, ym, checksObj, setMonthEndCheck]);
 
   if (!currentUserId) return null;
-
-  const tasks = panelTasks || DEFAULT_PANEL_TASKS;
 
   /* ── 右端フローティングタブ ── */
   const tab = (
@@ -318,7 +192,6 @@ export default function MonthEndPanel() {
         </span>
       )}
       <ClipboardList size={14} />
-      {/* 修正: rotate(180deg) を削除し、vertical-rl のみで正しい縦書きに */}
       <span style={{
         writingMode: "vertical-rl",
         fontSize: "9px",
@@ -368,16 +241,6 @@ export default function MonthEndPanel() {
               {year}年{month}月 / 最終営業日 {fmtDate(lastBizDay)}
             </p>
           </div>
-          {/* 管理者用設定ボタン */}
-          {isAdmin && (
-            <button
-              onClick={() => setShowAdmin(true)}
-              className="p-1.5 text-slate-400 hover:text-slate-700 transition-colors"
-              title="タスク定義を編集（管理者）"
-            >
-              <Settings size={14} />
-            </button>
-          )}
           <button onClick={() => setOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors">
             <X size={15} />
           </button>
@@ -419,6 +282,8 @@ export default function MonthEndPanel() {
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
           {tasks.map((task) => {
             const done = !!checksObj[task.id];
+            const isDue = isTaskCurrentlyDue(task, lastBizDay);
+            const dueDate = getTaskDueDate(task, lastBizDay);
             return (
               <button
                 key={task.id}
@@ -426,7 +291,7 @@ export default function MonthEndPanel() {
                 className={`w-full flex items-start gap-3 px-3.5 py-3 rounded-xl border-2 text-left transition-all active:scale-[0.98]
                   ${done
                     ? "bg-emerald-50 border-emerald-200 hover:border-emerald-300"
-                    : activeWarn
+                    : isDue && activeWarn
                       ? "bg-red-50/40 border-red-200 hover:border-red-400 hover:bg-red-50/70"
                       : "bg-white border-slate-200 hover:border-blue-300 hover:bg-blue-50/30"
                   }`}
@@ -435,7 +300,7 @@ export default function MonthEndPanel() {
                   className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center border-2 mt-0.5 transition-all
                     ${done
                       ? "bg-emerald-400 border-emerald-400"
-                      : activeWarn ? "border-red-300" : "border-slate-300"
+                      : isDue && activeWarn ? "border-red-300" : "border-slate-300"
                     }`}
                 >
                   {done && <CheckCircle2 size={11} className="text-white" strokeWidth={3} />}
@@ -445,8 +310,13 @@ export default function MonthEndPanel() {
                     ${done ? "line-through text-slate-400" : "text-slate-800"}`}>
                     {task.emoji} {task.title}
                   </p>
-                  <p className={`text-[10px] mt-0.5 ${done ? "text-slate-300" : "text-slate-400"}`}>
+                  <p className={`text-[10px] mt-0.5 ${done ? "text-slate-300" : isDue ? "text-red-400 font-semibold" : "text-slate-400"}`}>
                     {task.when}
+                    {!done && !isDue && (
+                      <span className="ml-1 text-slate-300">
+                        （{fmtDate(dueDate)}〜）
+                      </span>
+                    )}
                   </p>
                 </div>
               </button>
@@ -472,8 +342,8 @@ export default function MonthEndPanel() {
     document.body
   );
 
-  /* ── 起動時警告モーダル ── */
-  const startupModal = showStartup && createPortal(
+  /* ── 起動時警告モーダル（当日期限タスクのみ表示） ── */
+  const startupModal = showStartup && dueTodayIncomplete.length > 0 && createPortal(
     <div
       className="fixed inset-0 z-[90] flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.6)" }}
@@ -488,19 +358,22 @@ export default function MonthEndPanel() {
             月末処理の期限が迫っています
           </p>
         </div>
+
         <div className="px-5 py-5 space-y-3">
           <p className="text-[12px] text-slate-700 leading-relaxed">
             <span className="font-bold text-red-600">{myName} さん</span>、
-            {year}年{month}月の月末処理チェックリストに
-            <span className="font-black text-red-600"> 未完了が {incomplete} 件</span>
-            あります。
+            本日締切の月末処理が
+            <span className="font-black text-red-600"> {dueTodayIncomplete.length} 件</span>
+            未完了です。
           </p>
           <p className="text-[12px] text-slate-600 leading-relaxed">
             最終営業日 <span className="font-bold">{fmtDate(lastBizDay)}</span> までに
             必ず処理してください。
           </p>
+
+          {/* 当日期限の未完了リストのみ */}
           <div className="bg-red-50 rounded-xl px-3 py-2.5 space-y-1.5">
-            {tasks.filter(t => !checksObj[t.id]).map(t => (
+            {dueTodayIncomplete.map(t => (
               <div key={t.id} className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
                 <span className="text-[11px] font-semibold text-red-700">{t.emoji} {t.title}</span>
@@ -508,6 +381,7 @@ export default function MonthEndPanel() {
             ))}
           </div>
         </div>
+
         <div className="px-5 pb-5 flex gap-2">
           <button
             onClick={() => { setShowStartup(false); setOpen(true); }}
@@ -533,13 +407,6 @@ export default function MonthEndPanel() {
       {tab}
       {panel}
       {startupModal}
-      {showAdmin && (
-        <TaskDefModal
-          tasks={tasks}
-          onSave={(updated) => setPanelTasks(updated)}
-          onClose={() => setShowAdmin(false)}
-        />
-      )}
     </>
   );
 }
@@ -555,8 +422,8 @@ export function useMonthEndWarning() {
     return parseInt(s.includes("-") ? s.split("-")[1] : s, 10);
   }, [currentMonth]);
 
-  const year      = currentYear || new Date().getFullYear();
-  const ym        = `${year}-${String(month).padStart(2, "0")}`;
+  const year       = currentYear || new Date().getFullYear();
+  const ym         = `${year}-${String(month).padStart(2, "0")}`;
   const lastBizDay = useMemo(() => getLastBizDay(year, month), [year, month]);
 
   const daysToEnd = useMemo(() => {
@@ -579,10 +446,12 @@ export function useMonthEndWarning() {
     return raw;
   }, [monthEndChecks, currentUserId, ym, tasks]);
 
-  const incomplete = tasks.filter(t => !checksObj[t.id]).length;
+  const doneCount  = tasks.filter(t => !!checksObj[t.id]).length;
+  const totalCount = tasks.length;
+  const incomplete = totalCount - doneCount;
   const allDone    = incomplete === 0;
   const activeWarn = (daysToEnd >= 0 && daysToEnd <= 3 || daysToEnd < 0 && daysToEnd >= -5)
     && !allDone && !!currentUserId;
 
-  return { activeWarn, daysToEnd, incomplete, lastBizDay };
+  return { activeWarn, daysToEnd, incomplete, doneCount, totalCount, lastBizDay };
 }

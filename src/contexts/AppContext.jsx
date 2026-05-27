@@ -16,13 +16,17 @@ const MONTHLY_MEMBERS = [
 export const AppContext = createContext(null);
 
 /* ── 月末処理チェックリスト デフォルト定義 ── */
+/**
+ * 月末処理タスクのデフォルト定義
+ * daysBefore: 最終営業日の何日前が締切か（0=当日, 正数=N日前）
+ */
 export const DEFAULT_PANEL_TASKS = [
-  { id: "pt0", emoji: "📄", title: "前月・先々月受注の請求書リマインド", when: "最終営業日5日前" },
-  { id: "pt1", emoji: "📝", title: "リモア登録",                        when: "最終営業日3日前" },
-  { id: "pt2", emoji: "🚚", title: "今月回収案件の役務提供",             when: "最終営業日当日" },
-  { id: "pt3", emoji: "💰", title: "先月・先々月の入金確認",             when: "最終営業日当日" },
-  { id: "pt4", emoji: "💳", title: "経費精算",                          when: "最終営業日当日" },
-  { id: "pt5", emoji: "⏰", title: "勤怠申請",                          when: "最終営業日 18:55締切", isKintai: true },
+  { id: "pt0", emoji: "📄", title: "前月・先々月受注の請求書リマインド", when: "最終営業日5日前",         daysBefore: 5 },
+  { id: "pt1", emoji: "📝", title: "リモア登録",                        when: "最終営業日3日前",         daysBefore: 3 },
+  { id: "pt2", emoji: "🚚", title: "今月回収案件の役務提供",             when: "最終営業日当日",          daysBefore: 0 },
+  { id: "pt3", emoji: "💰", title: "先月・先々月の入金確認",             when: "最終営業日当日",          daysBefore: 0 },
+  { id: "pt4", emoji: "💳", title: "経費精算",                          when: "最終営業日当日",          daysBefore: 0 },
+  { id: "pt5", emoji: "⏰", title: "勤怠申請",                          when: "最終営業日 18:55締切",    daysBefore: 0, isKintai: true },
 ];
 
 /* 当月 period 文字列 ("YYYY-MM") */

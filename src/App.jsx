@@ -182,7 +182,7 @@ function MainApp() {
   } = useApp();
 
   /* 月末警告バナー用データ */
-  const { activeWarn, daysToEnd, incomplete, lastBizDay } = useMonthEndWarning();
+  const { activeWarn, daysToEnd, incomplete, doneCount, totalCount, lastBizDay } = useMonthEndWarning();
 
   /* 通知許可 — ログイン後に一度だけ要求 */
   useEffect(() => {
@@ -211,10 +211,10 @@ function MainApp() {
         <MonthEndBanner
           daysToEnd={daysToEnd}
           incomplete={incomplete}
+          doneCount={doneCount}
+          totalCount={totalCount}
           lastBizDay={lastBizDay}
-          onOpen={() => {/* MonthEndPanel が自身で open 管理 — タブクリック相当 */
-            document.getElementById("month-end-tab-btn")?.click();
-          }}
+          onOpen={() => document.getElementById("month-end-tab-btn")?.click()}
         />
       )}
 

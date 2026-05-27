@@ -1,7 +1,8 @@
 import { useState, useRef } from "react";
 import ImageCropModal from "../ImageCropModal.jsx";
-import { Plus, Edit2, Save, X, Eye, EyeOff, Download, Upload, FileText, Lock, UserX, UserCheck, Flag, Bell, BellOff } from "lucide-react";
+import { Plus, Edit2, Save, X, Eye, EyeOff, Download, Upload, FileText, Lock, UserX, UserCheck, Flag, Bell, BellOff, Trash2, ChevronUp, ChevronDown, GripVertical, ClipboardList } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
+import { DEFAULT_PANEL_TASKS } from "../../contexts/AppContext.jsx";
 import { TEAMS_OPT, ROLE_OPT, LS_KEYS } from "../../constants/index.js";
 import { parseAmt, lsGet } from "../../utils/index.js";
 import Confirm from "../ui/Confirm.jsx";
@@ -732,12 +733,187 @@ function NotifSection() {
   );
 }
 
+/* ━━━━━━━━ 月末タスク定義管理セクション（管理者限定） ━━━━━━━━ */
+function MonthEndTaskSection() {
+  const { panelTasks, setPanelTasks } = useApp();
+  const [list, setList] = useState(() => (panelTasks || DEFAULT_PANEL_TASKS).map(t => ({ ...t })));
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [saved, setSaved] = useState(false);
+
+  const move = (i, dir) => {
+    const next = [...list];
+    const j = i + dir;
+    if (j < 0 || j >= next.length) return;
+    [next[i], next[j]] = [next[j], next[i]];
+    setList(next);
+  };
+
+  const del = (i) => {
+    setList(prev => prev.filter((_, idx) => idx !== i));
+    setDeleteConfirm(null);
+  };
+
+  const addNew = () => {
+    setList(prev => [...prev, {
+      id: `pt_${Date.now()}`,
+      emoji: "📋",
+      title: "新しいタスク",
+      when: "最終営業日当日",
+      daysBefore: 0,
+      isKintai: false,
+    }]);
+  };
+
+  const updateField = (i, field, value) => {
+    setList(prev => prev.map((t, idx) => idx === i ? { ...t, [field]: value } : t));
+  };
+
+  const handleSave = () => {
+    setPanelTasks(list);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
+
+  const handleReset = () => {
+    const fresh = DEFAULT_PANEL_TASKS.map(t => ({ ...t }));
+    setList(fresh);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* ヘッダー説明 */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <ClipboardList size={14} className="text-blue-600" />
+          <h3 className="text-sm font-bold text-gray-700">月末処理タスク定義</h3>
+          <span className="text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200 rounded px-1.5 py-0.5">管理者限定</span>
+        </div>
+        <p className="text-xs text-gray-500 mb-1">
+          月末チェックリストの項目を追加・編集・削除・並び替えできます。<br />
+          保存すると全メンバーの月末処理パネルに即時反映されます。
+        </p>
+        <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 mt-2">
+          ⚠️ 「何日前」はその日の締切になります。0=最終営業日当日、3=3日前
+        </p>
+      </div>
+
+      {/* タスクリスト */}
+      <div className="space-y-2">
+        {list.map((task, i) => (
+          <div key={task.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            {/* メイン行 */}
+            <div className="flex items-center gap-2 px-3 py-2.5">
+              <GripVertical size={14} className="text-gray-300 shrink-0" />
+              {/* 順番ボタン */}
+              <div className="flex flex-col gap-0.5 shrink-0">
+                <button onClick={() => move(i, -1)} disabled={i === 0}
+                  className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-20">
+                  <ChevronUp size={12} />
+                </button>
+                <button onClick={() => move(i, 1)} disabled={i === list.length - 1}
+                  className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-20">
+                  <ChevronDown size={12} />
+                </button>
+              </div>
+              {/* 絵文字 */}
+              <input
+                className="w-10 text-center text-[16px] bg-gray-50 border border-gray-200 rounded-lg py-1 shrink-0"
+                value={task.emoji}
+                onChange={e => updateField(i, "emoji", e.target.value)}
+                maxLength={2}
+              />
+              {/* タイトル */}
+              <input
+                className={INP + " flex-1 text-[12px] min-w-0"}
+                value={task.title}
+                onChange={e => updateField(i, "title", e.target.value)}
+                placeholder="タスク名"
+              />
+              {/* 削除 */}
+              {deleteConfirm === i ? (
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className="text-[10px] text-red-500 font-bold whitespace-nowrap">削除?</span>
+                  <button onClick={() => del(i)}
+                    className="px-2 py-1 text-[10px] font-bold bg-red-500 text-white rounded-lg hover:bg-red-600">
+                    はい
+                  </button>
+                  <button onClick={() => setDeleteConfirm(null)}
+                    className="px-2 py-1 text-[10px] font-bold bg-gray-200 text-gray-600 rounded-lg">
+                    いいえ
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setDeleteConfirm(i)}
+                  className="p-1.5 text-gray-300 hover:text-red-400 shrink-0">
+                  <Trash2 size={13} />
+                </button>
+              )}
+            </div>
+            {/* サブ行：期限・何日前・勤怠通知 */}
+            <div className="px-3 pb-2.5 flex items-center gap-3 flex-wrap border-t border-gray-50 pt-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-[10px] text-gray-400 shrink-0">表示テキスト:</span>
+                <input
+                  className="text-[11px] text-gray-500 bg-gray-50 border border-gray-100 rounded px-2 py-0.5 w-36"
+                  value={task.when}
+                  onChange={e => updateField(i, "when", e.target.value)}
+                  placeholder="最終営業日当日"
+                />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-gray-400 shrink-0">何日前:</span>
+                <input
+                  type="number"
+                  min={0} max={30}
+                  className="text-[11px] text-gray-600 bg-gray-50 border border-gray-100 rounded px-2 py-0.5 w-16 text-center"
+                  value={task.daysBefore ?? 0}
+                  onChange={e => updateField(i, "daysBefore", Number(e.target.value))}
+                />
+              </div>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!!task.isKintai}
+                  onChange={e => updateField(i, "isKintai", e.target.checked)}
+                  className="w-3.5 h-3.5"
+                />
+                <span className="text-[10px] text-gray-400">勤怠18:55通知</span>
+              </label>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* アクションボタン */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <button onClick={addNew} className={BTN_PRI}>
+          <Plus size={13} /> タスクを追加
+        </button>
+        <button onClick={handleReset} className={BTN_GRAY}>
+          デフォルトに戻す
+        </button>
+        <div className="flex-1" />
+        <button onClick={handleSave} className={BTN_PRI}>
+          <Save size={13} /> 保存して全員に反映
+        </button>
+      </div>
+
+      {saved && (
+        <div className="rounded-xl px-4 py-3 text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+          ✅ 保存しました。全メンバーの月末処理パネルに反映されます。
+        </div>
+      )}
+    </div>
+  );
+}
+
 const SECTIONS = [
-  { id:"members",  label:"メンバー"      },
-  { id:"password", label:"パスワード管理" },
-  { id:"backup",   label:"バックアップ"   },
-  { id:"favicon",  label:"旗印"          },
-  { id:"notif",    label:"🔔 通知設定"   },
+  { id:"members",   label:"メンバー"      },
+  { id:"password",  label:"パスワード管理" },
+  { id:"backup",    label:"バックアップ"   },
+  { id:"favicon",   label:"旗印"          },
+  { id:"monthend",  label:"📋 月末タスク" },
+  { id:"notif",     label:"🔔 通知設定"   },
 ];
 
 export default function SettingsView() {
@@ -791,6 +967,7 @@ export default function SettingsView() {
         {section === "password" && <PasswordSection />}
         {section === "backup"   && <BackupSection />}
         {section === "favicon"  && <FaviconSection />}
+        {section === "monthend" && <MonthEndTaskSection />}
         {section === "notif"    && <NotifSection />}
       </div>
     </div>
