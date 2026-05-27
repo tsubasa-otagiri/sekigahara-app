@@ -320,93 +320,63 @@ function TaskCard({ task, onToggle, onEdit }) {
 
   return (
     <div
-      className={`flex items-start gap-3 px-3 py-3 rounded-xl bg-white transition-all
-        ${task.completed ? "opacity-50" : "card-shadow hover:shadow-md"}
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white transition-all
+        ${task.completed ? "opacity-45" : "card-shadow hover:shadow-md"}
         ${vanishing ? "task-vanish" : ""}`}
       style={{ borderLeft: `3px solid ${task.completed ? "#cbd5e1" : ps.color}` }}
     >
-      {/* ── 完了ボタン（目立つデザイン） ── */}
+      {/* ── 完了ボタン ── */}
       <button
         onClick={handleToggle}
         title={task.completed ? "未完了に戻す" : "完了にする"}
-        className={`shrink-0 mt-0.5 w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all
+        className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all
           ${task.completed
             ? "bg-emerald-400 border-emerald-400 text-white"
-            : "border-slate-300 text-slate-300 hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-500 hover:scale-110"
+            : "border-slate-300 text-transparent hover:border-emerald-400 hover:text-emerald-400 hover:scale-110"
           }`}
       >
-        {task.completed
-          ? <CheckCircle2 size={15} strokeWidth={2.5} />
-          : <Circle      size={15} strokeWidth={2}   />
-        }
+        <CheckCircle2 size={13} strokeWidth={2.5} />
       </button>
 
+      {/* ── タスク名＋メタ ── */}
       <div className="flex-1 min-w-0">
-        {/* タスク名 */}
-        <p className={`text-[13px] font-bold leading-snug
+        <p className={`text-[13px] font-semibold leading-snug truncate
           ${task.completed ? "line-through text-slate-400" : "text-slate-800"}`}>
           {task.title}
         </p>
 
-        {/* メタ情報行 */}
-        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+        {/* メタ情報: カテゴリ / 担当者 / 期限 のみ */}
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
 
-          {/* 優先度バッジ */}
-          <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full"
-            style={{ background: ps.bg, color: ps.color }}>
-            {ps.label}
-          </span>
-
-          {/* カテゴリバッジ */}
+          {/* カテゴリ */}
           {cs && task.category && (
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
               style={{ background: cs.bg, color: cs.color }}>
               {cs.label}
             </span>
           )}
 
-          {/* 担当者 + チームバッジ */}
+          {/* 担当者 */}
           {task.assignee && (
-            <span className="flex items-center gap-1">
-              <UserCircle2 size={11} className="text-slate-400" />
-              <span className="text-[11px] font-bold text-slate-700">{task.assignee}</span>
-              {tbs && (
-                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full"
-                  style={{ background: tbs.bg, color: tbs.color }}>
-                  {assigneeTeam}
-                </span>
-              )}
-            </span>
+            <span className="text-[11px] text-slate-500 font-medium">@ {task.assignee}</span>
           )}
 
           {/* 期限 */}
           {task.dueDate && (
-            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full
-              ${isOverdue ? "bg-red-50 text-red-500 font-black" : "text-slate-400"}`}>
-              {isOverdue ? "⚠ " : "📅 "}{task.dueDate}
+            <span className={`text-[10px] font-semibold flex items-center gap-0.5
+              ${isOverdue ? "text-red-500 font-bold" : "text-slate-400"}`}>
+              {isOverdue ? "⚠" : "📅"} {task.dueDate}
             </span>
           )}
 
-          {/* 追加者 */}
-          {task.createdBy && task.createdBy !== task.assignee && (
-            <span className="text-[9px] text-slate-300">追加: {task.createdBy}</span>
-          )}
-
-          {/* メモ */}
-          {task.note && (
-            <span className="text-[9px] text-slate-300 truncate max-w-[100px]">{task.note}</span>
-          )}
         </div>
-
       </div>
 
-      {/* ── 編集ボタン（削除はモーダル内） ── */}
-      <div className="flex items-center shrink-0 mt-0.5">
-        <button onClick={() => onEdit(task)}
-          className="p-1 text-slate-200 hover:text-blue-400 transition-colors" title="編集・削除">
-          <Pencil size={13} />
-        </button>
-      </div>
+      {/* ── 編集ボタン ── */}
+      <button onClick={() => onEdit(task)}
+        className="shrink-0 p-1 text-slate-200 hover:text-blue-400 transition-colors" title="編集">
+        <Pencil size={13} />
+      </button>
     </div>
   );
 }
