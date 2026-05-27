@@ -70,6 +70,28 @@ export const AppProvider = ({ children }) => {
     }
     return result;
   });
+  /* ── タスク ── */
+  const [tasks, setTasks] = useState(() => lsGet(LS_KEYS.TASKS, []));
+  useEffect(() => { lsSet(LS_KEYS.TASKS, tasks); }, [tasks]);
+
+  const addTask = useCallback((raw) => {
+    const t = { ...raw, id: `task_${Date.now()}`, completed: false, createdAt: new Date().toISOString() };
+    setTasks(prev => [t, ...prev]);
+  }, []);
+  const updateTask = useCallback((id, patch) => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t));
+  }, []);
+  const deleteTask = useCallback((id) => {
+    setTasks(prev => prev.filter(t => t.id !== id));
+  }, []);
+  const toggleTask = useCallback((id) => {
+    setTasks(prev => prev.map(t => t.id !== id ? t : {
+      ...t,
+      completed: !t.completed,
+      completedAt: !t.completed ? new Date().toISOString() : null,
+    }));
+  }, []);
+
   const [deals, setDeals] = useState(() => {
     const stored = lsGet(LS_KEYS.DEALS, DEF_DEALS);
     /* 案件の IS/FS 担当名も正規化 */
@@ -307,7 +329,8 @@ export const AppProvider = ({ children }) => {
       /* auth */
       currentUserId, currentUser, login, loginByName, logout,
       /* data */
-      members, deals,
+      members, deals, tasks,
+      addTask, updateTask, deleteTask, toggleTask,
       addDeal, updateDeal, deleteDeal, addActivity, deleteActivity, updateActivity,
       updateMember, addMember, deleteMember,
       replaceDeals, replaceMembers,

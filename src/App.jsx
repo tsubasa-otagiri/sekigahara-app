@@ -17,6 +17,7 @@ import SettingsView from "./components/views/SettingsView.jsx";
 import LostView          from "./components/views/LostView.jsx";
 import TeamRankingView  from "./components/views/TeamRankingView.jsx";
 import CalendarView    from "./components/views/CalendarView.jsx";
+import TaskView       from "./components/views/TaskView.jsx";
 
 function MainApp() {
   const {
@@ -55,6 +56,7 @@ function MainApp() {
         {activeView === "personal"     && <StatsView />}
         {activeView === "team-ranking" && <TeamRankingView />}
         {activeView === "calendar" && <CalendarView />}
+        {activeView === "tasks"    && <TaskView />}
         {activeView === "analysis" && <AnalysisView />}
         {activeView === "settings" && <SettingsView />}
       </main>
