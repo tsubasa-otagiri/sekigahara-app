@@ -2,16 +2,18 @@
  * HONNOJI no HEN — Cloudflare Workers API
  * KV Storage バックエンド
  *
- * セキュリティ機能:
- *   - IPホワイトリスト (env.ALLOWED_IPS)
- *   - APIキー認証     (env.API_KEY)
+ * セキュリティ:
+ *   【1】OPTIONS preflight  → IPチェックをスキップしてCORSレスポンスを即返却
+ *   【2】IPホワイトリスト   → env.ALLOWED_IPS に含まれないIPは 403 Forbidden
+ *   【3】APIキー認証        → env.API_KEY が設定されている場合のみ有効
  *
  * エンドポイント:
  *   GET  /api/:resource  → KV から取得
- *   POST /api/:resource  → KV へ保存（全置換）
+ *   POST /api/:resource  → KV へ全件保存（全置換）
  *   GET  /api/health     → ヘルスチェック
  */
 
+/* ── CORS ヘッダー（全レスポンスに付与） ── */
 const CORS = {
   "Access-Control-Allow-Origin":  "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -35,105 +37,77 @@ function err(msg, status = 400) {
   return new Response(msg, { status, headers: CORS });
 }
 
-/* ── API キー認証 ── */
+/* ── APIキー認証（env.API_KEY 未設定なら認証なし） ── */
 function checkAuth(request, env) {
   if (!env.API_KEY) return true;
   const k = request.headers.get("X-API-Key") || request.headers.get("x-api-key");
   return k === env.API_KEY;
 }
 
-/* ══════════════════════════════════════════════════════════════
- * IP ホワイトリスト判定
- *
- * @param {Request} request
- * @param {object}  env
- * @returns {{ allowed: boolean, clientIp: string, reason?: string }}
- * ══════════════════════════════════════════════════════════════ */
-function checkIpWhitelist(request, env) {
-  /* Cloudflare が付与する実接続元 IP */
-  const clientIp = request.headers.get("CF-Connecting-IP") || "unknown";
-
-  /* ALLOWED_IPS 未設定の場合 → すべて拒否（安全フェイルセーフ）
-   * 空文字列のみの場合も同様                                    */
-  const rawAllowed = (env.ALLOWED_IPS || "").trim();
-  if (!rawAllowed) {
-    return {
-      allowed: false,
-      clientIp,
-      reason: "ALLOWED_IPS not configured — all access denied for safety",
-    };
-  }
-
-  /* カンマ区切りをパース・トリム */
-  const allowedList = rawAllowed.split(",").map(ip => ip.trim()).filter(Boolean);
-
-  if (allowedList.includes(clientIp)) {
-    return { allowed: true, clientIp };
-  }
-
-  return {
-    allowed: false,
-    clientIp,
-    reason: `IP ${clientIp} is not in whitelist [${allowedList.join(", ")}]`,
-  };
-}
-
 export default {
   async fetch(request, env) {
 
-    /* ── Preflight は IP チェック前に返す（CORS ネゴシエーション） ── */
+    /* ════════════════════════════════════════════════════
+     * 【最優先①】OPTIONS preflight → IPチェック不要・即返却
+     *   ブラウザが CORS 安全確認のために送る自動リクエスト。
+     *   ここで止めると正規IPからのアクセスでもブラウザがエラーになる。
+     * ════════════════════════════════════════════════════ */
     if (request.method === "OPTIONS") {
-      return new Response(null, { headers: CORS });
+      return new Response(null, { status: 200, headers: CORS });
     }
 
-    /* ══════════════════════════════════════════════════════════
-     * 【最優先】IP ホワイトリスト チェック
-     * ══════════════════════════════════════════════════════════ */
-    const ipCheck = checkIpWhitelist(request, env);
-    if (!ipCheck.allowed) {
-      /* 拒否ログ（Cloudflare Dashboard > Workers > Logs で確認可能） */
-      const url    = new URL(request.url);
-      const logMsg = [
-        "[BLOCKED]",
-        new Date().toISOString(),
-        `IP=${ipCheck.clientIp}`,
-        `${request.method} ${url.pathname}`,
-        `reason=${ipCheck.reason}`,
-        `UA=${request.headers.get("User-Agent") || "unknown"}`,
-      ].join(" | ");
-      console.warn(logMsg);
+    /* ════════════════════════════════════════════════════
+     * 【最優先②】IPホワイトリスト チェック
+     *   Cloudflare が付与する CF-Connecting-IP で実IPを取得し、
+     *   env.ALLOWED_IPS（カンマ区切り）と照合する。
+     *   許可リスト外のIPは即座に 403 で遮断する。
+     * ════════════════════════════════════════════════════ */
+    const clientIP = request.headers.get("CF-Connecting-IP") || "unknown";
 
-      /* 403 + CORS ヘッダー（フロントエンドで CORS エラーと混同させない） */
+    /* ALLOWED_IPS 未設定 → 安全のため全拒否 */
+    const rawAllowed = (env.ALLOWED_IPS || "").trim();
+    if (!rawAllowed) {
+      console.error(`[IP ACCESS DENIED] ALLOWED_IPS not configured. Blocked: ${clientIP} tried to access ${request.method} ${request.url}`);
       return new Response(
-        JSON.stringify({
-          error:    "Forbidden: Access Denied",
-          clientIp: ipCheck.clientIp,
-          ts:       new Date().toISOString(),
-        }),
-        {
-          status: 403,
-          headers: { ...CORS, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ error: "Forbidden: Access Denied" }),
+        { status: 403, headers: { ...CORS, "Content-Type": "application/json" } }
       );
     }
 
-    /* ── API キー認証 ── */
+    /* 許可IPリストを作成してチェック */
+    const allowedIPs = rawAllowed.split(",").map(ip => ip.trim()).filter(Boolean);
+
+    if (!allowedIPs.includes(clientIP)) {
+      /* ── 拒否ログ（Cloudflare Dashboard > Workers > Logs で確認） ── */
+      console.error(`[IP ACCESS DENIED] Unauthorized IP: ${clientIP} tried to access ${request.method} ${request.url}`);
+
+      /* 403 + CORSヘッダー（フロントエンドで CORS エラーと混同させない） */
+      return new Response(
+        JSON.stringify({
+          error:    "Forbidden: Access Denied",
+          clientIp: clientIP,
+          ts:       new Date().toISOString(),
+        }),
+        { status: 403, headers: { ...CORS, "Content-Type": "application/json" } }
+      );
+    }
+
+    /* ════════════════════════════════════════════════════
+     * IPホワイトリスト通過 → 通常処理へ
+     * ════════════════════════════════════════════════════ */
+
+    /* APIキー認証 */
     if (!checkAuth(request, env)) return err("Unauthorized", 401);
 
     const url  = new URL(request.url);
     const path = url.pathname;
 
-    /* ── ヘルスチェック ── */
+    /* ヘルスチェック */
     if (path === "/api/health") {
-      const ipCheck2 = checkIpWhitelist(request, env); // 既に通過済みだが情報付与
-      return json({
-        ok:       true,
-        ts:       Date.now(),
-        clientIp: ipCheck.clientIp,
-      });
+      return json({ ok: true, ts: Date.now(), clientIp: clientIP });
     }
 
-    /* ── リソースルーティング /api/<resource> ── */
+    /* リソースルーティング: /api/<resource> */
     const m = path.match(/^\/api\/([a-z_]+)$/);
     if (!m || !RESOURCES.includes(m[1])) {
       return err("Not Found", 404);
@@ -141,7 +115,7 @@ export default {
 
     const resource = m[1];
 
-    /* ── GET ── */
+    /* GET */
     if (request.method === "GET") {
       try {
         const raw = await env.KV.get(resource);
@@ -153,11 +127,11 @@ export default {
       }
     }
 
-    /* ── POST（全置換） ── */
+    /* POST（全置換） */
     if (request.method === "POST") {
       try {
         const body = await request.text();
-        JSON.parse(body); // バリデーション
+        JSON.parse(body); // JSONバリデーション
         await env.KV.put(resource, body);
         return json({ ok: true, resource, savedAt: new Date().toISOString() });
       } catch (e) {
