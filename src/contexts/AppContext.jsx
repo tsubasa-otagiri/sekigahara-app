@@ -98,6 +98,7 @@ export const AppProvider = ({ children }) => {
    * ══════════════════════════════════════════════════════ */
   const [networkBlocked, setNetworkBlocked] = useState(false);
   const [apiChecking,    setApiChecking]    = useState(true);
+  const [lastUpdatedAt,  setLastUpdatedAt]  = useState(null); // 最終更新日時
 
   /* ── ユーザー別通知設定 ── */
   const [userSettings, setUserSettings] = useState(() => {
@@ -598,6 +599,7 @@ export const AppProvider = ({ children }) => {
 
       /* ── 正常応答: IP制限を解除（VPN復帰後ポーリングで自動回復） ── */
       setNetworkBlocked(false);
+      setLastUpdatedAt(new Date());
       apiLoadedRef.current = true;
       setApiChecking(false);
       return true;
@@ -755,7 +757,7 @@ export const AppProvider = ({ children }) => {
       monthEndChecks, setMonthEndCheck,
       panelTasks, setPanelTasks,
       /* network — 403遮断ステート */
-      networkBlocked, apiChecking,
+      networkBlocked, apiChecking, lastUpdatedAt,
       /* refresh */
       refreshData, fetchAllFromAPI,
       /* ui */

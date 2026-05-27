@@ -24,7 +24,12 @@ export default function Header() {
     activeTab,
     logoDataUrl,
     refreshData,
+    lastUpdatedAt,
   } = useApp();
+
+  const fmtUpdated = lastUpdatedAt
+    ? lastUpdatedAt.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })
+    : null;
 
   const [helpOpen,    setHelpOpen]    = useState(false);
   const [requestOpen, setRequestOpen] = useState(false);
@@ -108,6 +113,14 @@ export default function Header() {
             >
               <RefreshCw size={13} strokeWidth={2.5} className={spinning ? "spin" : ""} />
               <span className="hidden sm:inline">更新</span>
+              {fmtUpdated && (
+                <span
+                  className="hidden sm:inline text-[9px] font-normal"
+                  style={{ color: SF_BLUE, opacity: 0.45 }}
+                >
+                  {fmtUpdated}
+                </span>
+              )}
             </button>
 
             {/* 通知センター */}
