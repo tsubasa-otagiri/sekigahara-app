@@ -846,17 +846,26 @@ export default function TaskView() {
 
       {/* ── ヘッダー（青いタスク追加ボタン 1つのみ） ── */}
       <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-1 bg-white rounded-xl p-1 card-shadow">
-          <button onClick={() => setSubView("list")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all
-              ${subView === "list" ? "bg-[#0070d2] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-            <List size={12} /> リスト
-          </button>
-          <button onClick={() => setSubView("calendar")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all
-              ${subView === "calendar" ? "bg-[#0070d2] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-            <CalendarDays size={12} /> カレンダー
-          </button>
+        {/* リスト / カレンダー セグメントコントロール */}
+        <div className="flex rounded-xl overflow-hidden border border-slate-200 bg-slate-100 p-0.5 gap-0.5">
+          {[
+            { id: "list",     label: "リスト",       Icon: List },
+            { id: "calendar", label: "カレンダー",   Icon: CalendarDays },
+          ].map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              onClick={() => setSubView(id)}
+              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap
+                ${subView === id
+                  ? "bg-white text-[#0070d2] shadow-sm"
+                  : "text-slate-400 hover:text-slate-600"
+                }`}
+              style={subView === id ? { boxShadow: "0 1px 4px rgba(0,112,210,.15)" } : {}}
+            >
+              <Icon size={13} strokeWidth={subView === id ? 2.5 : 2} />
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* ★ タスク追加ボタンはここだけ（1つに統一） */}

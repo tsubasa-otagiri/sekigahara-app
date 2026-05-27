@@ -2,16 +2,16 @@ import { BarChart2, List, Kanban, User, Users, TrendingUp, Settings, XCircle, Ca
 import { useApp } from "../contexts/useApp.js";
 
 const ALL_VIEWS = [
-  { id: "summary",      label: "サマリー",       Icon: BarChart2,  adminOnly: false },
-  { id: "list",         label: "ヨミ一覧",       Icon: List,       adminOnly: false },
-  { id: "kanban",       label: "カンバン",       Icon: Kanban,     adminOnly: false },
-  { id: "calendar",     label: "カレンダー",       Icon: CalendarDays,  adminOnly: false },
-  { id: "tasks",        label: "タスク",           Icon: CheckSquare,   adminOnly: false },
-  { id: "lost",         label: "失注",           Icon: XCircle,    adminOnly: false },
-  { id: "personal",     label: "個人ランキング",  Icon: User,       adminOnly: false },
-  { id: "team-ranking", label: "チームランキング", Icon: Users,      adminOnly: false },
-  { id: "analysis",     label: "個人数字",       Icon: TrendingUp, adminOnly: false },
-  { id: "settings",     label: "設定",           Icon: Settings,   adminOnly: false },
+  { id: "tasks",        label: "タスク",          Icon: CheckSquare,  adminOnly: false },
+  { id: "summary",      label: "サマリー",        Icon: BarChart2,    adminOnly: false },
+  { id: "list",         label: "ヨミ一覧",        Icon: List,         adminOnly: false },
+  { id: "kanban",       label: "カンバン",        Icon: Kanban,       adminOnly: false },
+  { id: "calendar",     label: "カレンダー",      Icon: CalendarDays, adminOnly: false },
+  { id: "lost",         label: "失注",            Icon: XCircle,      adminOnly: false },
+  { id: "personal",     label: "個人ランキング",  Icon: User,         adminOnly: false },
+  { id: "team-ranking", label: "チームランキング", Icon: Users,       adminOnly: false },
+  { id: "analysis",     label: "個人数字",        Icon: TrendingUp,   adminOnly: false },
+  { id: "settings",     label: "設定",            Icon: Settings,     adminOnly: false },
 ];
 
 export default function ViewNav() {
