@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { AppProvider } from "./contexts/AppContext.jsx";
 import { useApp } from "./contexts/useApp.js";
 import Login from "./components/Login.jsx";
@@ -18,6 +19,51 @@ import LostView          from "./components/views/LostView.jsx";
 import TeamRankingView  from "./components/views/TeamRankingView.jsx";
 import CalendarView    from "./components/views/CalendarView.jsx";
 import TaskView       from "./components/views/TaskView.jsx";
+import { requestNotifPermission, fireNotif } from "./utils/desktopNotif.js";
+
+/* ── 期限監視フック ── */
+function useTaskDeadlineWatcher() {
+  const { tasks, addNotifLog, currentUserId } = useApp();
+  /* 既に通知済みのタスクIDセットを ref で管理（セッション中） */
+  const notifiedRef = useRef(new Set());
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const check = () => {
+      const now = Date.now();
+      tasks.forEach(t => {
+        if (t.completed || !t.dueDate) return;
+        const due = new Date(t.dueDate + "T23:59:59").getTime();
+        const diffH = (due - now) / 3600000; // 残り時間（時間）
+
+        /* 1日前アラート */
+        const key24 = `${t.id}_24h`;
+        if (diffH > 0 && diffH <= 24 && !notifiedRef.current.has(key24)) {
+          notifiedRef.current.add(key24);
+          const body = t.assignee ? `担当: ${t.assignee}` : "担当者未設定";
+          fireNotif(`⏰ 期限1日前: ${t.title}`, body, () => window.focus());
+          addNotifLog({ taskId: t.id, type: "task_deadline",
+            title: `⏰ 期限1日前: ${t.title}`, body });
+        }
+
+        /* 1時間前アラート */
+        const key1 = `${t.id}_1h`;
+        if (diffH > 0 && diffH <= 1 && !notifiedRef.current.has(key1)) {
+          notifiedRef.current.add(key1);
+          const body = t.assignee ? `担当: ${t.assignee}` : "担当者未設定";
+          fireNotif(`🔴 期限1時間前: ${t.title}`, body, () => window.focus());
+          addNotifLog({ taskId: t.id, type: "task_overdue",
+            title: `🔴 期限1時間前: ${t.title}`, body });
+        }
+      });
+    };
+
+    check(); // 初回即実行
+    const timer = setInterval(check, 60000); // 1分ごと
+    return () => clearInterval(timer);
+  }, [tasks, currentUserId, addNotifLog]);
+}
 
 function MainApp() {
   const {
@@ -26,6 +72,15 @@ function MainApp() {
     editingDeal, setEditingDeal,
     showPwPrompt,
   } = useApp();
+
+  /* 通知許可 — ログイン後に一度だけ要求 */
+  useEffect(() => {
+    if (!currentUserId) return;
+    requestNotifPermission();
+  }, [currentUserId]);
+
+  /* 期限監視 */
+  useTaskDeadlineWatcher();
 
   if (!currentUserId) return <Login />;
 

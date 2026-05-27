@@ -70,6 +70,23 @@ export const AppProvider = ({ children }) => {
     }
     return result;
   });
+  /* ── 通知ログ ── */
+  const [notifLogs, setNotifLogs] = useState(() => lsGet(LS_KEYS.NOTIFS, []));
+  useEffect(() => { lsSet(LS_KEYS.NOTIFS, notifLogs); }, [notifLogs]);
+
+  const addNotifLog = useCallback((log) => {
+    const entry = { id: `nlog_${Date.now()}`, isRead: false, createdAt: new Date().toISOString(), ...log };
+    setNotifLogs(prev => [entry, ...prev].slice(0, 100)); // 最大100件
+    return entry;
+  }, []);
+  const markNotifRead = useCallback((id) => {
+    setNotifLogs(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+  }, []);
+  const markAllNotifsRead = useCallback(() => {
+    setNotifLogs(prev => prev.map(n => ({ ...n, isRead: true })));
+  }, []);
+  const clearNotifLogs = useCallback(() => setNotifLogs([]), []);
+
   /* ── タスク ── */
   const [tasks, setTasks] = useState(() => lsGet(LS_KEYS.TASKS, []));
   useEffect(() => { lsSet(LS_KEYS.TASKS, tasks); }, [tasks]);
@@ -331,6 +348,8 @@ export const AppProvider = ({ children }) => {
       /* data */
       members, deals, tasks,
       addTask, updateTask, deleteTask, toggleTask,
+      /* notifLogs */
+      notifLogs, addNotifLog, markNotifRead, markAllNotifsRead, clearNotifLogs,
       addDeal, updateDeal, deleteDeal, addActivity, deleteActivity, updateActivity,
       updateMember, addMember, deleteMember,
       replaceDeals, replaceMembers,

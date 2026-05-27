@@ -5,6 +5,7 @@ import { THEX } from "../constants/index.js";
 import KabutoLogo from "../assets/KabutoLogo.jsx";
 import HelpModal from "./HelpModal.jsx";
 import RequestModal from "./RequestModal.jsx";
+import NotificationCenter from "./NotificationCenter.jsx";
 
 const ROLE_BG = {
   admin:  "#9c27b0",
@@ -89,6 +90,9 @@ export default function Header() {
 
           {/* ── 要望 ＋ ヘルプ ＋ 新規案件ボタン ── */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* 通知センター */}
+            <NotificationCenter />
+
             {/* 要望依頼ボタン */}
             <button
               onClick={() => setRequestOpen(true)}

@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import { MEMBER_MASTER_NAMES, DISPLAY_GROUPS, THEX } from "../../constants/index.js";
+import { fireNotif } from "../../utils/desktopNotif.js";
 
 /* ── 優先度 ── */
 const PRIORITY = [
@@ -473,7 +474,7 @@ function DayTaskModal({ day, ym, tasks, onClose, onToggle, onEdit, onDelete }) {
 
 /* ── メイン ── */
 export default function TaskView() {
-  const { tasks, members, addTask, updateTask, deleteTask, toggleTask } = useApp();
+  const { tasks, members, addTask, updateTask, deleteTask, toggleTask, addNotifLog } = useApp();
 
   const [subView,    setSubView]    = useState("list");  // "list" | "calendar"
   const [showModal,  setShowModal]  = useState(false);
@@ -484,7 +485,12 @@ export default function TaskView() {
     if (editTask) {
       updateTask(editTask.id, data);
     } else {
+      /* 新規追加: デスクトップ通知 + ログ */
       addTask(data);
+      const body = data.assignee ? `担当: ${data.assignee}` : "担当者未設定";
+      fireNotif(`✅ 新規タスク: ${data.title}`, body, () => window.focus());
+      addNotifLog({ taskId: null, type: "task_add",
+        title: `✅ 新規タスク: ${data.title}`, body });
     }
     setEditTask(null);
   };
