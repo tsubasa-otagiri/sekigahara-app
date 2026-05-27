@@ -113,6 +113,79 @@ function useTaskDeadlineWatcher() {
   }, [tasks, currentUserId, currentUser, addNotifLog, getMyNotifSettings]);
 }
 
+/* ══════════════════════════════════════════════════════════════
+ * 403 ネットワーク遮断画面
+ *   IPホワイトリストで Workers が拒否 → localStorage を見せず完全ロック
+ * ══════════════════════════════════════════════════════════════ */
+function NetworkBlockedScreen() {
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 9999,
+        background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        fontFamily: "system-ui, 'Hiragino Sans', sans-serif",
+      }}
+    >
+      <div style={{ textAlign: "center", maxWidth: 480, padding: "0 2rem" }}>
+        <div style={{ fontSize: 72, marginBottom: 24, lineHeight: 1 }}>🚫</div>
+        <h1 style={{ color: "#f1f5f9", fontSize: "1.75rem", fontWeight: 700, marginBottom: 16, letterSpacing: "-.01em" }}>
+          アクセスが拒否されました
+        </h1>
+        <div style={{
+          display: "inline-block",
+          background: "rgba(239,68,68,.15)",
+          border: "1px solid rgba(239,68,68,.5)",
+          borderRadius: 8, padding: "8px 24px", marginBottom: 24,
+        }}>
+          <span style={{ color: "#fca5a5", fontFamily: "monospace", fontWeight: 700, fontSize: "1.1rem", letterSpacing: "0.05em" }}>
+            403 Forbidden
+          </span>
+        </div>
+        <p style={{ color: "#94a3b8", lineHeight: 1.8, fontSize: "0.95rem", marginBottom: 10 }}>
+          このダッシュボードは<strong style={{ color: "#e2e8f0" }}>社内ネットワーク（許可IPアドレス）</strong>からのみアクセス可能です。
+        </p>
+        <p style={{ color: "#94a3b8", lineHeight: 1.8, fontSize: "0.95rem", marginBottom: 36 }}>
+          社内Wi-Fi またはVPN回線に接続してから再度アクセスしてください。
+        </p>
+        <p style={{ color: "#334155", fontSize: "0.72rem", letterSpacing: "0.04em" }}>
+          HONNOJI no HEN — GMO TECH MEO Sales Dashboard
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * 初回 API チェック中のローディング画面
+ *   Workers からの応答を受け取る前に localStorage データを見せない
+ * ══════════════════════════════════════════════════════════════ */
+function ApiCheckingScreen() {
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 9998,
+        background: "#0f172a",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        gap: 16,
+        fontFamily: "system-ui, 'Hiragino Sans', sans-serif",
+      }}
+    >
+      <style>{`@keyframes _spin { to { transform: rotate(360deg); } }`}</style>
+      <div style={{
+        width: 44, height: 44,
+        border: "3px solid #1e293b",
+        borderTopColor: "#3b82f6",
+        borderRadius: "50%",
+        animation: "_spin 0.75s linear infinite",
+      }} />
+      <p style={{ color: "#475569", fontSize: "0.85rem", margin: 0 }}>接続確認中...</p>
+    </div>
+  );
+}
+
 /* ── 月末チェックリスト: 勤怠申請 18:55 専用ウォッチャー ── */
 function useKintaiPanelWatcher() {
   const { currentUserId, currentUser, currentYear, currentMonth,
@@ -179,6 +252,8 @@ function MainApp() {
     showNewDeal, setShowNewDeal,
     editingDeal, setEditingDeal,
     showPwPrompt,
+    networkBlocked, // 403: IPホワイトリスト遮断
+    apiChecking,    // 初回 API チェック中
   } = useApp();
 
   /* 月末警告バナー用データ */
@@ -195,6 +270,12 @@ function MainApp() {
 
   /* 月末チェックリスト 勤怠18:55ウォッチャー */
   useKintaiPanelWatcher();
+
+  /* ── 初回 API チェック完了前: localStorage を一切見せない ── */
+  if (apiChecking) return <ApiCheckingScreen />;
+
+  /* ── 403 IPホワイトリスト遮断: アプリを完全ロック ── */
+  if (networkBlocked) return <NetworkBlockedScreen />;
 
   if (!currentUserId) return <Login />;
 

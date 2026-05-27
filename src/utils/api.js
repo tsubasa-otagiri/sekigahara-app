@@ -2,7 +2,7 @@
  * api.js — Cloudflare Workers API クライアント
  *
  * 環境変数（.env.local に設定可能）:
- *   VITE_API_URL  = "https://kpi-dashboard.kpi-gmotech.workers.dev"
+ *   VITE_API_URL  = "https://kpi-dashboard.tsubasa-otagiri.workers.dev"
  *   VITE_API_KEY  = "your-api-key"  （Workers で API_KEY を設定した場合のみ）
  */
 
@@ -27,23 +27,38 @@ async function fetchWithTimeout(url, options = {}, ms = 8000) {
 }
 
 /**
+ * IPホワイトリスト制限 (403 Forbidden) 専用エラークラス
+ *
+ * AppContext.jsx の fetchAllFromAPI catch 内でこのクラスを検知して
+ * アプリ全体をブロック画面に切り替える。
+ */
+export class ForbiddenError extends Error {
+  constructor(resource) {
+    super(`403 Forbidden: access denied for "${resource}"`);
+    this.name   = "ForbiddenError";
+    this.status = 403;
+  }
+}
+
+/**
  * GET /api/:resource
  * @returns {Promise<any>} パースされた JSON
- * @throws エラー時はスロー（呼び出し元でキャッチ）
+ * @throws {ForbiddenError} 403 の場合（IPホワイトリスト遮断）
+ * @throws {Error}          その他 HTTP エラー
  */
 export async function apiGet(resource) {
   const res = await fetchWithTimeout(
     `${BASE}/api/${resource}`,
     { method: "GET", headers: buildHeaders() }
   );
+  if (res.status === 403) throw new ForbiddenError(resource);
   if (!res.ok) throw new Error(`apiGet(${resource}) → HTTP ${res.status}`);
   return res.json();
 }
 
 /**
  * POST /api/:resource  (full replace)
- * @param {string} resource
- * @param {any}    data
+ * @throws {ForbiddenError} 403 の場合（IPホワイトリスト遮断）
  */
 export async function apiSet(resource, data) {
   const res = await fetchWithTimeout(
@@ -54,16 +69,20 @@ export async function apiSet(resource, data) {
       body:    JSON.stringify(data),
     }
   );
+  if (res.status === 403) throw new ForbiddenError(resource);
   if (!res.ok) throw new Error(`apiSet(${resource}) → HTTP ${res.status}`);
   return res.json();
 }
 
-/** Workers ヘルスチェック */
+/**
+ * Workers ヘルスチェック
+ * @returns {Promise<number>} HTTP ステータスコード (0 = ネットワークエラー/タイムアウト)
+ */
 export async function apiHealth() {
   try {
     const res = await fetchWithTimeout(`${BASE}/api/health`, { headers: buildHeaders() }, 4000);
-    return res.ok;
+    return res.status; // 200, 403, etc.
   } catch {
-    return false;
+    return 0; // ネットワーク到達不可
   }
 }

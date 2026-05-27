@@ -12,7 +12,7 @@ import { DEF_MEMBERS, DEF_DEALS } from "../constants/defaultData.js";
 import { LS_KEYS } from "../constants/index.js";
 import { lsGet, lsSet, authLoad, authSave, authClear, nextId, parseAmt, resolvePhase, normalizeName } from "../utils/index.js";
 import { buildMonthlyTasks } from "../utils/monthlyTasks.js";
-import { apiGet, apiSet } from "../utils/api.js";
+import { apiGet, apiSet, ForbiddenError } from "../utils/api.js";
 
 /* 月末タスク対象メンバー（固定15名） */
 const MONTHLY_MEMBERS = [
@@ -88,6 +88,16 @@ export const AppProvider = ({ children }) => {
    * false の間は useEffect 内から apiSet を呼ばない（呼ばせない）
    * ══════════════════════════════════════════════════════ */
   const apiLoadedRef = useRef(false);
+
+  /* ══════════════════════════════════════════════════════
+   * ネットワーク遮断ステート
+   *   networkBlocked : Workers が 403 を返した場合 true
+   *                    → App.jsx でアプリ全体をブロック画面に切り替え
+   *   apiChecking    : 初回 API チェック完了前は true
+   *                    → 完了前に localStorage キャッシュを表示させない
+   * ══════════════════════════════════════════════════════ */
+  const [networkBlocked, setNetworkBlocked] = useState(false);
+  const [apiChecking,    setApiChecking]    = useState(true);
 
   /* ── ユーザー別通知設定 ── */
   const [userSettings, setUserSettings] = useState(() => {
@@ -586,11 +596,27 @@ export const AppProvider = ({ children }) => {
         if (Object.keys(local).length > 0) apiSet("user_settings", local).catch(console.error);
       }
 
+      /* ── 正常応答: IP制限を解除（VPN復帰後ポーリングで自動回復） ── */
+      setNetworkBlocked(false);
       apiLoadedRef.current = true;
+      setApiChecking(false);
       return true;
+
     } catch (e) {
+
+      /* ── 403: IPホワイトリストで遮断 → アプリ全体をブロック画面へ ── */
+      if (e instanceof ForbiddenError) {
+        console.error("[IP ACCESS DENIED] Frontend blocked: 403 Forbidden from API.");
+        setNetworkBlocked(true);
+        setApiChecking(false);
+        /* apiLoadedRef は true にしない（ブロック中は書き込みも禁止） */
+        return false;
+      }
+
+      /* ── その他エラー（ネットワーク障害・タイムアウト等）→ キャッシュで継続 ── */
       console.warn("API unavailable, using local cache:", e.message);
       apiLoadedRef.current = true;
+      setApiChecking(false);
       return false;
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -728,6 +754,8 @@ export const AppProvider = ({ children }) => {
       /* 月末処理 */
       monthEndChecks, setMonthEndCheck,
       panelTasks, setPanelTasks,
+      /* network — 403遮断ステート */
+      networkBlocked, apiChecking,
       /* refresh */
       refreshData, fetchAllFromAPI,
       /* ui */

@@ -64,6 +64,15 @@ export default {
      * ════════════════════════════════════════════════════ */
     const clientIP = request.headers.get("CF-Connecting-IP") || "unknown";
 
+    /* CF-Connecting-IP が取得できない場合も安全のためブロック */
+    if (clientIP === "unknown") {
+      console.error(`[IP ACCESS DENIED] CF-Connecting-IP header missing. Blocked: ${request.method} ${request.url}`);
+      return new Response(
+        JSON.stringify({ error: "Forbidden: Cannot determine client IP" }),
+        { status: 403, headers: { ...CORS, "Content-Type": "application/json" } }
+      );
+    }
+
     /* ALLOWED_IPS 未設定 → 安全のため全拒否 */
     const rawAllowed = (env.ALLOWED_IPS || "").trim();
     if (!rawAllowed) {
