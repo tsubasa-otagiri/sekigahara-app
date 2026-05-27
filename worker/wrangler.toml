@@ -3,14 +3,18 @@ main            = "index.js"
 compatibility_date = "2024-11-01"
 
 # ── KV Namespace ──────────────────────────────────────
-# 1. Cloudflare Dashboard > Workers & Pages > KV で
-#    "HONNOJI_KV" という名前で Namespace を新規作成する
-# 2. 発行された id を下記 id = "" に貼り付ける
-# 3. wrangler deploy で kpi-dashboard.kpi-gmotech.workers.dev へデプロイ
-# ──────────────────────────────────────────────────────
 [[kv_namespaces]]
 binding = "KV"
 id      = "30733344d83840aabc5e2bd3a59b70a6"
+
+# ── 環境変数 ──────────────────────────────────────────
+# ALLOWED_IPS: カンマ区切りの許可IPアドレス一覧
+#   ①主回線:        210.172.143.39
+#   ②Mac用VPN回線: 210.172.143.37
+# ※ Cloudflare Dashboard > Workers > kpi-dashboard > Settings > Variables
+#    で上書き設定することも可能（Dashboard 側が優先される）
+[vars]
+ALLOWED_IPS = "210.172.143.39,210.172.143.37"
 
 # ── オプション: API キー認証 ───────────────────────────
 # 認証が必要な場合は Cloudflare Dashboard > Workers > Settings >
