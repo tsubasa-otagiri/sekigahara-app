@@ -474,7 +474,7 @@ function DayTaskModal({ day, ym, tasks, onClose, onToggle, onEdit, onDelete }) {
 
 /* ── メイン ── */
 export default function TaskView() {
-  const { tasks, members, addTask, updateTask, deleteTask, toggleTask, addNotifLog } = useApp();
+  const { tasks, members, addTask, updateTask, deleteTask, toggleTask, addNotifLog, currentUserId, getMyNotifSettings } = useApp();
 
   const [subView,    setSubView]    = useState("list");  // "list" | "calendar"
   const [showModal,  setShowModal]  = useState(false);
@@ -485,10 +485,11 @@ export default function TaskView() {
     if (editTask) {
       updateTask(editTask.id, data);
     } else {
-      /* 新規追加: デスクトップ通知 + ログ */
+      /* 新規追加: デスクトップ通知（設定ON時のみ）+ ログ */
       addTask(data);
       const body = data.assignee ? `担当: ${data.assignee}` : "担当者未設定";
-      fireNotif(`✅ 新規タスク: ${data.title}`, body, () => window.focus());
+      const { notifyOnTaskAdded } = getMyNotifSettings(currentUserId);
+      if (notifyOnTaskAdded) fireNotif(`✅ 新規タスク: ${data.title}`, body, () => window.focus());
       addNotifLog({ taskId: null, type: "task_add",
         title: `✅ 新規タスク: ${data.title}`, body });
     }

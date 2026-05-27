@@ -23,7 +23,7 @@ import { requestNotifPermission, fireNotif } from "./utils/desktopNotif.js";
 
 /* ── 期限監視フック ── */
 function useTaskDeadlineWatcher() {
-  const { tasks, addNotifLog, currentUserId } = useApp();
+  const { tasks, addNotifLog, currentUserId, getMyNotifSettings } = useApp();
   /* 既に通知済みのタスクIDセットを ref で管理（セッション中） */
   const notifiedRef = useRef(new Set());
 
@@ -31,18 +31,19 @@ function useTaskDeadlineWatcher() {
     if (!currentUserId) return;
 
     const check = () => {
+      const { notifyOnTaskReminder } = getMyNotifSettings(currentUserId);
       const now = Date.now();
       tasks.forEach(t => {
         if (t.completed || !t.dueDate) return;
         const due = new Date(t.dueDate + "T23:59:59").getTime();
-        const diffH = (due - now) / 3600000; // 残り時間（時間）
+        const diffH = (due - now) / 3600000;
 
         /* 1日前アラート */
         const key24 = `${t.id}_24h`;
         if (diffH > 0 && diffH <= 24 && !notifiedRef.current.has(key24)) {
           notifiedRef.current.add(key24);
           const body = t.assignee ? `担当: ${t.assignee}` : "担当者未設定";
-          fireNotif(`⏰ 期限1日前: ${t.title}`, body, () => window.focus());
+          if (notifyOnTaskReminder) fireNotif(`⏰ 期限1日前: ${t.title}`, body, () => window.focus());
           addNotifLog({ taskId: t.id, type: "task_deadline",
             title: `⏰ 期限1日前: ${t.title}`, body });
         }
@@ -52,17 +53,17 @@ function useTaskDeadlineWatcher() {
         if (diffH > 0 && diffH <= 1 && !notifiedRef.current.has(key1)) {
           notifiedRef.current.add(key1);
           const body = t.assignee ? `担当: ${t.assignee}` : "担当者未設定";
-          fireNotif(`🔴 期限1時間前: ${t.title}`, body, () => window.focus());
+          if (notifyOnTaskReminder) fireNotif(`🔴 期限1時間前: ${t.title}`, body, () => window.focus());
           addNotifLog({ taskId: t.id, type: "task_overdue",
             title: `🔴 期限1時間前: ${t.title}`, body });
         }
       });
     };
 
-    check(); // 初回即実行
-    const timer = setInterval(check, 60000); // 1分ごと
+    check();
+    const timer = setInterval(check, 60000);
     return () => clearInterval(timer);
-  }, [tasks, currentUserId, addNotifLog]);
+  }, [tasks, currentUserId, addNotifLog, getMyNotifSettings]);
 }
 
 function MainApp() {

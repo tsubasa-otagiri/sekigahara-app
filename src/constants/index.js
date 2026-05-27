@@ -93,7 +93,8 @@ export const LS_KEYS = {
   TARGETS:  "honnoji_targets",
   REQUESTS: "honnoji_requests",
   TASKS:    "honnoji_tasks",
-  NOTIFS:   "honnoji_notif_logs",
+  NOTIFS:        "honnoji_notif_logs",
+  USER_SETTINGS: "honnoji_user_settings",
 };
 
 /* 認証有効時間（ミリ秒）: 24時間 */

@@ -70,6 +70,23 @@ export const AppProvider = ({ children }) => {
     }
     return result;
   });
+  /* ── ユーザー別通知設定 { [userId]: { notifyOnTaskAdded, notifyOnTaskReminder } } ── */
+  const [userSettings, setUserSettings] = useState(() => lsGet(LS_KEYS.USER_SETTINGS, {}));
+  useEffect(() => { lsSet(LS_KEYS.USER_SETTINGS, userSettings); }, [userSettings]);
+
+  /** 現在ログインユーザーの通知設定を返す（デフォルト: すべてON） */
+  const getMyNotifSettings = useCallback((userId) => {
+    return { notifyOnTaskAdded: true, notifyOnTaskReminder: true, ...((userSettings[userId]) || {}) };
+  }, [userSettings]);
+
+  /** 現在ログインユーザーの通知設定を更新 */
+  const updateMyNotifSettings = useCallback((userId, patch) => {
+    setUserSettings(prev => ({
+      ...prev,
+      [userId]: { notifyOnTaskAdded: true, notifyOnTaskReminder: true, ...(prev[userId] || {}), ...patch },
+    }));
+  }, []);
+
   /* ── 通知ログ ── */
   const [notifLogs, setNotifLogs] = useState(() => lsGet(LS_KEYS.NOTIFS, []));
   useEffect(() => { lsSet(LS_KEYS.NOTIFS, notifLogs); }, [notifLogs]);
@@ -350,6 +367,8 @@ export const AppProvider = ({ children }) => {
       addTask, updateTask, deleteTask, toggleTask,
       /* notifLogs */
       notifLogs, addNotifLog, markNotifRead, markAllNotifsRead, clearNotifLogs,
+      /* userSettings */
+      userSettings, getMyNotifSettings, updateMyNotifSettings,
       addDeal, updateDeal, deleteDeal, addActivity, deleteActivity, updateActivity,
       updateMember, addMember, deleteMember,
       replaceDeals, replaceMembers,

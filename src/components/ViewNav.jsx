@@ -11,7 +11,7 @@ const ALL_VIEWS = [
   { id: "personal",     label: "個人ランキング",  Icon: User,       adminOnly: false },
   { id: "team-ranking", label: "チームランキング", Icon: Users,      adminOnly: false },
   { id: "analysis",     label: "個人数字",       Icon: TrendingUp, adminOnly: false },
-  { id: "settings",     label: "設定",           Icon: Settings,   adminOnly: true  },
+  { id: "settings",     label: "設定",           Icon: Settings,   adminOnly: false },
 ];
 
 export default function ViewNav() {
