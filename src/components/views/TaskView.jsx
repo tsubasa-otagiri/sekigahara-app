@@ -21,6 +21,22 @@ const PRIORITY = [
 ];
 const pStyle = (v) => PRIORITY.find(p => p.value === v) || PRIORITY[1];
 
+/* カテゴリ定義 */
+const CATEGORIES = [
+  { value: "",               label: "なし",             color: "#94a3b8", bg: "#f8fafc" },
+  { value: "資料作成",        label: "資料作成",          color: "#0284c7", bg: "#e0f2fe" },
+  { value: "見積書作成",      label: "見積書作成",         color: "#0891b2", bg: "#cffafe" },
+  { value: "SF申請",         label: "SF申請",            color: "#7c3aed", bg: "#ede9fe" },
+  { value: "与信WF申請",      label: "与信WF申請",         color: "#9333ea", bg: "#f3e8ff" },
+  { value: "イレギュラーWF申請",label: "イレギュラーWF申請", color: "#db2777", bg: "#fce7f3" },
+  { value: "デモ画面発行",    label: "デモ画面発行",        color: "#059669", bg: "#d1fae5" },
+  { value: "日程調整",       label: "日程調整",           color: "#d97706", bg: "#fef3c7" },
+  { value: "漫画資料",       label: "漫画資料",           color: "#ea580c", bg: "#ffedd5" },
+  { value: "社内確認",       label: "社内確認",           color: "#16a34a", bg: "#dcfce7" },
+  { value: "お礼メール",     label: "お礼メール",          color: "#e11d48", bg: "#ffe4e6" },
+];
+const catStyle = (v) => CATEGORIES.find(c => c.value === v) || CATEGORIES[0];
+
 /* チームセクション見出し色 */
 const TEAM_HDR = {
   "杉山T": { hdr: "#166534", light: "#f0fdf4", border: "#86efac", dot: "#16a34a" },
@@ -118,14 +134,16 @@ function buildSections(activeTab, members) {
 /* ────────────────────────────────────────────
    TaskModal
 ──────────────────────────────────────────── */
-function TaskModal({ task, members, defaultAssignee = "", onSave, onClose }) {
+function TaskModal({ task, members, defaultAssignee = "", onSave, onDelete, onClose }) {
   const isEdit = !!task;
   const [title,    setTitle]    = useState(task?.title    || "");
   const [dueDate,  setDueDate]  = useState(task?.dueDate  || "");
   const [assignee, setAssignee] = useState(task?.assignee ?? defaultAssignee);
   const [priority, setPriority] = useState(task?.priority || "medium");
+  const [category, setCategory] = useState(task?.category || "");
   const [note,     setNote]     = useState(task?.note     || "");
   const [err,      setErr]      = useState("");
+  const [confirmDel, setConfirmDel] = useState(false);
 
   const activeMembers = members
     .filter(m => m.status === "active" && m.role !== "admin")
@@ -137,7 +155,12 @@ function TaskModal({ task, members, defaultAssignee = "", onSave, onClose }) {
 
   const handleSave = () => {
     if (!title.trim()) { setErr("タスク名を入力してください"); return; }
-    onSave({ title: title.trim(), dueDate, assignee, priority, note });
+    onSave({ title: title.trim(), dueDate, assignee, priority, category, note });
+    onClose();
+  };
+
+  const handleDelete = () => {
+    onDelete(task.id);
     onClose();
   };
 
@@ -147,11 +170,16 @@ function TaskModal({ task, members, defaultAssignee = "", onSave, onClose }) {
       onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md"
         onMouseDown={e => e.stopPropagation()}>
+
+        {/* ── ヘッダー ── */}
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <p className="text-sm font-black text-slate-800">{isEdit ? "タスクを編集" : "新しいタスク"}</p>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1"><X size={16} /></button>
         </div>
+
+        {/* ── フォーム ── */}
         <div className="px-5 py-4 space-y-3">
+          {/* タスク名 */}
           <div>
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">タスク名 *</label>
             <input
@@ -163,6 +191,19 @@ function TaskModal({ task, members, defaultAssignee = "", onSave, onClose }) {
             />
             {err && <p className="text-[10px] text-red-500 mt-1">{err}</p>}
           </div>
+
+          {/* カテゴリ */}
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">カテゴリ</label>
+            <select value={category} onChange={e => setCategory(e.target.value)}
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white">
+              {CATEGORIES.map(c => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* 担当者 */}
           <div>
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">担当者</label>
             <select value={assignee} onChange={e => setAssignee(e.target.value)}
@@ -178,6 +219,8 @@ function TaskModal({ task, members, defaultAssignee = "", onSave, onClose }) {
               ))}
             </select>
           </div>
+
+          {/* 期限・優先度 */}
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">期限</label>
@@ -192,14 +235,41 @@ function TaskModal({ task, members, defaultAssignee = "", onSave, onClose }) {
               </select>
             </div>
           </div>
+
+          {/* メモ */}
           <div>
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">メモ</label>
             <textarea value={note} onChange={e => setNote(e.target.value)} rows={2}
               className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 resize-none"
               placeholder="補足など" />
           </div>
+
+          {/* 削除確認エリア（編集時のみ） */}
+          {isEdit && confirmDel && (
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-red-50 border border-red-200">
+              <span className="text-[12px] font-bold text-red-600 flex-1">本当に削除しますか？</span>
+              <button onClick={handleDelete}
+                className="px-3 py-1.5 rounded-lg text-[11px] font-black bg-red-500 text-white hover:bg-red-600 transition-colors">
+                削除する
+              </button>
+              <button onClick={() => setConfirmDel(false)}
+                className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors">
+                キャンセル
+              </button>
+            </div>
+          )}
         </div>
-        <div className="px-5 py-3 border-t border-slate-100 flex gap-2 justify-end">
+
+        {/* ── フッター ── */}
+        <div className="px-5 py-3 border-t border-slate-100 flex items-center gap-2">
+          {/* 削除ボタン（編集時のみ左端） */}
+          {isEdit && !confirmDel && (
+            <button onClick={() => setConfirmDel(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-bold text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors border border-red-200">
+              <Trash2 size={12} /> 削除
+            </button>
+          )}
+          <div className="flex-1" />
           <button onClick={onClose}
             className="px-4 py-2 rounded-xl text-[12px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
             キャンセル
@@ -219,12 +289,12 @@ function TaskModal({ task, members, defaultAssignee = "", onSave, onClose }) {
 /* ────────────────────────────────────────────
    TaskCard（完了ボタン強調・雲消えアニメ・削除確認付き）
 ──────────────────────────────────────────── */
-function TaskCard({ task, onToggle, onEdit, onDelete }) {
+function TaskCard({ task, onToggle, onEdit }) {
   const today = todayStr();
   const isOverdue = !task.completed && task.dueDate && task.dueDate < today;
   const ps = pStyle(task.priority);
-  const [vanishing,      setVanishing]      = useState(false);
-  const [confirmingDel,  setConfirmingDel]  = useState(false);
+  const cs = task.category ? catStyle(task.category) : null;
+  const [vanishing, setVanishing] = useState(false);
 
   /* 担当者のチーム名を DISPLAY_GROUPS から逆引き */
   const assigneeTeam = task.assignee ? (NAME_TO_TEAM[task.assignee] || null) : null;
@@ -247,11 +317,6 @@ function TaskCard({ task, onToggle, onEdit, onDelete }) {
       setVanishing(false);
     }, 520);
   };
-
-  /* ── 削除: 確認モード ── */
-  const handleDeleteClick = () => setConfirmingDel(true);
-  const handleDeleteConfirm = () => { setConfirmingDel(false); onDelete(task.id); };
-  const handleDeleteCancel  = () => setConfirmingDel(false);
 
   return (
     <div
@@ -292,6 +357,14 @@ function TaskCard({ task, onToggle, onEdit, onDelete }) {
             {ps.label}
           </span>
 
+          {/* カテゴリバッジ */}
+          {cs && task.category && (
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+              style={{ background: cs.bg, color: cs.color }}>
+              {cs.label}
+            </span>
+          )}
+
           {/* 担当者 + チームバッジ */}
           {task.assignee && (
             <span className="flex items-center gap-1">
@@ -325,37 +398,15 @@ function TaskCard({ task, onToggle, onEdit, onDelete }) {
           )}
         </div>
 
-        {/* ── 削除確認バー ── */}
-        {confirmingDel && (
-          <div className="mt-2 flex items-center gap-2 px-2 py-1.5 rounded-lg bg-red-50 border border-red-200">
-            <span className="text-[11px] font-bold text-red-600 flex-1">本当に削除しますか？</span>
-            <button
-              onClick={handleDeleteConfirm}
-              className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-red-500 text-white hover:bg-red-600 transition-colors">
-              削除
-            </button>
-            <button
-              onClick={handleDeleteCancel}
-              className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors">
-              キャンセル
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* ── アクションボタン（削除確認中は非表示） ── */}
-      {!confirmingDel && (
-        <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
-          <button onClick={() => onEdit(task)}
-            className="p-1 text-slate-200 hover:text-blue-400 transition-colors" title="編集">
-            <Pencil size={13} />
-          </button>
-          <button onClick={handleDeleteClick}
-            className="p-1 text-slate-200 hover:text-red-400 transition-colors" title="削除">
-            <Trash2 size={13} />
-          </button>
-        </div>
-      )}
+      {/* ── 編集ボタン（削除はモーダル内） ── */}
+      <div className="flex items-center shrink-0 mt-0.5">
+        <button onClick={() => onEdit(task)}
+          className="p-1 text-slate-200 hover:text-blue-400 transition-colors" title="編集・削除">
+          <Pencil size={13} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -418,7 +469,7 @@ function TeamSection({ label, memberNames, tasks, memberFilter, onToggle, onEdit
           </div>
         ) : (
           pending.map(t => (
-            <TaskCard key={t.id} task={t} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} />
+            <TaskCard key={t.id} task={t} onToggle={onToggle} onEdit={onEdit} />
           ))
         )}
       </div>
@@ -437,7 +488,7 @@ function TeamSection({ label, memberNames, tasks, memberFilter, onToggle, onEdit
           {showCompleted && (
             <div className="space-y-1.5 mt-2">
               {completed.slice(0, 8).map(t => (
-                <TaskCard key={t.id} task={t} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} />
+                <TaskCard key={t.id} task={t} onToggle={onToggle} onEdit={onEdit} />
               ))}
               {completed.length > 8 && (
                 <p className="text-[9px] text-center font-semibold" style={{ color: th.dot + "88" }}>
@@ -498,7 +549,7 @@ function ListView({ tasks, members, activeTab, onToggle, onEdit, onDelete }) {
         ) : (
           <div className="space-y-2">
             {pending.map(t => (
-              <TaskCard key={t.id} task={t} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} />
+              <TaskCard key={t.id} task={t} onToggle={onToggle} onEdit={onEdit} />
             ))}
           </div>
         )}
@@ -506,7 +557,7 @@ function ListView({ tasks, members, activeTab, onToggle, onEdit, onDelete }) {
           <div className="space-y-1.5">
             <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest px-1">完了済み ({completed.length})</p>
             {completed.slice(0, 10).map(t => (
-              <TaskCard key={t.id} task={t} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} />
+              <TaskCard key={t.id} task={t} onToggle={onToggle} onEdit={onEdit} />
             ))}
           </div>
         )}
@@ -590,7 +641,7 @@ function ListView({ tasks, members, activeTab, onToggle, onEdit, onDelete }) {
           </div>
           <div className="p-3 space-y-2">
             {unassignedPending.map(t => (
-              <TaskCard key={t.id} task={t} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} />
+              <TaskCard key={t.id} task={t} onToggle={onToggle} onEdit={onEdit} />
             ))}
           </div>
         </div>
@@ -728,7 +779,7 @@ function DayTaskModal({ day, ym, tasks, onClose, onToggle, onEdit, onDelete }) {
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
           {tasks.map(t => (
             <TaskCard key={t.id} task={t} onToggle={onToggle}
-              onEdit={(t) => { onClose(); onEdit(t); }} onDelete={onDelete} />
+              onEdit={(t) => { onClose(); onEdit(t); }} />
           ))}
         </div>
       </div>
@@ -851,6 +902,7 @@ export default function TaskView() {
           members={members}
           defaultAssignee={editTask ? undefined : defaultAssignee}
           onSave={handleSave}
+          onDelete={deleteTask}
           onClose={() => { setShowModal(false); setEditTask(null); }}
         />
       )}
