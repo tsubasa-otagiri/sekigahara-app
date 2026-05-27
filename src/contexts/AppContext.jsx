@@ -2,6 +2,15 @@ import { createContext, useState, useEffect, useCallback } from "react";
 import { DEF_MEMBERS, DEF_DEALS } from "../constants/defaultData.js";
 import { LS_KEYS } from "../constants/index.js";
 import { lsGet, lsSet, authLoad, authSave, authClear, nextId, parseAmt, resolvePhase, normalizeName } from "../utils/index.js";
+import { buildMonthlyTasks } from "../utils/monthlyTasks.js";
+
+/* 月末タスク対象メンバー（固定15名） */
+const MONTHLY_MEMBERS = [
+  "中村","中","櫻井","青木",
+  "渡部","横井","上浦","太田",
+  "鈴木","十文字","井上",
+  "杉山","小田切","早川","早坂",
+];
 
 export const AppContext = createContext(null);
 
@@ -146,6 +155,27 @@ export const AppProvider = ({ children }) => {
     }));
   }, []);
 
+  /**
+   * 月末処理チェックリストを全15名分生成
+   * - 既存タスク（同一ID）はスキップ（重複防止）
+   * - 戻り値: { added: number, skipped: number }
+   */
+  const generateMonthlyCheckTasks = useCallback((year, month) => {
+    const newTasks = buildMonthlyTasks(year, month, MONTHLY_MEMBERS);
+    let added = 0, skipped = 0;
+    setTasks(prev => {
+      const existingIds = new Set(prev.map(t => t.id));
+      const toAdd = newTasks.filter(t => {
+        if (existingIds.has(t.id)) { skipped++; return false; }
+        added++;
+        return true;
+      });
+      if (toAdd.length === 0) return prev;
+      return [...toAdd, ...prev];
+    });
+    return { total: newTasks.length, added, skipped };
+  }, []);
+
   const [deals, setDeals] = useState(() => {
     const stored = lsGet(LS_KEYS.DEALS, DEF_DEALS);
     /* 案件の IS/FS 担当名も正規化 */
@@ -196,6 +226,19 @@ export const AppProvider = ({ children }) => {
   const activePeriods = periodType === "month"
     ? [currentPeriod]
     : (_QM[periodType] || []).map(m => `${currentYear}-${_PAD(m)}`);
+
+  /* ── 月末処理チェック進捗 { "userId_YYYY-MM": boolean[6] } ── */
+  const [monthEndChecks, setMonthEndChecksState] = useState(() => lsGet(LS_KEYS.MONTH_END, {}));
+  useEffect(() => { lsSet(LS_KEYS.MONTH_END, monthEndChecks); }, [monthEndChecks]);
+
+  const setMonthEndCheck = useCallback((userId, ym, idx, value) => {
+    setMonthEndChecksState(prev => {
+      const key     = `${userId}_${ym}`;
+      const current = Array.isArray(prev[key]) ? [...prev[key]] : Array(6).fill(false);
+      current[idx]  = value;
+      return { ...prev, [key]: current };
+    });
+  }, []);
 
   /* ── 要望データ ── */
   const [requests, setRequests] = useState(() => lsGet(LS_KEYS.REQUESTS, []));
@@ -393,7 +436,7 @@ export const AppProvider = ({ children }) => {
       currentUserId, currentUser, login, loginByName, logout,
       /* data */
       members, deals, tasks,
-      addTask, updateTask, deleteTask, toggleTask,
+      addTask, updateTask, deleteTask, toggleTask, generateMonthlyCheckTasks,
       /* notifLogs */
       notifLogs, addNotifLog, markNotifRead, markAllNotifsRead, clearNotifLogs,
       /* userSettings */
@@ -413,6 +456,8 @@ export const AppProvider = ({ children }) => {
       currentMonth, setCurrentMonth,
       periodType, setPeriodType,
       currentPeriod, activePeriods,
+      /* 月末処理チェックリスト */
+      monthEndChecks, setMonthEndCheck,
       /* manual refresh */
       refreshData,
       /* ui */

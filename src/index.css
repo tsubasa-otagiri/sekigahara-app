@@ -76,6 +76,18 @@ input[type=number] { -moz-appearance: textfield; }
   width: 0%;
 }
 
+/* ── 月末パネル: スライドイン ── */
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+/* ── 月末タブ: 警告時パルス ── */
+@keyframes pulseTab {
+  0%,100% { box-shadow: 0 4px 16px rgba(220,38,38,.45); }
+  50%     { box-shadow: 0 4px 24px rgba(220,38,38,.8), 0 0 0 4px rgba(220,38,38,.15); }
+}
+
 /* ── タスク完了: 雲のように消えるアニメーション ── */
 @keyframes taskVanish {
   0%   { opacity: 1;   transform: scale(1)    translateY(0);    filter: blur(0px);  }

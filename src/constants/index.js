@@ -99,6 +99,8 @@ export const LS_KEYS = {
   WATCHER_PFX:   "honnoji_watcher_",
   /* マイグレーションフラグ: 古いnotifLogsを一掃済みかどうか */
   NOTIF_MIGRATED: "honnoji_notif_migrated_v2",
+  /* 月末処理チェックリスト進捗 */
+  MONTH_END:      "honnoji_monthend",
 };
 
 /* 認証有効時間（ミリ秒）: 24時間 */

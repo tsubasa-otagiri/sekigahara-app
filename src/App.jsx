@@ -3,6 +3,7 @@ import { AppProvider } from "./contexts/AppContext.jsx";
 import { useApp } from "./contexts/useApp.js";
 import Login from "./components/Login.jsx";
 import Header from "./components/Header.jsx";
+import MonthEndPanel, { MonthEndBanner, useMonthEndWarning } from "./components/MonthEndPanel.jsx";
 import TeamTabs from "./components/TeamTabs.jsx";
 import PeriodNav from "./components/PeriodNav.jsx";
 import ViewNav from "./components/ViewNav.jsx";
@@ -112,6 +113,63 @@ function useTaskDeadlineWatcher() {
   }, [tasks, currentUserId, currentUser, addNotifLog, getMyNotifSettings]);
 }
 
+/* ── 月末チェックリスト: 勤怠申請 18:55 専用ウォッチャー ── */
+function useKintaiPanelWatcher() {
+  const { currentUserId, currentUser, currentYear, currentMonth,
+          monthEndChecks, addNotifLog, getMyNotifSettings } = useApp();
+  const firedRef = useRef(new Set());
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    const myName = currentUser?.name || "";
+    if (!myName) return;
+
+    /* 勤怠チェックがすでに済んでいるか */
+    const month = (() => {
+      if (!currentMonth) return new Date().getMonth() + 1;
+      if (typeof currentMonth === "number") return currentMonth;
+      const s = String(currentMonth);
+      return parseInt(s.includes("-") ? s.split("-")[1] : s, 10);
+    })();
+    const year = currentYear || new Date().getFullYear();
+    const ym   = `${year}-${String(month).padStart(2, "0")}`;
+
+    const check = () => {
+      const raw      = monthEndChecks?.[`${currentUserId}_${ym}`];
+      const kintaiDone = raw?.[5] === true; // idx 5 = 勤怠申請
+      if (kintaiDone) return; // 完了済みなら通知不要
+
+      const now = new Date();
+      const h   = now.getHours();
+      const m   = now.getMinutes();
+      const key = `kintai_panel_${currentUserId}_${ym}`;
+
+      /* 当日判定: 同じ年月の最終営業日かどうかはシンプルにh===18&&m>=55で発火 */
+      if (h === 18 && m >= 55 && !firedRef.current.has(key)) {
+        firedRef.current.add(key);
+        const { notifyOnTaskReminder } = getMyNotifSettings(currentUserId);
+        if (notifyOnTaskReminder) {
+          fireNotif(
+            "🔔 勤怠申請の締め切りです！",
+            `${myName} さん、18:55になりました。今すぐ申請してください！`,
+            () => window.focus()
+          );
+        }
+        addNotifLog({
+          taskId: null, type: "task_overdue",
+          targetUser: myName,
+          title: "🔔 勤怠申請の締め切りです！",
+          body: "18:55になりました。今すぐ申請してください！",
+        });
+      }
+    };
+
+    check();
+    const timer = setInterval(check, 30000); // 30秒ごとにチェック
+    return () => clearInterval(timer);
+  }, [currentUserId, currentUser, currentYear, currentMonth, monthEndChecks, addNotifLog, getMyNotifSettings]);
+}
+
 function MainApp() {
   const {
     currentUserId, activeView,
@@ -119,6 +177,9 @@ function MainApp() {
     editingDeal, setEditingDeal,
     showPwPrompt,
   } = useApp();
+
+  /* 月末警告バナー用データ */
+  const { activeWarn, daysToEnd, incomplete, lastBizDay } = useMonthEndWarning();
 
   /* 通知許可 — ログイン後に一度だけ要求 */
   useEffect(() => {
@@ -129,6 +190,9 @@ function MainApp() {
   /* 期限監視 */
   useTaskDeadlineWatcher();
 
+  /* 月末チェックリスト 勤怠18:55ウォッチャー */
+  useKintaiPanelWatcher();
+
   if (!currentUserId) return <Login />;
 
   const closeDealModal = () => {
@@ -138,6 +202,19 @@ function MainApp() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#f4f6f9" }}>
+
+      {/* ── 月末警告バナー（Header の直上 layout-flow） ── */}
+      {activeWarn && (
+        <MonthEndBanner
+          daysToEnd={daysToEnd}
+          incomplete={incomplete}
+          lastBizDay={lastBizDay}
+          onOpen={() => {/* MonthEndPanel が自身で open 管理 — タブクリック相当 */
+            document.getElementById("month-end-tab-btn")?.click();
+          }}
+        />
+      )}
+
       <Header />
 
       {/* ── 固定ナビ: チームタブ＋対象期間＋ビュー切替 ── */}
@@ -173,6 +250,9 @@ function MainApp() {
 
       {/* 要望対応通知バナー */}
       <RequestNotif />
+
+      {/* ── 月末処理チェックリスト（タブ + パネル + 起動モーダル） ── */}
+      <MonthEndPanel />
     </div>
   );
 }
