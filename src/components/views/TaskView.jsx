@@ -217,41 +217,62 @@ function TaskModal({ task, members, defaultAssignee = "", onSave, onClose }) {
 }
 
 /* ────────────────────────────────────────────
-   TaskCard（チームバッジ・担当者名強調付き）
+   TaskCard（完了ボタン強調・雲消えアニメ・削除確認付き）
 ──────────────────────────────────────────── */
 function TaskCard({ task, onToggle, onEdit, onDelete }) {
   const today = todayStr();
   const isOverdue = !task.completed && task.dueDate && task.dueDate < today;
   const ps = pStyle(task.priority);
-  const [bouncing, setBouncing] = useState(false);
+  const [vanishing,      setVanishing]      = useState(false);
+  const [confirmingDel,  setConfirmingDel]  = useState(false);
 
   /* 担当者のチーム名を DISPLAY_GROUPS から逆引き */
   const assigneeTeam = task.assignee ? (NAME_TO_TEAM[task.assignee] || null) : null;
   const tbs = assigneeTeam ? teamBadgeStyle(assigneeTeam) : null;
 
+  /* ── 完了トグル：未完了→完了時は雲消えアニメ後に実行 ── */
   const handleToggle = (e) => {
-    if (!task.completed) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      launchConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2);
-      showNiceJob();
-      setBouncing(true);
-      setTimeout(() => setBouncing(false), 500);
+    if (task.completed) {
+      /* 完了→未完了: 即座に戻す */
+      onToggle(task.id);
+      return;
     }
-    onToggle(task.id);
+    /* 未完了→完了: コンフェッティ + アニメ後に状態更新 */
+    const rect = e.currentTarget.getBoundingClientRect();
+    launchConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    showNiceJob();
+    setVanishing(true);
+    setTimeout(() => {
+      onToggle(task.id);
+      setVanishing(false);
+    }, 520);
   };
+
+  /* ── 削除: 確認モード ── */
+  const handleDeleteClick = () => setConfirmingDel(true);
+  const handleDeleteConfirm = () => { setConfirmingDel(false); onDelete(task.id); };
+  const handleDeleteCancel  = () => setConfirmingDel(false);
 
   return (
     <div
       className={`flex items-start gap-3 px-3 py-3 rounded-xl bg-white transition-all
         ${task.completed ? "opacity-50" : "card-shadow hover:shadow-md"}
-        ${bouncing ? "task-bounce" : ""}`}
+        ${vanishing ? "task-vanish" : ""}`}
       style={{ borderLeft: `3px solid ${task.completed ? "#cbd5e1" : ps.color}` }}
     >
-      {/* チェックボタン */}
-      <button onClick={handleToggle} className="mt-0.5 shrink-0">
+      {/* ── 完了ボタン（目立つデザイン） ── */}
+      <button
+        onClick={handleToggle}
+        title={task.completed ? "未完了に戻す" : "完了にする"}
+        className={`shrink-0 mt-0.5 w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all
+          ${task.completed
+            ? "bg-emerald-400 border-emerald-400 text-white"
+            : "border-slate-300 text-slate-300 hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-500 hover:scale-110"
+          }`}
+      >
         {task.completed
-          ? <CheckCircle2 size={17} className="text-emerald-400" />
-          : <Circle size={17} className="text-slate-300 hover:text-blue-400 transition-colors" />
+          ? <CheckCircle2 size={15} strokeWidth={2.5} />
+          : <Circle      size={15} strokeWidth={2}   />
         }
       </button>
 
@@ -271,7 +292,7 @@ function TaskCard({ task, onToggle, onEdit, onDelete }) {
             {ps.label}
           </span>
 
-          {/* 担当者 + チームバッジ（セットで強調表示） */}
+          {/* 担当者 + チームバッジ */}
           {task.assignee && (
             <span className="flex items-center gap-1">
               <UserCircle2 size={11} className="text-slate-400" />
@@ -295,9 +316,7 @@ function TaskCard({ task, onToggle, onEdit, onDelete }) {
 
           {/* 追加者 */}
           {task.createdBy && task.createdBy !== task.assignee && (
-            <span className="text-[9px] text-slate-300">
-              追加: {task.createdBy}
-            </span>
+            <span className="text-[9px] text-slate-300">追加: {task.createdBy}</span>
           )}
 
           {/* メモ */}
@@ -305,17 +324,38 @@ function TaskCard({ task, onToggle, onEdit, onDelete }) {
             <span className="text-[9px] text-slate-300 truncate max-w-[100px]">{task.note}</span>
           )}
         </div>
+
+        {/* ── 削除確認バー ── */}
+        {confirmingDel && (
+          <div className="mt-2 flex items-center gap-2 px-2 py-1.5 rounded-lg bg-red-50 border border-red-200">
+            <span className="text-[11px] font-bold text-red-600 flex-1">本当に削除しますか？</span>
+            <button
+              onClick={handleDeleteConfirm}
+              className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-red-500 text-white hover:bg-red-600 transition-colors">
+              削除
+            </button>
+            <button
+              onClick={handleDeleteCancel}
+              className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors">
+              キャンセル
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* アクションボタン */}
-      <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
-        <button onClick={() => onEdit(task)} className="p-1 text-slate-200 hover:text-blue-400 transition-colors">
-          <Pencil size={13} />
-        </button>
-        <button onClick={() => onDelete(task.id)} className="p-1 text-slate-200 hover:text-red-400 transition-colors">
-          <Trash2 size={13} />
-        </button>
-      </div>
+      {/* ── アクションボタン（削除確認中は非表示） ── */}
+      {!confirmingDel && (
+        <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
+          <button onClick={() => onEdit(task)}
+            className="p-1 text-slate-200 hover:text-blue-400 transition-colors" title="編集">
+            <Pencil size={13} />
+          </button>
+          <button onClick={handleDeleteClick}
+            className="p-1 text-slate-200 hover:text-red-400 transition-colors" title="削除">
+            <Trash2 size={13} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
