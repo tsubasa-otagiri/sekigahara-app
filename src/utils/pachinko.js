@@ -3,22 +3,22 @@
  * パチンコ風確変ルーレット演出（視覚のみ・音なし）
  *
  * 確率テーブル:
- *   10% … フリーズ演出 → 必ず確変大当り（スロット特殊演出）
- *   40% … 確変大当り（レインボーフラッシュ）
- *   50% … 通常大当り（confetti）
+ *   10% … 🔥 フリーズ確変  → 必ず777（漆黒ブラックアウト1.5秒）
+ *   40% … 🌈 通常大当たり  → 555 + レインボーフラッシュ
+ *   50% … ✨ 通常          → confetti のみ
  *
- * フリーズ演出タイムライン:
- *   900ms      — リール突然停止 + 暗転 + 白爆発フラッシュ
- *   900〜1600ms — ⚡FREEZE⚡テキスト + 電撃稲妻エフェクト
- *   1600ms     — リール再始動
- *   3050ms     — 全リールホールド → 必ず 777
- *   3100ms     — レインボーフラッシュ炸裂
- *   5900ms     — フェードアウト → クリーンアップ
+ * フリーズ演出タイムライン (FREEZE_DUR = 1500ms):
+ *   900ms       — リール突然停止 + 白爆発フラッシュ
+ *   900〜2400ms — 漆黒ブラックアウト(0.97) + ⚡FREEZE⚡ + 電撃稲妻ストロボ
+ *   2400ms      — 赤フラッシュで再始動
+ *   3850ms      — 全リールホールド → 777
+ *   3900ms      — レインボーフラッシュ炸裂 + 「大当たり！」
+ *   6700ms      — フェードアウト → クリーンアップ
  *
  * 通常フロー (フリーズなし):
  *   1700/2050/2350ms — リール①②③ホールド
- *   [確変] 2400ms    — レインボーフラッシュ + 「大当たり！」 → 5200ms
- *   [通常] 2350ms    — confetti発火 + 「お疲れ様でした！」 → 3600ms
+ *   [確変 40%] 2400ms — レインボー + 「大当たり！」(555) → 5200ms
+ *   [通常 50%] 2350ms — confetti 発火 → 3600ms
  */
 
 /* ════════════════════════════════════════════
@@ -29,8 +29,8 @@ const SYMBOLS     = ['7','7','♦','★','2','3','8','4','9','6','5','1'];
 const N           = SYMBOLS.length;
 
 const FREEZE_START = 900;
-const FREEZE_DUR   = 700;
-const FREEZE_END   = FREEZE_START + FREEZE_DUR; // 1600
+const FREEZE_DUR   = 1500;                        // 長尺漆黒ブラックアウト
+const FREEZE_END   = FREEZE_START + FREEZE_DUR;  // 2400
 
 /* ── rrect（roundRect ポリフィル） ── */
 function rrect(c, x, y, w, h, r) {
@@ -137,9 +137,15 @@ function drawReels(ctx, t, W, H, RESULT, lockT, isFreezeOn) {
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.shadowBlur = 0;
 
       if (mid && locked && RESULT === '7') {
+        /* フリーズ確変 777 — 炎ゴールド */
         const tg = ctx.createLinearGradient(0, yy, 0, yy + symH);
         tg.addColorStop(0, '#fffaaa'); tg.addColorStop(0.4, '#ffd700'); tg.addColorStop(1, '#ff7800');
         ctx.fillStyle = tg; ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 28;
+      } else if (mid && locked && RESULT === '5') {
+        /* 通常確変 555 — 翡翠グリーン〜ゴールド */
+        const tg = ctx.createLinearGradient(0, yy, 0, yy + symH);
+        tg.addColorStop(0, '#efffcc'); tg.addColorStop(0.4, '#7fff00'); tg.addColorStop(1, '#00e676');
+        ctx.fillStyle = tg; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 26;
       } else if (mid && locked) {
         ctx.fillStyle = '#cce0ff'; ctx.shadowColor = '#88aaff'; ctx.shadowBlur = 14;
       } else {
@@ -188,42 +194,43 @@ function drawReels(ctx, t, W, H, RESULT, lockT, isFreezeOn) {
    ft = t - FREEZE_START (0〜FREEZE_DUR)
 ════════════════════════════════════════════ */
 function drawFreeze(ctx, t, W, H) {
-  const ft = t - FREEZE_START;
+  const ft = t - FREEZE_START; // 0 〜 FREEZE_DUR (1500ms)
 
-  /* ① 突入白爆発フラッシュ (0〜80ms) */
-  if (ft < 80) {
-    const fa = (1 - ft / 80) * 0.92;
+  /* ① 突入白爆発フラッシュ (0〜100ms) */
+  if (ft < 100) {
+    const fa = (1 - ft / 100) * 0.95;
     ctx.fillStyle = `rgba(255,255,255,${fa})`;
     ctx.fillRect(0, 0, W, H);
   }
 
-  /* ② 暗転オーバーレイ (60〜FREEZE_DUR ms) */
-  if (ft >= 60) {
-    const ramp    = Math.min(1, (ft - 60) / 120);
-    const exitRmp = ft > FREEZE_DUR - 120 ? (ft - (FREEZE_DUR - 120)) / 120 : 0;
-    const alpha   = ramp * (1 - exitRmp) * 0.93;
-    ctx.fillStyle = `rgba(0,0,10,${alpha})`;
+  /* ② 漆黒ブラックアウト (70〜1300ms) — ほぼ完全に真っ黒 */
+  if (ft >= 70) {
+    const ramp    = Math.min(1, (ft - 70) / 130);            // 70〜200ms で完全黒へ
+    const exitRmp = ft > 1250 ? (ft - 1250) / 250 : 0;       // 1250〜1500ms で黒明け
+    const alpha   = ramp * (1 - exitRmp) * 0.97;             // 最大 0.97 = 漆黒
+    ctx.fillStyle = `rgba(0,0,4,${alpha})`;
     ctx.fillRect(0, 0, W, H);
   }
 
-  /* ③ 電撃稲妻 (100〜FREEZE_DUR-80 ms) */
-  if (ft >= 100 && ft < FREEZE_DUR - 80) {
-    drawLightning(ctx, t, W, H);
+  /* ③ 電撃稲妻 (120〜1280ms) — ブラックアウト中にランダム点滅 */
+  if (ft >= 120 && ft < 1280) {
+    /* 80ms 周期でストロボ（漆黒の中でより衝撃的）*/
+    if (Math.floor(ft / 80) % 3 !== 0) drawLightning(ctx, t, W, H);
   }
 
-  /* ④ ⚡FREEZE⚡テキスト (130〜FREEZE_DUR-60 ms) */
-  if (ft >= 130 && ft < FREEZE_DUR - 60) {
-    const enterA = Math.min(1, (ft - 130) / 100);
-    const exitA  = Math.max(0, 1 - (ft - (FREEZE_DUR - 160)) / 100);
+  /* ④ ⚡FREEZE⚡テキスト (160〜1260ms) */
+  if (ft >= 160 && ft < 1260) {
+    const enterA = Math.min(1, (ft - 160) / 140);
+    const exitA  = Math.max(0, 1 - (ft - 1120) / 140);
     const alpha  = Math.min(enterA, exitA);
-    const bounce = Math.sin(ft / 60) * 6;
+    const bounce = Math.sin(ft / 90) * 7;
     drawFreezeText(ctx, W, H / 2 + bounce, alpha);
   }
 
-  /* ⑤ 再始動赤フラッシュ (FREEZE_DUR-80〜FREEZE_DUR ms) */
-  if (ft >= FREEZE_DUR - 80) {
-    const fa = Math.min(1, (ft - (FREEZE_DUR - 80)) / 80) * 0.65;
-    ctx.fillStyle = `rgba(200,20,0,${fa})`;
+  /* ⑤ 再始動赤フラッシュ (1300〜1500ms) */
+  if (ft >= 1300) {
+    const fa = Math.min(1, (ft - 1300) / 200) * 0.72;
+    ctx.fillStyle = `rgba(210,10,0,${fa})`;
     ctx.fillRect(0, 0, W, H);
   }
 }
@@ -406,7 +413,8 @@ export function launchPachinko({ onNormal, onDone } = {}) {
   const IS_FREEZE = Math.random() < 0.10;          // 10% フリーズ
   const IS_RUSH   = IS_FREEZE || Math.random() < 0.5; // フリーズは必ず確変
 
-  const RESULT = IS_RUSH ? '7' : '2';
+  /* フリーズ=777 / 通常確変=555 / 通常=2 */
+  const RESULT = IS_FREEZE ? '7' : IS_RUSH ? '5' : '2';
 
   /* フリーズ有無でロックタイミングをずらす（リアル時刻） */
   const lockT    = BASE_LOCK.map(l => l + (IS_FREEZE ? FREEZE_DUR : 0));
