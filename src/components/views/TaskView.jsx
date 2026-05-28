@@ -3,15 +3,14 @@ import { createPortal } from "react-dom";
 import {
   Plus, Trash2, X, ChevronLeft, ChevronRight,
   CalendarDays, List, AlertCircle, Circle, CheckCircle2,
-  Pencil, Users, CheckCheck, UserCircle2, ClipboardList, Sparkles,
+  Pencil, Users, CheckCheck, UserCircle2,
 } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import { MEMBER_MASTER_NAMES, DISPLAY_GROUPS } from "../../constants/index.js";
 import { fireNotif } from "../../utils/desktopNotif.js";
 import { filterTasksByTab, getTabMemberNames, NAME_TO_TEAM } from "../../utils/index.js";
 import { launchConfetti, showNiceJob } from "../../utils/confetti.js";
-import { getLastBizDay } from "../../utils/monthlyTasks.js";
-
+import { launchPachinko } from "../../utils/pachinko.js";
 /* ────────────────────────────────────────────
    定数
 ──────────────────────────────────────────── */
@@ -130,155 +129,6 @@ function buildSections(activeTab, members) {
   const group = DISPLAY_GROUPS.find(g => g.label === activeTab);
   if (group) return [{ label: group.label, memberNames: activeNames(group.names) }];
   return null;
-}
-
-/* ────────────────────────────────────────────
-   MonthlyGenModal（月末チェックリスト生成）
-──────────────────────────────────────────── */
-const MONTHLY_MEMBERS_LABEL = [
-  "中村","中","櫻井","青木",
-  "渡部","横井","上浦","太田",
-  "鈴木","十文字","井上",
-  "杉山","小田切","早川","早坂",
-];
-
-function MonthlyGenModal({ defaultYear, defaultMonth, onGenerate, onClose }) {
-  const [year,   setYear]   = useState(defaultYear);
-  const [month,  setMonth]  = useState(defaultMonth);
-  const [result, setResult] = useState(null); // { added, skipped }
-
-  /* 対象月の最終営業日プレビュー */
-  const lastBiz = useMemo(() => {
-    const d = getLastBizDay(year, month);
-    return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
-  }, [year, month]);
-
-  const handleGenerate = () => {
-    const r = onGenerate(year, month);
-    setResult(r);
-  };
-
-  return createPortal(
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.5)" }}
-      onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md"
-        onMouseDown={e => e.stopPropagation()}>
-
-        {/* ── ヘッダー ── */}
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: "#eff6ff" }}>
-            <ClipboardList size={16} style={{ color: "#0070d2" }} />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-black text-slate-800">月末処理チェックリスト生成</p>
-            <p className="text-[10px] text-slate-400 mt-0.5">15名 × 6タスク = 最大90件を一括登録</p>
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1"><X size={16} /></button>
-        </div>
-
-        {!result ? (
-          <>
-            {/* ── 年月選択 ── */}
-            <div className="px-5 py-4 space-y-4">
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">対象年</label>
-                  <select value={year} onChange={e => setYear(Number(e.target.value))}
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-400 bg-white">
-                    {[2025,2026,2027,2028].map(y => <option key={y} value={y}>{y}年</option>)}
-                  </select>
-                </div>
-                <div className="flex-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">対象月</label>
-                  <select value={month} onChange={e => setMonth(Number(e.target.value))}
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-400 bg-white">
-                    {Array.from({length:12},(_,i)=>i+1).map(m =>
-                      <option key={m} value={m}>{m}月</option>
-                    )}
-                  </select>
-                </div>
-              </div>
-
-              {/* 最終営業日プレビュー */}
-              <div className="px-3 py-2.5 bg-blue-50 rounded-xl border border-blue-100">
-                <p className="text-[11px] text-blue-700 font-semibold">
-                  📅 {year}年{month}月 最終営業日: <span className="font-black">{lastBiz}</span>
-                </p>
-              </div>
-
-              {/* 対象メンバーリスト */}
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">対象メンバー（15名）</p>
-                <div className="flex flex-wrap gap-1">
-                  {MONTHLY_MEMBERS_LABEL.map(name => (
-                    <span key={name}
-                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                      {name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* タスク内容プレビュー */}
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">生成タスク（各メンバーに6件）</p>
-                <ol className="space-y-1">
-                  {[
-                    "前月・先々月受注案件の請求書リマインド（最終営業日5営業日前）",
-                    "リモア登録（最終営業日3日前）",
-                    "今月回収案件の役務提供（最終営業日当日）",
-                    "先月・先々月の入金確認（最終営業日当日）",
-                    "経費精算（最終営業日当日）",
-                    "勤怠申請（最終営業日 18:55 ⏰アラート）",
-                  ].map((t, i) => (
-                    <li key={i} className="flex items-start gap-1.5 text-[11px] text-slate-600">
-                      <span className="shrink-0 w-4 h-4 rounded-full bg-blue-100 text-blue-600 font-black text-[9px] flex items-center justify-center mt-0.5">{i+1}</span>
-                      {t}
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            </div>
-
-            <div className="px-5 py-3 border-t border-slate-100 flex gap-2 justify-end">
-              <button onClick={onClose}
-                className="px-4 py-2 rounded-xl text-[12px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
-                キャンセル
-              </button>
-              <button onClick={handleGenerate}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] font-bold text-white transition-colors hover:brightness-110"
-                style={{ background: "#0070d2" }}>
-                <Sparkles size={13} /> 一括生成する
-              </button>
-            </div>
-          </>
-        ) : (
-          /* ── 生成完了 ── */
-          <div className="px-5 py-8 text-center">
-            <div className="text-4xl mb-3">🎉</div>
-            <p className="text-base font-black text-slate-800 mb-1">生成完了！</p>
-            <p className="text-[13px] text-slate-600">
-              <span className="font-black text-[#0070d2]">{result.added}件</span> 追加
-              {result.skipped > 0 && (
-                <span className="text-slate-400 ml-2">（{result.skipped}件はすでに存在のためスキップ）</span>
-              )}
-            </p>
-            <p className="text-[11px] text-slate-400 mt-2">
-              各メンバーの画面に月末タスクが表示されます
-            </p>
-            <button onClick={onClose}
-              className="mt-5 px-6 py-2 rounded-xl text-[12px] font-bold text-white transition-colors hover:brightness-110"
-              style={{ background: "#0070d2" }}>
-              閉じる
-            </button>
-          </div>
-        )}
-      </div>
-    </div>,
-    document.body
-  );
 }
 
 /* ────────────────────────────────────────────
@@ -464,10 +314,22 @@ function TaskCard({ task, onToggle, onEdit }) {
       onToggle(task.id);
       return;
     }
-    /* 未完了→完了: コンフェッティ + アニメ後に状態更新 */
+    /* 未完了→完了: パチンコ演出（オーバーレイ独立） + カード消滅アニメ */
     const rect = e.currentTarget.getBoundingClientRect();
-    launchConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2);
-    showNiceJob();
+    const ox = rect.left + rect.width  / 2;
+    const oy = rect.top  + rect.height / 2;
+
+    /* パチンコルーレット起動
+     *   通常大当り(50%) → onNormal でコンフェッティ + NiceJob トースト
+     *   確変大当り(50%) → レインボーフラッシュ（pachinko.js 内で完結）   */
+    launchPachinko({
+      onNormal: () => {
+        launchConfetti(ox, oy);
+        showNiceJob();
+      },
+    });
+
+    /* カード消滅アニメ（演出とは独立して実行）*/
     setVanishing(true);
     setTimeout(() => {
       onToggle(task.id);
@@ -933,9 +795,7 @@ function DayTaskModal({ day, ym, tasks, onClose, onToggle, onEdit, onDelete }) {
 export default function TaskView() {
   const { tasks, members, addTask, updateTask, deleteTask, toggleTask,
           addNotifLog, currentUserId, getMyNotifSettings,
-          activeTab, currentUser,
-          currentYear, currentMonth,
-          generateMonthlyCheckTasks } = useApp();
+          activeTab, currentUser } = useApp();
   const myName = currentUser?.name || "";
 
   /* ★ activeTab で厳格フィルター（utils の修正版 filterTasksByTab を使用） */
@@ -956,7 +816,6 @@ export default function TaskView() {
   const [showModal,    setShowModal]    = useState(false);
   const [editTask,     setEditTask]     = useState(null);
   const [dayModal,     setDayModal]     = useState(null);
-  const [showGenModal, setShowGenModal] = useState(false);
 
   const handleSave = (data) => {
     if (editTask) {
@@ -1023,15 +882,6 @@ export default function TaskView() {
 
         {/* 右側ボタン群 */}
         <div className="flex items-center gap-2">
-          {/* 月末チェックリスト生成ボタン */}
-          <button onClick={() => setShowGenModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-colors hover:brightness-95 border border-amber-300"
-            style={{ background: "#fffbeb", color: "#b45309" }}
-            title={`${currentYear}年${currentMonth}月 月末処理チェックリストを一括生成`}>
-            <ClipboardList size={13} />
-            <span className="hidden sm:inline">月末タスク生成</span>
-          </button>
-
           {/* タスク追加ボタン */}
           <button onClick={handleAdd}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] font-bold text-white transition-colors hover:brightness-110"
@@ -1055,18 +905,6 @@ export default function TaskView() {
         <CalView
           tasks={filteredTasks}
           onDayClick={(day, ym, ds) => setDayModal({ day, ym, deals: ds })}
-        />
-      )}
-
-      {/* 月末チェックリスト生成モーダル */}
-      {showGenModal && (
-        <MonthlyGenModal
-          defaultYear={currentYear}
-          defaultMonth={typeof currentMonth === "string"
-            ? parseInt(currentMonth.split("-")[1] || currentMonth, 10)
-            : currentMonth}
-          onGenerate={(y, m) => generateMonthlyCheckTasks(y, m)}
-          onClose={() => setShowGenModal(false)}
         />
       )}
 

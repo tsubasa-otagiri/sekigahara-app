@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { REAL_TEAMS, DISPLAY_GROUPS, MEMBER_MASTER_NAMES } from "../../constants/index.js";
 import {
   Chart as ChartJS,
@@ -255,9 +255,23 @@ function TeamBarChart({ stats, color }) {
 /* ══════════════════════════════════════════════
    メインコンポーネント
 ══════════════════════════════════════════════ */
+/* 期間フォーマット "2026-05" → "2026年5月" */
+const fmtPeriod = (ym) => {
+  if (!ym) return "";
+  const [y, m] = ym.split("-");
+  return `${y}年${Number(m)}月`;
+};
+
 export default function AnalysisView() {
   const { deals, members, currentUser, activeTab, activePeriods } = useApp();
   const myName = currentUser?.name ?? "";
+
+  /* ── 期間タブ（複数期間が選択されているとき） ── */
+  const [selectedPeriod, setSelectedPeriod] = useState(() => activePeriods[0]);
+  /* selectedPeriod が activePeriods に含まれなくなったときのフォールバック */
+  const memberPeriod = activePeriods.includes(selectedPeriod)
+    ? selectedPeriod
+    : activePeriods[0];
 
   /* 表示メンバー（admin・退職者除外）— DISPLAY_GROUPS ベースでフィルタ */
   const teamMembers = useMemo(() => {
@@ -275,11 +289,17 @@ export default function AnalysisView() {
     return base.filter(m => m.team === activeTab);
   }, [members, activeTab]);
 
-  /* チーム案件 */
+  /* チーム案件（サマリー用 — activePeriods 全体） */
   const teamDeals = useMemo(() => {
     const pdDeals = deals.filter(d => activePeriods.includes(d.period));
     return filterByTab(pdDeals, activeTab, myName);
   }, [deals, activeTab, activePeriods]);
+
+  /* メンバーカード用案件（memberPeriod 単体フィルタ） */
+  const memberDeals = useMemo(() => {
+    const pdDeals = deals.filter(d => d.period === memberPeriod);
+    return filterByTab(pdDeals, activeTab, myName);
+  }, [deals, activeTab, memberPeriod]);
 
   /* チーム目標合計 */
   const totalTarget = useMemo(
@@ -358,6 +378,29 @@ export default function AnalysisView() {
         </div>
       ) : (
         <div className="space-y-6">
+          {/* 複数期間選択中のとき: 月切り替えタブ */}
+          {activePeriods.length > 1 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] text-slate-400 font-semibold mr-1">個人数字の期間:</span>
+              {activePeriods.map(p => (
+                <button
+                  key={p}
+                  onClick={() => setSelectedPeriod(p)}
+                  className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold transition-colors border ${
+                    memberPeriod === p
+                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                      : "bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-600"
+                  }`}
+                >
+                  {fmtPeriod(p)}
+                </button>
+              ))}
+              <span className="text-[10px] text-slate-400 ml-1">
+                ※ チームサマリーは全期間合算
+              </span>
+            </div>
+          )}
+
           {grouped.map(({ team, color: tc, members: gm }) => (
             <div key={team}>
               {/* チームセクションヘッダー */}
@@ -367,13 +410,18 @@ export default function AnalysisView() {
                   {team}
                 </h4>
                 <span className="text-[10px] text-slate-400">{gm.length} 名</span>
+                {activePeriods.length > 1 && (
+                  <span className="text-[10px] font-bold text-blue-500 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5">
+                    {fmtPeriod(memberPeriod)}
+                  </span>
+                )}
                 <div className="flex-1 h-px bg-slate-200 ml-1" />
               </div>
 
               {/* メンバーカード グリッド */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {gm.map(m => (
-                  <MemberCard key={m.id} member={m} deals={deals} />
+                  <MemberCard key={m.id} member={m} deals={memberDeals} />
                 ))}
               </div>
             </div>

@@ -1,10 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import ImageCropModal from "../ImageCropModal.jsx";
-import { Plus, Edit2, Save, X, Eye, EyeOff, Download, Upload, FileText, Lock, UserX, UserCheck, Flag, Bell, BellOff, Trash2, ChevronUp, ChevronDown, GripVertical, ClipboardList } from "lucide-react";
+import { Plus, Edit2, Save, X, Eye, EyeOff, Download, Upload, FileText, Lock, UserX, UserCheck, Flag, Bell, BellOff, Trash2, ChevronUp, ChevronDown, GripVertical, ClipboardList, Sparkles } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import { DEFAULT_PANEL_TASKS } from "../../contexts/AppContext.jsx";
 import { TEAMS_OPT, ROLE_OPT, LS_KEYS } from "../../constants/index.js";
 import { parseAmt, lsGet, normalizeName, normalizePeriod } from "../../utils/index.js";
+import { getLastBizDay } from "../../utils/monthlyTasks.js";
 import Confirm from "../ui/Confirm.jsx";
 
 /* ── CSV ヘルパー ── */
@@ -782,10 +783,25 @@ function NotifSection() {
 
 /* ━━━━━━━━ 月末タスク定義管理セクション（管理者限定） ━━━━━━━━ */
 function MonthEndTaskSection() {
-  const { panelTasks, setPanelTasks } = useApp();
+  const { panelTasks, setPanelTasks, generateMonthlyCheckTasks, currentYear, currentMonth } = useApp();
   const [list, setList] = useState(() => (panelTasks || DEFAULT_PANEL_TASKS).map(t => ({ ...t })));
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [saved, setSaved] = useState(false);
+
+  /* ── 一括生成 ── */
+  const [genYear,   setGenYear]   = useState(() => currentYear);
+  const [genMonth,  setGenMonth]  = useState(() => currentMonth);
+  const [genResult, setGenResult] = useState(null); // null | { added, skipped, total, lastBizDay }
+
+  const lastBizDayPreview = useMemo(() => {
+    try { return getLastBizDay(genYear, genMonth); } catch { return null; }
+  }, [genYear, genMonth]);
+
+  const handleGenerate = () => {
+    const res = generateMonthlyCheckTasks(genYear, genMonth);
+    const lbd = getLastBizDay(genYear, genMonth);
+    setGenResult({ ...res, lastBizDay: lbd });
+  };
 
   const move = (i, dir) => {
     const next = [...list];
@@ -950,6 +966,85 @@ function MonthEndTaskSection() {
           ✅ 保存しました。全メンバーの月末処理パネルに反映されます。
         </div>
       )}
+
+      {/* ── 一括生成セクション ── */}
+      <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-5 mt-2">
+        <div className="flex items-center gap-2 mb-3">
+          <Sparkles size={14} className="text-amber-500" />
+          <h3 className="text-sm font-bold text-gray-700">月末タスク 一括生成</h3>
+          <span className="text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">管理者限定</span>
+        </div>
+        <p className="text-xs text-gray-500 mb-3">
+          上記のタスク定義をもとに、指定した年月の月末タスクを全メンバー分まとめて作成します。<br />
+          既に同じIDのタスクが存在する場合はスキップされます（重複防止）。
+        </p>
+
+        {/* 年月セレクタ */}
+        <div className="flex items-center gap-3 flex-wrap mb-3">
+          <div className="flex items-center gap-1.5">
+            <label className="text-[11px] text-gray-500 font-semibold shrink-0">年:</label>
+            <select
+              value={genYear}
+              onChange={e => { setGenYear(Number(e.target.value)); setGenResult(null); }}
+              className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+            >
+              {[currentYear - 1, currentYear, currentYear + 1].map(y => (
+                <option key={y} value={y}>{y}年</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <label className="text-[11px] text-gray-500 font-semibold shrink-0">月:</label>
+            <select
+              value={genMonth}
+              onChange={e => { setGenMonth(Number(e.target.value)); setGenResult(null); }}
+              className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                <option key={m} value={m}>{m}月</option>
+              ))}
+            </select>
+          </div>
+          {lastBizDayPreview && (
+            <span className="text-[11px] text-gray-400">
+              最終営業日: <span className="font-bold text-gray-600">
+                {lastBizDayPreview.getFullYear()}/{lastBizDayPreview.getMonth()+1}/{lastBizDayPreview.getDate()}
+              </span>
+            </span>
+          )}
+        </div>
+
+        <button
+          onClick={handleGenerate}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] font-bold text-white transition-colors hover:brightness-110"
+          style={{ background: "linear-gradient(135deg,#f59e0b,#d97706)", boxShadow: "0 2px 8px -2px rgba(245,158,11,.4)" }}
+        >
+          <Sparkles size={13} />
+          {genYear}年{genMonth}月の月末タスクを一括生成
+        </button>
+
+        {genResult && (
+          <div className={`mt-3 rounded-xl px-4 py-3 text-sm font-medium border ${
+            genResult.added > 0
+              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+              : "bg-slate-50 text-slate-600 border-slate-200"
+          }`}>
+            {genResult.added > 0 ? "✅" : "ℹ️"}{" "}
+            <span className="font-bold">{genResult.added}</span> 件生成
+            {genResult.skipped > 0 && (
+              <span className="text-[11px] font-normal ml-2 opacity-70">
+                （{genResult.skipped} 件はすでに存在のためスキップ）
+              </span>
+            )}
+            {genResult.added > 0 && (
+              <span className="text-[11px] font-normal ml-2 opacity-70">
+                — {genYear}年{genMonth}月 最終営業日:{" "}
+                {genResult.lastBizDay.getFullYear()}/{genResult.lastBizDay.getMonth()+1}/{genResult.lastBizDay.getDate()}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
