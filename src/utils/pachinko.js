@@ -4,8 +4,8 @@
  *
  * 確率テーブル:
  *   10% … 🔥 フリーズ確変  → 必ず777（漆黒ブラックアウト1.5秒）
- *   40% … 🌈 通常大当たり  → 555 + レインボーフラッシュ
- *   50% … ✨ 通常          → confetti のみ
+ *   20% … 🌈 通常大当たり  → 555 + レインボーフラッシュ
+ *   70% … ✨ 通常          → confetti のみ
  *
  * フリーズ演出タイムライン (FREEZE_DUR = 1500ms):
  *   900ms       — リール突然停止 + 白爆発フラッシュ
@@ -410,8 +410,8 @@ function drawText(ctx, t, W, H, IS_RUSH, lockT, rushStart) {
 ════════════════════════════════════════════ */
 export function launchPachinko({ onNormal, onDone } = {}) {
   /* 確率判定 */
-  const IS_FREEZE = Math.random() < 0.10;          // 10% フリーズ
-  const IS_RUSH   = IS_FREEZE || Math.random() < 0.5; // フリーズは必ず確変
+  const IS_FREEZE = Math.random() < 0.10;               // 10% フリーズ確変
+  const IS_RUSH   = IS_FREEZE || Math.random() < (2/9); // 残90%中に20%確変 → 2/9≈22.2%
 
   /* フリーズ=777 / 通常確変=555 / 通常=2 */
   const RESULT = IS_FREEZE ? '7' : IS_RUSH ? '5' : '2';
