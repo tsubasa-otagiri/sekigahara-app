@@ -105,7 +105,7 @@ function MembersSection() {
           <table className="w-full min-w-[560px] border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                {["名前", "チーム", "ロール", "目標（万）", "ステータス", ...(isAdmin ? ["ログイン"] : []), "操作"].map(h=>(
+                {["名前", "チーム", "ロール", "目標（万）", "ステータス", ...(isAdmin ? ["ログイン / 更新"] : []), "操作"].map(h=>(
                   <th key={h} className="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -144,16 +144,33 @@ function MembersSection() {
                     </td>
                     {isAdmin && (() => {
                       const lc = loginCounts[m.id];
-                      const cnt = lc?.count ?? 0;
-                      const last = lc?.lastLogin
-                        ? new Date(lc.lastLogin).toLocaleString("ja-JP", { month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit" })
+                      const cnt  = lc?.count ?? 0;
+                      const fmtDt = (iso) => iso
+                        ? new Date(iso).toLocaleString("ja-JP", {
+                            year:"numeric", month:"numeric", day:"numeric",
+                            hour:"2-digit", minute:"2-digit",
+                          })
                         : null;
+                      const lastLogin  = fmtDt(lc?.lastLogin);
+                      const lastUpdate = fmtDt(m.updatedAt);
                       return (
-                        <td className="px-3 py-2.5 text-center">
-                          <span className="text-sm font-bold text-gray-700">{cnt}</span>
-                          <span className="text-[10px] text-gray-400 font-normal ml-0.5">回</span>
-                          {last && (
-                            <div className="text-[10px] text-gray-400 leading-tight mt-0.5">{last}</div>
+                        <td className="px-3 py-2.5 text-center min-w-[130px]">
+                          {/* ログイン回数 */}
+                          <div>
+                            <span className="text-sm font-bold text-gray-700">{cnt}</span>
+                            <span className="text-[10px] text-gray-400 font-normal ml-0.5">回</span>
+                          </div>
+                          {/* 最終ログイン日時 */}
+                          {lastLogin && (
+                            <div className="text-[10px] text-gray-400 leading-tight mt-0.5">
+                              <span className="text-gray-300 mr-0.5">🔑</span>{lastLogin}
+                            </div>
+                          )}
+                          {/* 最新更新日時（プロフィール変更） */}
+                          {lastUpdate && (
+                            <div className="text-[10px] text-gray-400 leading-tight mt-0.5">
+                              <span className="text-gray-300 mr-0.5">✏️</span>{lastUpdate}
+                            </div>
                           )}
                         </td>
                       );

@@ -401,14 +401,17 @@ export const AppProvider = ({ children }) => {
 
   const updateMember = useCallback((id, patch) => {
     setMembers(prev => {
-      const next = prev.map(m => m.id === id ? { ...m, ...patch } : m);
+      const next = prev.map(m =>
+        m.id === id ? { ...m, ...patch, updatedAt: new Date().toISOString() } : m
+      );
       if (apiLoadedRef.current) apiSet("members", next).catch(console.error);
       return next;
     });
   }, []);
 
   const addMember = useCallback((raw) => {
-    const m = { ...raw, id: `usr_${Date.now()}`, status: "active" };
+    const _now = new Date().toISOString();
+    const m = { ...raw, id: `usr_${Date.now()}`, status: "active", createdAt: _now, updatedAt: _now };
     setMembers(prev => {
       const next = [...prev, m];
       if (apiLoadedRef.current) apiSet("members", next).catch(console.error);

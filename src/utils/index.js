@@ -3,8 +3,12 @@ import { LS_KEYS, AUTH_TTL, NEGLECT_DAYS, DISPLAY_GROUPS } from "../constants/in
 /* ── 金額パース: "¥227,200" "3.5万円" "1万" "48" など → 万単位の数値 ── */
 export const parseAmt = (v) => {
   if (v === "" || v == null) return 0;
-  /* ¥ / ￥ 記号・カンマを除去してから処理 */
-  const s = String(v).replace(/[¥￥,]/g, "").trim();
+  /* 通貨記号・区切り文字・単位サフィックスを除去してから処理
+   *   ¥  (U+00A5 半角)  ／  ￥  (U+FFE5 全角)
+   *   \  (Shift-JIS ¥ を UTF-8 で読んだ場合 0x5C=backslash になる)
+   *   円 (単位サフィックス: "100,000円" など)
+   *   ,  (桁区切り)  ／  半角スペース                               */
+  const s = String(v).replace(/[¥￥\\円, ]/g, "").trim();
   if (s.includes("万")) {
     const n = parseFloat(s.replace(/万円?/, ""));
     return isNaN(n) ? 0 : Math.round(n * 100) / 100;
