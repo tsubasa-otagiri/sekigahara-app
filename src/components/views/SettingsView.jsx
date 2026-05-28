@@ -4,7 +4,7 @@ import { Plus, Edit2, Save, X, Eye, EyeOff, Download, Upload, FileText, Lock, Us
 import { useApp } from "../../contexts/useApp.js";
 import { DEFAULT_PANEL_TASKS } from "../../contexts/AppContext.jsx";
 import { TEAMS_OPT, ROLE_OPT, LS_KEYS } from "../../constants/index.js";
-import { parseAmt, lsGet, normalizeName, nextId } from "../../utils/index.js";
+import { parseAmt, lsGet, normalizeName, nextId, normalizePeriod } from "../../utils/index.js";
 import Confirm from "../ui/Confirm.jsx";
 
 /* ── CSV ヘルパー ── */
@@ -337,8 +337,8 @@ function BackupSection() {
             confidence: c[hasId ? col("確度")     : 6] || "30%",
             phase:      c[hasId ? col("フェーズ") : 7] || "未設定",
             note:       c[hasId ? col("備考")     : 8] || "",
-            /* ★ 対象年月が空の場合は現在表示中の期間をデフォルトにする */
-            period:     rawPeriod || currentPeriod,
+            /* ★ "Jun-26" 等Excel形式 → "2026-06" に正規化、空なら currentPeriod */
+            period:     normalizePeriod(rawPeriod) || currentPeriod,
           };
 
           const rawId = hasId ? String(c[col("id")] || "").trim() : "";

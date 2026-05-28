@@ -10,7 +10,7 @@
 import { createContext, useState, useEffect, useCallback, useRef } from "react";
 import { DEF_MEMBERS, DEF_DEALS } from "../constants/defaultData.js";
 import { LS_KEYS } from "../constants/index.js";
-import { lsGet, lsSet, authLoad, authSave, authClear, nextId, parseAmt, resolvePhase, normalizeName } from "../utils/index.js";
+import { lsGet, lsSet, authLoad, authSave, authClear, nextId, parseAmt, resolvePhase, normalizeName, normalizePeriod } from "../utils/index.js";
 import { buildMonthlyTasks } from "../utils/monthlyTasks.js";
 import { apiGet, apiSet, ForbiddenError } from "../utils/api.js";
 
@@ -68,7 +68,7 @@ const _normDeal = (d) => ({
   is:         normalizeName(d.is),
   fs:         normalizeName(d.fs),
   phase:      _migratePhase(d.phase || "未設定"),
-  period:     d.period     || TODAY_PERIOD,
+  period:     normalizePeriod(d.period) || TODAY_PERIOD,
   yomi:       _migrateYomi(d.yomi || _confToYomi(d.confidence)),
   lossReason: d.lossReason || "",
   createdAt:  d.createdAt  || _TODAY_ISO,

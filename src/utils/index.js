@@ -112,6 +112,38 @@ let _nid = 100;
 export const nextId = () => ++_nid;
 
 /* ══════════════════════════════════════════════
+   対象年月 正規化
+   CSVがExcelで開かれると "Jun-26" のような
+   mmm-yy 形式に変換されてしまうことがある。
+   アプリ内部形式 "YYYY-MM" に統一する。
+   対応フォーマット:
+     "2026-06"  → "2026-06"  (そのまま)
+     "2026/06"  → "2026-06"
+     "Jun-26"   → "2026-06"  (Excel mmm-yy)
+     "6月"      → null       (変換不可 → 呼び出し側でデフォルト使用)
+══════════════════════════════════════════════ */
+const _MON = {
+  jan:"01", feb:"02", mar:"03", apr:"04", may:"05", jun:"06",
+  jul:"07", aug:"08", sep:"09", oct:"10", nov:"11", dec:"12",
+};
+export const normalizePeriod = (raw) => {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (!s) return null;
+  /* YYYY-MM (正規形式) */
+  if (/^\d{4}-\d{2}$/.test(s)) return s;
+  /* YYYY/MM */
+  if (/^\d{4}\/\d{2}$/.test(s)) return s.replace("/", "-");
+  /* Excel mmm-yy 例: "Jun-26", "jan-25" */
+  const m = s.match(/^([A-Za-z]{3})-(\d{2})$/);
+  if (m) {
+    const mon = _MON[m[1].toLowerCase()];
+    if (mon) return `20${m[2]}-${mon}`;
+  }
+  return null; // 変換不可
+};
+
+/* ══════════════════════════════════════════════
    担当者名 正規化マッピング
    旧ニックネーム／旧フルネーム → 正式名
    LocalStorageの既存データや取り込みCSVに
