@@ -221,12 +221,13 @@ export default {
         /* ④ 変更あり → KV に書き込み */
         await env.KV.put(resource, body);
 
-        /* ⑤ キャッシュ無効化（バックグラウンド） */
-        ctx.waitUntil(
-          caches.default
-            .delete(cacheKey)
-            .catch(e => console.warn("Cache delete failed:", e.message))
-        );
+        /* ⑤ キャッシュ無効化（レスポンス返却前に完了させる）
+         *  waitUntil にするとレスポンス後に非同期実行されるため、
+         *  30秒ポーリングが先に走って古いキャッシュを取得してしまう
+         *  競合状態が発生する。await で確実にキャッシュを削除してから返す。 */
+        await caches.default
+          .delete(cacheKey)
+          .catch(e => console.warn("Cache delete failed:", e.message));
 
         return json({ ok: true, resource, savedAt: new Date().toISOString() });
 

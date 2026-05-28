@@ -4,7 +4,7 @@ import { Plus, Edit2, Save, X, Eye, EyeOff, Download, Upload, FileText, Lock, Us
 import { useApp } from "../../contexts/useApp.js";
 import { DEFAULT_PANEL_TASKS } from "../../contexts/AppContext.jsx";
 import { TEAMS_OPT, ROLE_OPT, LS_KEYS } from "../../constants/index.js";
-import { parseAmt, lsGet, normalizeName, nextId, normalizePeriod } from "../../utils/index.js";
+import { parseAmt, lsGet, normalizeName, normalizePeriod } from "../../utils/index.js";
 import Confirm from "../ui/Confirm.jsx";
 
 /* ── CSV ヘルパー ── */
@@ -366,10 +366,13 @@ function BackupSection() {
             if (idx !== -1) updatedDeals[idx] = { ...existing, ...patch, updatedAt: new Date().toISOString() };
             updated++;
           } else {
-            /* 新規追加 — 必須フィールドをすべて揃えて追加 */
+            /* 新規追加 — 必須フィールドをすべて揃えて追加
+             * nextId() はページリロードで 101 にリセットされるため
+             * 既存案件と ID が衝突し削除・更新が誤動作する原因になる。
+             * タイムスタンプ＋インデックスの文字列 ID で衝突を防ぐ。 */
             const now = new Date().toISOString();
             updatedDeals.push({
-              id:         nextId(),
+              id:         `deal_${Date.now()}_${i}`,
               activities: [],
               lossReason: "",
               yomi:       patch.confidence,
