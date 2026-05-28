@@ -124,6 +124,11 @@ export const AppProvider = ({ children }) => {
   });
   const loginCountsRef = useRef(loginCounts);
 
+  /* ── 案件書き込み最終タイムスタンプ ──
+   * 30秒ポーリングの GET が書き込み前に発行された場合、
+   * レスポンスで setDeals を上書きしないための競合防止フラグ */
+  const lastDealsWriteRef = useRef(0);
+
   /* userSettings / panelTasks / loginCounts → localStorage のみ（API書き込みは各 setter 内で） */
   useEffect(() => {
     userSettingsRef.current  = userSettings;
@@ -298,7 +303,7 @@ export const AppProvider = ({ children }) => {
     };
     setDeals(prev => {
       const next = [deal, ...prev];
-      if (apiLoadedRef.current) apiSet("deals", next).catch(console.error);
+      if (apiLoadedRef.current) { lastDealsWriteRef.current = Date.now(); apiSet("deals", next).catch(console.error); }
       return next;
     });
     return deal;
@@ -315,7 +320,7 @@ export const AppProvider = ({ children }) => {
         n.updatedAt = new Date().toISOString();
         return n;
       });
-      if (apiLoadedRef.current) apiSet("deals", next).catch(console.error);
+      if (apiLoadedRef.current) { lastDealsWriteRef.current = Date.now(); apiSet("deals", next).catch(console.error); }
       return next;
     });
   }, []);
@@ -323,7 +328,7 @@ export const AppProvider = ({ children }) => {
   const deleteDeal = useCallback((id) => {
     setDeals(prev => {
       const next = prev.filter(d => d.id !== id);
-      if (apiLoadedRef.current) apiSet("deals", next).catch(console.error);
+      if (apiLoadedRef.current) { lastDealsWriteRef.current = Date.now(); apiSet("deals", next).catch(console.error); }
       return next;
     });
   }, []);
@@ -336,7 +341,7 @@ export const AppProvider = ({ children }) => {
         activities: [...(d.activities || []), { id: nextId(), date: now, ...act }],
         updatedAt: now,
       });
-      if (apiLoadedRef.current) apiSet("deals", next).catch(console.error);
+      if (apiLoadedRef.current) { lastDealsWriteRef.current = Date.now(); apiSet("deals", next).catch(console.error); }
       return next;
     });
   }, []);
@@ -349,7 +354,7 @@ export const AppProvider = ({ children }) => {
         activities: (d.activities || []).filter(a => a.id !== actId),
         updatedAt: now,
       });
-      if (apiLoadedRef.current) apiSet("deals", next).catch(console.error);
+      if (apiLoadedRef.current) { lastDealsWriteRef.current = Date.now(); apiSet("deals", next).catch(console.error); }
       return next;
     });
   }, []);
@@ -362,14 +367,14 @@ export const AppProvider = ({ children }) => {
         activities: (d.activities || []).map(a => a.id !== actId ? a : { ...a, ...patch }),
         updatedAt: now,
       });
-      if (apiLoadedRef.current) apiSet("deals", next).catch(console.error);
+      if (apiLoadedRef.current) { lastDealsWriteRef.current = Date.now(); apiSet("deals", next).catch(console.error); }
       return next;
     });
   }, []);
 
   const replaceDeals = useCallback((ds) => {
     setDeals(ds);
-    if (apiLoadedRef.current) apiSet("deals", ds).catch(console.error);
+    if (apiLoadedRef.current) { lastDealsWriteRef.current = Date.now(); apiSet("deals", ds).catch(console.error); }
   }, []);
 
   /* ── メンバー ── */
@@ -531,6 +536,9 @@ export const AppProvider = ({ children }) => {
    *   → 新端末でキーが存在しない場合は DEF_XXX を API に送らない
    * ══════════════════════════════════════════════════════ */
   const fetchAllFromAPI = useCallback(async () => {
+    /* GET 発行時刻を記録。レスポンスが届く前に書き込みが入った場合は
+     * deals の上書きをスキップして削除・更新の消失を防ぐ */
+    const fetchStartTime = Date.now();
     try {
       const [
         apiDeals, apiTasks, apiMembers,
@@ -541,9 +549,13 @@ export const AppProvider = ({ children }) => {
         apiGet("user_settings"),
       ]);
 
-      /* deals */
+      /* deals —
+       * fetchStartTime < lastDealsWriteRef なら GET 中に書き込みが起きている
+       * → 古い KV レスポンスで削除/更新が上書きされるのを防ぐためスキップ */
       if (Array.isArray(apiDeals) && apiDeals.length > 0) {
-        setDeals(apiDeals.map(_normDeal));
+        if (fetchStartTime >= lastDealsWriteRef.current) {
+          setDeals(apiDeals.map(_normDeal));
+        }
       } else if (lsExists(LS_KEYS.DEALS)) {
         const local = lsGet(LS_KEYS.DEALS, []);
         if (local.length > 0) apiSet("deals", local).catch(console.error);

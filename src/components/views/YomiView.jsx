@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Fragment } from "react";
 import { CheckSquare, Square, Trash } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import { filterByTab, fmtAmt, isNeglected } from "../../utils/index.js";
@@ -289,9 +289,8 @@ export default function YomiView() {
                   if (gDeals.length === 0) return null;
                   const allChecked = isAdmin && gDeals.length > 0 && gDeals.every((d) => selected.has(d.id));
                   return (
-                    <>
+                    <Fragment key={conf}>
                       <GroupHeader
-                        key={`hd-${conf}`}
                         conf={conf}
                         count={gDeals.length}
                         total={total}
@@ -309,7 +308,7 @@ export default function YomiView() {
                           onDetail={setDetailDeal}
                         />
                       ))}
-                    </>
+                    </Fragment>
                   );
                 })}
               </tbody>
