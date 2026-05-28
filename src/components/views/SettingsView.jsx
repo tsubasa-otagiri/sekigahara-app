@@ -4,7 +4,7 @@ import { Plus, Edit2, Save, X, Eye, EyeOff, Download, Upload, FileText, Lock, Us
 import { useApp } from "../../contexts/useApp.js";
 import { DEFAULT_PANEL_TASKS } from "../../contexts/AppContext.jsx";
 import { TEAMS_OPT, ROLE_OPT, LS_KEYS } from "../../constants/index.js";
-import { parseAmt, lsGet } from "../../utils/index.js";
+import { parseAmt, lsGet, normalizeName, nextId } from "../../utils/index.js";
 import Confirm from "../ui/Confirm.jsx";
 
 /* ── CSV ヘルパー ── */
@@ -242,7 +242,7 @@ function PasswordSection() {
 
 /* ━━━━━━━━ バックアップセクション ━━━━━━━━ */
 function BackupSection() {
-  const { deals, members, currentUser, replaceDeals, replaceMembers } = useApp();
+  const { deals, members, currentUser, replaceDeals, replaceMembers, currentPeriod } = useApp();
   const isAdmin = currentUser?.role === "admin";
 
   const jsonRef = useRef(null);
@@ -326,17 +326,19 @@ function BackupSection() {
           if (!company.trim()) return;
 
           /* フィールドパース */
+          const rawPeriod = (c[hasId ? col("対象年月") : 9] || "").trim();
           const patch = {
             company,
             plan:       c[hasId ? col("プラン")    : 1] || "MDC",
             amount:     parseAmt(c[hasId ? col("月額")     : 2]),
-            is:         c[hasId ? col("IS担当")  : 3] || "",
-            fs:         c[hasId ? col("FS担当")  : 4] || "",
+            is:         normalizeName(c[hasId ? col("IS担当")  : 3] || ""),
+            fs:         normalizeName(c[hasId ? col("FS担当")  : 4] || ""),
             team:       c[hasId ? col("チーム")   : 5] || "",
             confidence: c[hasId ? col("確度")     : 6] || "30%",
             phase:      c[hasId ? col("フェーズ") : 7] || "未設定",
             note:       c[hasId ? col("備考")     : 8] || "",
-            period:     c[hasId ? col("対象年月") : 9] || "",
+            /* ★ 対象年月が空の場合は現在表示中の期間をデフォルトにする */
+            period:     rawPeriod || currentPeriod,
           };
 
           const rawId = hasId ? String(c[col("id")] || "").trim() : "";
@@ -345,11 +347,20 @@ function BackupSection() {
           if (existing) {
             /* 更新: 活動履歴など既存データは保持しつつ上書き */
             const idx = updatedDeals.findIndex(d => String(d.id) === rawId);
-            if (idx !== -1) updatedDeals[idx] = { ...existing, ...patch };
+            if (idx !== -1) updatedDeals[idx] = { ...existing, ...patch, updatedAt: new Date().toISOString() };
             updated++;
           } else {
-            /* 新規追加 */
-            updatedDeals.push({ id: Date.now() + i, activities: [], ...patch });
+            /* 新規追加 — 必須フィールドをすべて揃えて追加 */
+            const now = new Date().toISOString();
+            updatedDeals.push({
+              id:         nextId(),
+              activities: [],
+              lossReason: "",
+              yomi:       patch.confidence,
+              createdAt:  now,
+              updatedAt:  now,
+              ...patch,
+            });
             added++;
           }
         });
