@@ -393,26 +393,6 @@ function drawText(ctx, t, W, H, IS_RUSH, lockT, rushStart) {
       ctx.restore();
     }
 
-  } else {
-    /* 通常: 「お疲れ様でした！」*/
-    const textT = t - lockT[2];
-    const a = Math.min(1, textT / 220);
-    if (a <= 0) return;
-
-    ctx.save();
-    ctx.globalAlpha = a;
-    const fs = Math.min(50, W * 0.07);
-    ctx.font = `900 ${fs}px "Arial Black",sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-
-    const tg = ctx.createLinearGradient(W/2 - 160, 0, W/2 + 160, 0);
-    tg.addColorStop(0, '#ffd700'); tg.addColorStop(0.5, '#ffffff'); tg.addColorStop(1, '#ffd700');
-    ctx.strokeStyle = '#7a3800'; ctx.lineWidth = 5;
-    ctx.shadowColor = '#ff8c00'; ctx.shadowBlur = 22;
-    ctx.strokeText('お疲れ様でした！ ✨', W / 2, H / 2 - Math.min(65, H * 0.1));
-    ctx.fillStyle = tg;
-    ctx.fillText('お疲れ様でした！ ✨', W / 2, H / 2 - Math.min(65, H * 0.1));
-    ctx.restore();
   }
 }
 
