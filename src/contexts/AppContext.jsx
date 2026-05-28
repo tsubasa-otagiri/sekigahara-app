@@ -103,7 +103,7 @@ export const AppProvider = ({ children }) => {
   /* ── ユーザー別通知設定 ── */
   const [userSettings, setUserSettings] = useState(() => {
     const raw = lsGet(LS_KEYS.USER_SETTINGS, {});
-    const { __panelTasks: _, ...rest } = raw;
+    const { __panelTasks: _, __loginCounts: __, ...rest } = raw;
     return rest;
   });
   const userSettingsRef = useRef(userSettings);
@@ -117,12 +117,20 @@ export const AppProvider = ({ children }) => {
   });
   const panelTasksRef = useRef(panelTasks);
 
-  /* userSettings / panelTasks → localStorage のみ（API書き込みは各 setter 内で） */
+  /* ── ユーザー別ログイン回数（管理画面表示用） ── */
+  const [loginCounts, setLoginCounts] = useState(() => {
+    const raw = lsGet(LS_KEYS.USER_SETTINGS, {});
+    return (raw.__loginCounts && typeof raw.__loginCounts === "object") ? raw.__loginCounts : {};
+  });
+  const loginCountsRef = useRef(loginCounts);
+
+  /* userSettings / panelTasks / loginCounts → localStorage のみ（API書き込みは各 setter 内で） */
   useEffect(() => {
-    userSettingsRef.current = userSettings;
-    panelTasksRef.current   = panelTasks;
-    lsSet(LS_KEYS.USER_SETTINGS, { ...userSettings, __panelTasks: panelTasks });
-  }, [userSettings, panelTasks]);
+    userSettingsRef.current  = userSettings;
+    panelTasksRef.current    = panelTasks;
+    loginCountsRef.current   = loginCounts;
+    lsSet(LS_KEYS.USER_SETTINGS, { ...userSettings, __panelTasks: panelTasks, __loginCounts: loginCounts });
+  }, [userSettings, panelTasks, loginCounts]);
 
   const getMyNotifSettings = useCallback((userId) => {
     return { notifyOnTaskAdded: true, notifyOnTaskReminder: true, ...((userSettings[userId]) || {}) };
@@ -137,7 +145,7 @@ export const AppProvider = ({ children }) => {
       userSettingsRef.current = next;
       /* ユーザー操作 → API書き込み */
       if (apiLoadedRef.current) {
-        apiSet("user_settings", { ...next, __panelTasks: panelTasksRef.current }).catch(console.error);
+        apiSet("user_settings", { ...next, __panelTasks: panelTasksRef.current, __loginCounts: loginCountsRef.current }).catch(console.error);
       }
       return next;
     });
@@ -148,7 +156,7 @@ export const AppProvider = ({ children }) => {
     panelTasksRef.current = tasks;
     /* ユーザー操作 → API書き込み */
     if (apiLoadedRef.current) {
-      apiSet("user_settings", { ...userSettingsRef.current, __panelTasks: tasks }).catch(console.error);
+      apiSet("user_settings", { ...userSettingsRef.current, __panelTasks: tasks, __loginCounts: loginCountsRef.current }).catch(console.error);
     }
   }, []);
 
@@ -581,9 +589,9 @@ export const AppProvider = ({ children }) => {
         if (Object.keys(local).length > 0) apiSet("monthend", local).catch(console.error);
       }
 
-      /* user_settings + panelTasks */
+      /* user_settings + panelTasks + loginCounts */
       if (apiUserSettings && typeof apiUserSettings === "object" && Object.keys(apiUserSettings).length > 0) {
-        const { __panelTasks, ...uSettings } = apiUserSettings;
+        const { __panelTasks, __loginCounts, ...uSettings } = apiUserSettings;
         if (Object.keys(uSettings).length > 0) {
           setUserSettings(uSettings);
           userSettingsRef.current = uSettings;
@@ -591,6 +599,10 @@ export const AppProvider = ({ children }) => {
         if (Array.isArray(__panelTasks) && __panelTasks.length > 0) {
           setPanelTasksRaw(__panelTasks);
           panelTasksRef.current = __panelTasks;
+        }
+        if (__loginCounts && typeof __loginCounts === "object") {
+          setLoginCounts(__loginCounts);
+          loginCountsRef.current = __loginCounts;
         }
       } else if (lsExists(LS_KEYS.USER_SETTINGS)) {
         const local = lsGet(LS_KEYS.USER_SETTINGS, {});
@@ -653,6 +665,22 @@ export const AppProvider = ({ children }) => {
     if (pw === "1111") setShowPwPrompt(true);
     const unnotified = requests.filter(r => r.user === m.name && r.status === "対応済" && !r.notified);
     if (unnotified.length > 0) setRequestNotifs(unnotified);
+
+    /* ── ログイン数カウント ── */
+    setLoginCounts(prev => {
+      const entry = prev[m.id] || { count: 0 };
+      const next  = { ...prev, [m.id]: { count: (entry.count || 0) + 1, lastLogin: new Date().toISOString() } };
+      loginCountsRef.current = next;
+      if (apiLoadedRef.current) {
+        apiSet("user_settings", {
+          ...userSettingsRef.current,
+          __panelTasks:   panelTasksRef.current,
+          __loginCounts:  next,
+        }).catch(console.error);
+      }
+      return next;
+    });
+
     return true;
   }, [members, requests]);
 
@@ -735,6 +763,8 @@ export const AppProvider = ({ children }) => {
       notifLogs, addNotifLog, markNotifRead, markAllNotifsRead, clearNotifLogs,
       /* userSettings */
       userSettings, getMyNotifSettings, updateMyNotifSettings,
+      /* loginCounts */
+      loginCounts,
       /* requests */
       requests,
       addRequest: addRequestBound,

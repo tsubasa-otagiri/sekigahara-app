@@ -30,7 +30,7 @@ const BTN_RED  = "px-4 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 t
 
 /* ━━━━━━━━ メンバーセクション ━━━━━━━━ */
 function MembersSection() {
-  const { members, addMember, updateMember, deleteMember, currentUser } = useApp();
+  const { members, addMember, updateMember, deleteMember, currentUser, loginCounts } = useApp();
   const isAdmin = currentUser?.role === "admin";
 
   const [editId,   setEditId]   = useState(null);
@@ -105,7 +105,7 @@ function MembersSection() {
           <table className="w-full min-w-[560px] border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                {["名前", "チーム", "ロール", "目標（万）", "ステータス", "操作"].map(h=>(
+                {["名前", "チーム", "ロール", "目標（万）", "ステータス", ...(isAdmin ? ["ログイン"] : []), "操作"].map(h=>(
                   <th key={h} className="px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -142,6 +142,22 @@ function MembersSection() {
                         {isRetired ? "退職" : "在籍"}
                       </span>
                     </td>
+                    {isAdmin && (() => {
+                      const lc = loginCounts[m.id];
+                      const cnt = lc?.count ?? 0;
+                      const last = lc?.lastLogin
+                        ? new Date(lc.lastLogin).toLocaleString("ja-JP", { month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit" })
+                        : null;
+                      return (
+                        <td className="px-3 py-2.5 text-center">
+                          <span className="text-sm font-bold text-gray-700">{cnt}</span>
+                          <span className="text-[10px] text-gray-400 font-normal ml-0.5">回</span>
+                          {last && (
+                            <div className="text-[10px] text-gray-400 leading-tight mt-0.5">{last}</div>
+                          )}
+                        </td>
+                      );
+                    })()}
                     <td className="px-3 py-2.5">
                       {isEditing ? (
                         <div className="flex gap-1">
