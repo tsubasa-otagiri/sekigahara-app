@@ -379,9 +379,28 @@ function BackupSection() {
           const existing = rawId ? existingMap.get(rawId) : null;
 
           if (existing) {
-            /* 更新: 活動履歴など既存データは保持しつつ上書き */
+            /* 更新: 活動履歴など既存データは保持しつつ上書き
+             * ★ 前回CSVから実際にフィールドが変わった場合のみ updatedAt をアップロード日時に更新
+             *   変更なし → 既存の updatedAt を維持（放置アラートを誤リセットしない） */
             const idx = updatedDeals.findIndex(d => String(d.id) === rawId);
-            if (idx !== -1) updatedDeals[idx] = { ...existing, ...patch, updatedAt: new Date().toISOString() };
+            if (idx !== -1) {
+              const changed =
+                existing.company    !== patch.company                        ||
+                existing.plan       !== patch.plan                           ||
+                existing.amount     !== patch.amount                         ||
+                existing.is         !== patch.is                             ||
+                existing.fs         !== patch.fs                             ||
+                existing.team       !== patch.team                           ||
+                existing.confidence !== patch.confidence                     ||
+                existing.phase      !== patch.phase                          ||
+                (existing.note  || "") !== (patch.note  || "")               ||
+                (existing.period|| "") !== (patch.period|| "");
+              updatedDeals[idx] = {
+                ...existing,
+                ...patch,
+                updatedAt: changed ? new Date().toISOString() : existing.updatedAt,
+              };
+            }
             updated++;
           } else {
             /* 新規追加 — 必須フィールドをすべて揃えて追加
