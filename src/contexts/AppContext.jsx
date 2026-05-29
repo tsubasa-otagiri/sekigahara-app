@@ -395,12 +395,16 @@ export const AppProvider = ({ children }) => {
       result = result.map(m => ({ ...m, pw: "1111" }));
       localStorage.setItem(PW_RESET_KEY, "1");
     }
-    /* 渡邉(IS/鈴木T) 追加マイグレーション */
-    const WATANABE_IS_KEY = "honnoji_watanabe_is_v1";
+    /* 渡邉(IS/杉山T) 追加・チーム修正マイグレーション */
+    const WATANABE_IS_KEY = "honnoji_watanabe_is_v2";
     if (!localStorage.getItem(WATANABE_IS_KEY)) {
       const entry = DEF_MEMBERS.find(m => m.id === "watanabe_is");
-      if (entry && !result.some(m => m.id === "watanabe_is")) {
-        result = [...result, entry];
+      if (entry) {
+        if (!result.some(m => m.id === "watanabe_is")) {
+          result = [...result, entry];
+        } else {
+          result = result.map(m => m.id === "watanabe_is" ? { ...m, team: "杉山T" } : m);
+        }
       }
       localStorage.setItem(WATANABE_IS_KEY, "1");
     }
@@ -584,11 +588,17 @@ export const AppProvider = ({ children }) => {
       /* members */
       if (Array.isArray(apiMembers) && apiMembers.length > 0) {
         let next = apiMembers.map(m => ({ ...m, name: normalizeName(m.name) }));
-        /* 渡邉 追加マイグレーション: KV にまだいない場合のみ追加して書き戻す */
+        /* 渡邉 追加・チーム修正マイグレーション */
         const wEntry = DEF_MEMBERS.find(m => m.id === "watanabe_is");
-        if (wEntry && !next.some(m => m.id === "watanabe_is")) {
-          next = [...next, wEntry];
-          apiSet("members", next).catch(console.error);
+        if (wEntry) {
+          const existing = next.find(m => m.id === "watanabe_is");
+          if (!existing) {
+            next = [...next, wEntry];
+            apiSet("members", next).catch(console.error);
+          } else if (existing.team !== "杉山T") {
+            next = next.map(m => m.id === "watanabe_is" ? { ...m, team: "杉山T" } : m);
+            apiSet("members", next).catch(console.error);
+          }
         }
         setMembers(next);
       } else if (lsExists(LS_KEYS.MEMBERS)) {

@@ -10,7 +10,7 @@ export const DEF_MEMBERS = [
   { id:"suzuki",     name:"鈴木",   role:"FS",     team:"鈴木T", badge:"FS",    pw:"1111", target:DEF_TGT, status:"active" },
   { id:"jumonji",    name:"十文字", role:"IS",     team:"鈴木T", badge:"IS",    pw:"1111", target:DEF_TGT, status:"active" },
   { id:"inoue",      name:"井上",   role:"IS",     team:"鈴木T", badge:"IS",    pw:"1111", target:DEF_TGT, status:"active" },
-  { id:"watanabe_is",name:"渡邉",   role:"IS",     team:"鈴木T", badge:"IS",    pw:"1111", target:DEF_TGT, status:"active" },
+  { id:"watanabe_is",name:"渡邉",   role:"IS",     team:"杉山T", badge:"IS",    pw:"1111", target:DEF_TGT, status:"active" },
   /* 中村T */
   { id:"naka",       name:"中",     role:"leader", team:"中村T", badge:"IS+FS", pw:"1111", target:DEF_TGT, status:"active" },
   { id:"sakurai",    name:"櫻井",   role:"IS",     team:"中村T", badge:"IS",    pw:"1111", target:DEF_TGT, status:"active" },
