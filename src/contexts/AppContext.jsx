@@ -75,21 +75,40 @@ const TASK_IMPORT_V1 = [
   { title:"山新【リスケ】→27日に先方から電話くれるとのこと。▼連絡つかず", note:"",                                                                                                                                   category:"",          priority:"low",    dueDate:"2026-05-27", assignee:"早坂"  },
 ];
 
+/** タスク処理者（createdBy）マッピング: 担当者 → 登録者 */
+const IMPORT_CREATOR = {
+  "鈴木":   "鈴木",
+  "十文字": "鈴木",
+  "井上":   "鈴木",
+  "小田切": "早川",
+  "早川":   "早川",
+  "早坂":   "早川",
+};
+
 /** 重複（title+assignee）を除いて未登録タスクのみ追加 */
 function applyTaskImportV1(tasks) {
   const existing = new Set(tasks.map(t => `${t.title}::${t.assignee}`));
   const now = new Date().toISOString();
   const toAdd = TASK_IMPORT_V1
-    .filter((r, _) => !existing.has(`${r.title}::${r.assignee}`))
+    .filter(r => !existing.has(`${r.title}::${r.assignee}`))
     .map((r, i) => ({
-      id: `task_import_v1_${i}`,
+      id:        `task_import_v1_${i}`,
       completed: false,
       createdAt: now,
-      createdBy: "管理者",
+      createdBy: IMPORT_CREATOR[r.assignee] || "管理者",
       dueTime:   "",
       ...r,
     }));
   return toAdd.length > 0 ? [...tasks, ...toAdd] : tasks;
+}
+
+/** v2: 既存インポートタスクの createdBy を正しい登録者に修正 */
+function applyTaskImportCreatorFix(tasks) {
+  return tasks.map(t =>
+    (t.id && String(t.id).startsWith("task_import_v1_") && IMPORT_CREATOR[t.assignee])
+      ? { ...t, createdBy: IMPORT_CREATOR[t.assignee] }
+      : t
+  );
 }
 
 /* 当月 period 文字列 ("YYYY-MM") */
@@ -270,10 +289,15 @@ export const AppProvider = ({ children }) => {
   /* ── タスク ── */
   const [tasks, setTasks] = useState(() => {
     let t = lsGet(LS_KEYS.TASKS, []);
-    const IMPORT_KEY = "honnoji_task_import_v1";
+    const IMPORT_KEY  = "honnoji_task_import_v1";
+    const CREATOR_KEY = "honnoji_task_import_v2";
     if (!localStorage.getItem(IMPORT_KEY)) {
       t = applyTaskImportV1(t);
       localStorage.setItem(IMPORT_KEY, "1");
+    }
+    if (!localStorage.getItem(CREATOR_KEY)) {
+      t = applyTaskImportCreatorFix(t);
+      localStorage.setItem(CREATOR_KEY, "1");
     }
     return t;
   });
@@ -651,8 +675,12 @@ export const AppProvider = ({ children }) => {
 
       /* tasks */
       if (Array.isArray(apiTasks) && apiTasks.length > 0) {
-        const merged = applyTaskImportV1(apiTasks);
-        if (merged.length > apiTasks.length) apiSet("tasks", merged).catch(console.error);
+        let merged = applyTaskImportV1(apiTasks);
+        const fixed = applyTaskImportCreatorFix(merged);
+        if (fixed.length > apiTasks.length || JSON.stringify(fixed) !== JSON.stringify(merged)) {
+          apiSet("tasks", fixed).catch(console.error);
+        }
+        merged = fixed;
         setTasks(merged);
       } else if (lsExists(LS_KEYS.TASKS)) {
         const local = lsGet(LS_KEYS.TASKS, []);

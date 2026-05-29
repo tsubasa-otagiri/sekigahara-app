@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, CalendarDays, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, AlertCircle, StickyNote } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import { fmtAmt, filterByTab, filterTasksByTab } from "../../utils/index.js";
 import { TODAY_PERIOD } from "../../contexts/AppContext.jsx";
@@ -57,6 +57,45 @@ const PRIORITY_STYLE = {
 const PRIORITY_LABEL = { high: "高", medium: "中", low: "低" };
 
 /* ── 日別ポップオーバー ── */
+/* ── カレンダーモーダル内タスク行（メモ展開付き） ── */
+function CalTaskRow({ t }) {
+  const [showNote, setShowNote] = useState(false);
+  const ps = PRIORITY_STYLE[t.priority] || PRIORITY_STYLE.medium;
+  return (
+    <div
+      className={`px-3 py-2.5 rounded-xl ${t.note ? "cursor-pointer" : ""}`}
+      style={{ background: ps.bg, border: `1px solid ${ps.border}` }}
+      onClick={() => { if (t.note) setShowNote(v => !v); }}
+    >
+      <div className="flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: ps.dot }} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <p className="text-[13px] font-bold text-slate-800 truncate">{t.title}</p>
+            {t.note && (
+              <StickyNote size={11} className={`shrink-0 transition-colors ${showNote ? "text-amber-400" : "text-slate-300"}`} />
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+            <span className="text-[10px] font-black px-1.5 py-0.5 rounded"
+              style={{ background: ps.border + "55", color: ps.label }}>
+              優先度:{PRIORITY_LABEL[t.priority] || "中"}
+            </span>
+            {t.assignee && (
+              <span className="text-[10px] text-slate-500 font-semibold">{t.assignee}</span>
+            )}
+          </div>
+        </div>
+      </div>
+      {showNote && t.note && (
+        <div className="mt-2 text-[11px] text-slate-600 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-2 leading-relaxed whitespace-pre-wrap">
+          {t.note}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DayModal({ day, ym, deals, tasks, onClose, onSelectDeal }) {
   const ds = dayStr(ym, day);
   const today = todayStr();
@@ -118,29 +157,7 @@ function DayModal({ day, ym, deals, tasks, onClose, onSelectDeal }) {
               {deals.length > 0 && (
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 pt-1">✅ タスク</p>
               )}
-              {tasks.map(t => {
-                const ps = PRIORITY_STYLE[t.priority] || PRIORITY_STYLE.medium;
-                return (
-                  <div
-                    key={t.id}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                    style={{ background: ps.bg, border: `1px solid ${ps.border}` }}
-                  >
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: ps.dot }} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-bold text-slate-800 truncate">{t.title}</p>
-                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded" style={{ background: ps.border + "55", color: ps.label }}>
-                          優先度:{PRIORITY_LABEL[t.priority] || "中"}
-                        </span>
-                        {t.assignee && (
-                          <span className="text-[10px] text-slate-500 font-semibold">{t.assignee}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {tasks.map(t => <CalTaskRow key={t.id} t={t} />)}
             </>
           )}
         </div>
