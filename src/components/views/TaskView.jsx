@@ -186,7 +186,7 @@ function TaskModal({ task, members, defaultAssignee = "", onSave, onDelete, onCl
             <input
               autoFocus value={title}
               onChange={e => { setTitle(e.target.value); setErr(""); }}
-              onKeyDown={e => { if (e.key === "Enter") handleSave(); }}
+              onKeyDown={e => { if (e.key === "Enter") e.preventDefault(); }}
               className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
               placeholder="タスク名を入力"
             />

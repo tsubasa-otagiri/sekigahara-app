@@ -126,7 +126,8 @@ export default function DealModal({ deal, onClose }) {
       title={isEdit ? "案件を編集" : "新規案件登録"}
       sub={isEdit ? form.company : undefined}
     >
-      <form onSubmit={handleSubmit} className="p-5 space-y-4 pb-6">
+      <form onSubmit={handleSubmit} className="p-5 space-y-4 pb-6"
+        onKeyDown={e => { if (e.key === "Enter" && e.target.tagName === "INPUT") e.preventDefault(); }}>
         {/* 会社名 */}
         <Fld label="会社名" req err={errors.company}>
           <input
