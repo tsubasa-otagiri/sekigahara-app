@@ -11,7 +11,7 @@ export const DISPLAY_GROUPS = [
   { label: "杉山T", names: ["杉山", "小田切", "早川", "早坂"] },
   { label: "中村T", names: ["中村", "中", "櫻井", "青木"] },
   { label: "渡部T", names: ["渡部", "横井", "上浦", "太田"] },
-  { label: "鈴木T", names: ["鈴木", "十文字", "井上"] },
+  { label: "鈴木T", names: ["鈴木", "十文字", "井上", "渡邉"] },
 ];
 export const MEMBER_MASTER_NAMES = DISPLAY_GROUPS.flatMap(g => g.names);
 export const CONF       = ["30%", "50%", "70%", "回収"];

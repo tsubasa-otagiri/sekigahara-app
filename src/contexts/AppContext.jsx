@@ -14,11 +14,11 @@ import { lsGet, lsSet, authLoad, authSave, authClear, nextId, parseAmt, resolveP
 import { buildMonthlyTasks } from "../utils/monthlyTasks.js";
 import { apiGet, apiSet, ForbiddenError } from "../utils/api.js";
 
-/* 月末タスク対象メンバー（固定15名） */
+/* 月末タスク対象メンバー（固定16名） */
 const MONTHLY_MEMBERS = [
   "中村","中","櫻井","青木",
   "渡部","横井","上浦","太田",
-  "鈴木","十文字","井上",
+  "鈴木","十文字","井上","渡邉",
   "杉山","小田切","早川","早坂",
 ];
 
@@ -395,6 +395,15 @@ export const AppProvider = ({ children }) => {
       result = result.map(m => ({ ...m, pw: "1111" }));
       localStorage.setItem(PW_RESET_KEY, "1");
     }
+    /* 渡邉(IS/鈴木T) 追加マイグレーション */
+    const WATANABE_IS_KEY = "honnoji_watanabe_is_v1";
+    if (!localStorage.getItem(WATANABE_IS_KEY)) {
+      const entry = DEF_MEMBERS.find(m => m.id === "watanabe_is");
+      if (entry && !result.some(m => m.id === "watanabe_is")) {
+        result = [...result, entry];
+      }
+      localStorage.setItem(WATANABE_IS_KEY, "1");
+    }
     return result;
   });
   useEffect(() => { lsSet(LS_KEYS.MEMBERS, members); }, [members]);
@@ -574,7 +583,14 @@ export const AppProvider = ({ children }) => {
 
       /* members */
       if (Array.isArray(apiMembers) && apiMembers.length > 0) {
-        setMembers(apiMembers.map(m => ({ ...m, name: normalizeName(m.name) })));
+        let next = apiMembers.map(m => ({ ...m, name: normalizeName(m.name) }));
+        /* 渡邉 追加マイグレーション: KV にまだいない場合のみ追加して書き戻す */
+        const wEntry = DEF_MEMBERS.find(m => m.id === "watanabe_is");
+        if (wEntry && !next.some(m => m.id === "watanabe_is")) {
+          next = [...next, wEntry];
+          apiSet("members", next).catch(console.error);
+        }
+        setMembers(next);
       } else if (lsExists(LS_KEYS.MEMBERS)) {
         const local = lsGet(LS_KEYS.MEMBERS, []);
         if (local.length > 0) apiSet("members", local).catch(console.error);
