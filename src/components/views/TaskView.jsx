@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import {
   Plus, Trash2, X, ChevronLeft, ChevronRight,
   CalendarDays, List, AlertCircle, Circle, CheckCircle2,
-  Pencil, Users, CheckCheck, UserCircle2,
+  Pencil, Users, CheckCheck, UserCircle2, StickyNote,
 } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import { MEMBER_MASTER_NAMES, DISPLAY_GROUPS } from "../../constants/index.js";
@@ -301,7 +301,8 @@ function TaskCard({ task, onToggle, onEdit }) {
   const isOverdue = !task.completed && task.dueDate && task.dueDate < today;
   const ps = pStyle(task.priority);
   const cs = task.category ? catStyle(task.category) : null;
-  const [vanishing, setVanishing] = useState(false);
+  const [vanishing,  setVanishing]  = useState(false);
+  const [showNote,   setShowNote]   = useState(false);
 
   /* 担当者のチーム名を DISPLAY_GROUPS から逆引き */
   const assigneeTeam = task.assignee ? (NAME_TO_TEAM[task.assignee] || null) : null;
@@ -357,12 +358,24 @@ function TaskCard({ task, onToggle, onEdit }) {
         <CheckCircle2 size={13} strokeWidth={2.5} />
       </button>
 
-      {/* ── タスク名＋メタ ── */}
-      <div className="flex-1 min-w-0">
-        <p className={`text-[13px] font-semibold leading-snug truncate
-          ${task.completed ? "line-through text-slate-400" : "text-slate-800"}`}>
-          {task.title}
-        </p>
+      {/* ── タスク名＋メタ（クリックでメモ展開） ── */}
+      <div
+        className={`flex-1 min-w-0 ${task.note ? "cursor-pointer" : ""}`}
+        onClick={() => { if (task.note) setShowNote(v => !v); }}
+      >
+        <div className="flex items-center gap-1.5">
+          <p className={`text-[13px] font-semibold leading-snug truncate
+            ${task.completed ? "line-through text-slate-400" : "text-slate-800"}`}>
+            {task.title}
+          </p>
+          {/* メモありインジケーター */}
+          {task.note && (
+            <StickyNote
+              size={11}
+              className={`shrink-0 transition-colors ${showNote ? "text-amber-400" : "text-slate-300"}`}
+            />
+          )}
+        </div>
 
         {/* メタ情報行 */}
         <div className="flex items-center justify-between gap-2 mt-1">
@@ -401,6 +414,13 @@ function TaskCard({ task, onToggle, onEdit }) {
             </span>
           )}
         </div>
+
+        {/* ── メモ展開エリア ── */}
+        {showNote && task.note && (
+          <div className="mt-2 text-[11px] text-slate-600 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-2 leading-relaxed whitespace-pre-wrap">
+            {task.note}
+          </div>
+        )}
       </div>
 
       {/* ── 編集ボタン ── */}
