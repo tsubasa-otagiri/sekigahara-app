@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { ChevronUp, ChevronDown, ChevronsUpDown, X } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
-import { fmtAmt } from "../../utils/index.js";
+import { fmtAmt, getMemberTarget } from "../../utils/index.js";
 import { REAL_TEAMS, MEMBER_MASTER_NAMES } from "../../constants/index.js";
 import { TeamBadge, PlanBadge } from "../ui/Badges.jsx";
 
@@ -210,7 +210,7 @@ export default function StatsView() {
       /* 実件数（折半なし）: credit < 1 になる案件が存在する場合に表示用 */
       const kaishuCountRaw = kaishuDeals.length;
 
-      const target = m.target ?? 0;
+      const target = getMemberTarget(m, activePeriods);
       const rate   = target > 0 ? Math.round((kaishu / target) * 100) : 0;
       return { m, target, kaishu, aggressive, pipeline, pipelineRaw, rate, kaishuCount, kaishuCountRaw };
     });

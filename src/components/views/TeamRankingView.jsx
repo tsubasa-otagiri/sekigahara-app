@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { ChevronUp, ChevronDown, ChevronsUpDown, X } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
-import { fmtAmt } from "../../utils/index.js";
+import { fmtAmt, getMemberTarget } from "../../utils/index.js";
 import { REAL_TEAMS, THEX } from "../../constants/index.js";
 import { TeamBadge, PlanBadge } from "../ui/Badges.jsx";
 
@@ -131,7 +131,7 @@ export default function TeamRankingView() {
     const kaishuCount = kaishuDeals.length;
     const aggressive  = teamDeals.filter(d => d.confidence === "70%" || d.confidence === "回収").reduce((s, d) => s + (d.amount || 0), 0);
     const pipeline    = teamDeals.length;
-    const target      = teamMembers.reduce((s, m) => s + (m.target || 0), 0);
+    const target      = teamMembers.reduce((s, m) => s + getMemberTarget(m, activePeriods), 0);
     const rate        = target > 0 ? Math.round((kaishu / target) * 100) : 0;
     const perPerson   = teamMembers.length > 0 ? Math.round((kaishu / teamMembers.length) * 100) / 100 : 0;
     return { team, target, kaishu, kaishuCount, aggressive, pipeline, rate, memberCount: teamMembers.length, perPerson };

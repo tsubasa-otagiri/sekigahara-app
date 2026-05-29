@@ -14,7 +14,8 @@ export const DEF_MEMBERS = [
   /* 中村T */
   { id:"naka",       name:"中",     role:"leader", team:"中村T", badge:"IS+FS", pw:"1111", target:DEF_TGT, status:"active" },
   { id:"sakurai",    name:"櫻井",   role:"IS",     team:"中村T", badge:"IS",    pw:"1111", target:DEF_TGT, status:"active" },
-  { id:"aoki",       name:"青木",   role:"IS",     team:"中村T", badge:"IS",    pw:"1111", target:DEF_TGT, status:"active" },
+  { id:"aoki",       name:"青木",   role:"IS",     team:"中村T", badge:"IS",    pw:"1111", target:DEF_TGT, status:"active",
+    monthlyTargets: { "2026-05":0, "2026-06":10, "2026-07":20, "2026-08":30 } },
   { id:"nakamura_f", name:"中村",   role:"FS",     team:"中村T", badge:"FS",    pw:"1111", target:DEF_TGT, status:"active" },
   /* 渡部T */
   { id:"yokoi",      name:"横井",   role:"leader", team:"渡部T", badge:"IS+FS", pw:"1111", target:DEF_TGT, status:"active" },

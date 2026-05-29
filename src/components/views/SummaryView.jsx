@@ -6,7 +6,7 @@ import {
 } from "chart.js";
 import { Doughnut, Bar } from "react-chartjs-2";
 import { useApp } from "../../contexts/useApp.js";
-import { filterByTab, fmtAmt, getDealCredit } from "../../utils/index.js";
+import { filterByTab, fmtAmt, getDealCredit, getMemberTarget } from "../../utils/index.js";
 import { CONF, CTW, THEX, REAL_TEAMS, YOMI, YOMI_WEIGHT, YOMI_COLOR, LOSS_REASONS } from "../../constants/index.js";
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
@@ -288,13 +288,13 @@ export default function SummaryView() {
 
   /* 目標: マイタブ → 個人目標、チームタブ → チーム合計 */
   const teamTarget = useMemo(() => {
-    if (isMyTab) return currentUser?.target || 0;
+    if (isMyTab) return getMemberTarget(currentUser, activePeriods);
     return members
       .filter(m => m.role !== "admin" && m.status === "active" &&
         (activeTab === "全体" || m.team === activeTab ||
          (activeTab === "鈴木Tプレ" && (m.team === "杉山T" || m.team === "鈴木T"))))
-      .reduce((s, m) => s + (m.target || 0), 0);
-  }, [members, activeTab, currentUser, isMyTab]);
+      .reduce((s, m) => s + getMemberTarget(m, activePeriods), 0);
+  }, [members, activeTab, currentUser, isMyTab, activePeriods]);
 
   const total    = Object.values(byConf).reduce((a, b) => a + b, 0);
   const kaishu   = byConf["回収"] || 0;

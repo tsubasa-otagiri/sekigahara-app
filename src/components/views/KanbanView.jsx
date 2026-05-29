@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from "react";
 import { useApp } from "../../contexts/useApp.js";
-import { filterByTab, fmtAmt, isNeglected, getDealCredit } from "../../utils/index.js";
+import { filterByTab, fmtAmt, isNeglected, getDealCredit, getMemberTarget } from "../../utils/index.js";
 import { CONF, CTW, THEX, REAL_TEAMS } from "../../constants/index.js";
 
 /* チーム順ソートのインデックス（REAL_TEAMS 基準） */
@@ -297,13 +297,13 @@ export default function KanbanView() {
 
   /* 目標: マイタブ → 個人目標 / チームタブ → チーム合計 */
   const teamTarget = useMemo(() => {
-    if (isMyTab) return currentUser?.target || 0;
+    if (isMyTab) return getMemberTarget(currentUser, activePeriods);
     return members
       .filter(m => m.role !== "admin" && m.status === "active" &&
         (activeTab === "全体" || m.team === activeTab ||
          (activeTab === "鈴木Tプレ" && (m.team === "杉山T" || m.team === "鈴木T"))))
-      .reduce((s, m) => s + (m.target || 0), 0);
-  }, [members, activeTab, currentUser, isMyTab]);
+      .reduce((s, m) => s + getMemberTarget(m, activePeriods), 0);
+  }, [members, activeTab, currentUser, isMyTab, activePeriods]);
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">

@@ -186,6 +186,21 @@ export const getDealCredit = (deal, name) => {
   return 1.0;
 };
 
+/**
+ * メンバーの目標金額（万円）を返す。
+ * monthlyTargets が設定されている月は月別値を優先、ない月はデフォルト target を使用。
+ * activePeriods: ["2026-05", "2026-06"] などの YYYY-MM 配列。
+ * 複数期間の場合は合計値を返す。
+ */
+export const getMemberTarget = (member, activePeriods = []) => {
+  if (!member) return 0;
+  const mt = member.monthlyTargets;
+  const def = member.target ?? 0;
+  if (!mt || Object.keys(mt).length === 0) return def;
+  if (activePeriods.length === 0) return def;
+  return activePeriods.reduce((sum, ym) => sum + (ym in mt ? mt[ym] : def), 0);
+};
+
 /** 14日以上更新なし（受注・失注以外）の案件を検知 */
 export const isNeglected = (deal) => {
   if (!deal) return false;

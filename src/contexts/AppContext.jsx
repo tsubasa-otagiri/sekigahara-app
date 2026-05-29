@@ -395,6 +395,15 @@ export const AppProvider = ({ children }) => {
       result = result.map(m => ({ ...m, pw: "1111" }));
       localStorage.setItem(PW_RESET_KEY, "1");
     }
+    /* 青木 月別目標マイグレーション */
+    const AOKI_TARGETS_KEY = "honnoji_aoki_targets_v1";
+    if (!localStorage.getItem(AOKI_TARGETS_KEY)) {
+      result = result.map(m => m.id === "aoki"
+        ? { ...m, monthlyTargets: { "2026-05":0, "2026-06":10, "2026-07":20, "2026-08":30 } }
+        : m
+      );
+      localStorage.setItem(AOKI_TARGETS_KEY, "1");
+    }
     /* 渡邉(IS/杉山T) 追加・チーム修正マイグレーション */
     const WATANABE_IS_KEY = "honnoji_watanabe_is_v2";
     if (!localStorage.getItem(WATANABE_IS_KEY)) {
@@ -588,7 +597,14 @@ export const AppProvider = ({ children }) => {
       /* members */
       if (Array.isArray(apiMembers) && apiMembers.length > 0) {
         let next = apiMembers.map(m => ({ ...m, name: normalizeName(m.name) }));
-        /* 渡邉 追加・チーム修正マイグレーション */
+        /* 青木 月別目標マイグレーション（KV） */
+        const AOKI_MT = { "2026-05":0, "2026-06":10, "2026-07":20, "2026-08":30 };
+        const aokiIdx = next.findIndex(m => m.id === "aoki");
+        if (aokiIdx !== -1 && !("2026-05" in (next[aokiIdx].monthlyTargets ?? {}))) {
+          next = next.map((m, i) => i === aokiIdx ? { ...m, monthlyTargets: AOKI_MT } : m);
+          apiSet("members", next).catch(console.error);
+        }
+        /* 渡邉 追加・チーム修正マイグレーション（KV） */
         const wEntry = DEF_MEMBERS.find(m => m.id === "watanabe_is");
         if (wEntry) {
           const existing = next.find(m => m.id === "watanabe_is");

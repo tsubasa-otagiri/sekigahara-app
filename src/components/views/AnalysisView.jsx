@@ -6,7 +6,7 @@ import {
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
 import { useApp } from "../../contexts/useApp.js";
-import { filterByTab } from "../../utils/index.js";
+import { filterByTab, getMemberTarget } from "../../utils/index.js";
 import { THEX } from "../../constants/index.js";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
@@ -95,12 +95,12 @@ const calcTeam = (deals, target) =>
 ══════════════════════════════════════════════ */
 const ROLE_BG = { leader:"#f97316", FS:"#059669", IS:"#0891b2" };
 
-function MemberCard({ member, deals }) {
+function MemberCard({ member, deals, period }) {
+  const target = getMemberTarget(member, period ? [period] : []);
   const stats = useMemo(
-    () => calcMember(deals, member.name, member.target ?? 0),
-    [deals, member]
+    () => calcMember(deals, member.name, target),
+    [deals, member, target]
   );
-  const target = member.target ?? 0;
 
   return (
     <div className="bg-white rounded-2xl card-shadow overflow-hidden">
@@ -303,8 +303,8 @@ export default function AnalysisView() {
 
   /* チーム目標合計 */
   const totalTarget = useMemo(
-    () => teamMembers.reduce((s, m) => s + (m.target ?? 0), 0),
-    [teamMembers]
+    () => teamMembers.reduce((s, m) => s + getMemberTarget(m, activePeriods), 0),
+    [teamMembers, activePeriods]
   );
 
   /* チームサマリー */
@@ -421,7 +421,7 @@ export default function AnalysisView() {
               {/* メンバーカード グリッド */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {gm.map(m => (
-                  <MemberCard key={m.id} member={m} deals={memberDeals} />
+                  <MemberCard key={m.id} member={m} deals={memberDeals} period={memberPeriod} />
                 ))}
               </div>
             </div>
