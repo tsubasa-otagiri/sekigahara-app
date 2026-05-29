@@ -37,6 +37,61 @@ export const DEFAULT_PANEL_TASKS = [
   { id: "pt5", emoji: "⏰", title: "勤怠申請",                          when: "最終営業日 18:55締切", daysBefore: 0, isKintai: true },
 ];
 
+/* ══════════════════════════════════════════════
+   一括インポートタスク v1（スクリーンショットから登録）
+   title + assignee の組み合わせが既存になければ追加（重複防止）
+══════════════════════════════════════════════ */
+const TASK_IMPORT_V1 = [
+  /* 鈴木 */
+  { title:"ウェルビー株式会社",                         note:"ツール導入するメリット",                                                                                                                               category:"資料作成",   priority:"medium", dueDate:"2026-06-01", assignee:"鈴木"  },
+  { title:"コメ兵",                                     note:"ロードマップ",                                                                                                                                         category:"資料作成",   priority:"medium", dueDate:"",          assignee:"鈴木"  },
+  /* 十文字 */
+  { title:"ウェルビー株式会社",                         note:"コンサル資料（ツールとコンサルどっちも欲しいです！）☆プラン未定。分析店舗3店舗駅近店舗想定でお願いします！総合分析で。次回Zooミーティング",          category:"見積書作成", priority:"high",   dueDate:"2026-06-01", assignee:"十文字"},
+  { title:"株式会社ホンダモビリティ東北",               note:"9月スタート想定、6月中旬にセカンド25店舗テーブルコンサルスタート（分析データ確認）Honda Cars宮城中央 Honda Cars山形 Honda Cars岩手",               category:"資料作成",   priority:"medium", dueDate:"2026-06-05", assignee:"十文字"},
+  { title:"J-netレンタリース株式会社",                  note:"コンサル資料（料金とコンサルとツールどっちも欲しいです！）☆プラン未定、分析店舗3店舗駅近店舗想定でお願いします！総合分析で、次回Zooミーティング",  category:"資料作成",   priority:"medium", dueDate:"2026-05-29", assignee:"十文字"},
+  { title:"株式会社やる気",                             note:"イレギュラー",                                                                                                                                         category:"見積書作成", priority:"high",   dueDate:"",          assignee:"十文字"},
+  { title:"２りんかん",                                 note:"6/11でデモ画面発行予定→次回06月16日（火）15:00 横浜戸塚2りんかん 仮見2りんかん、和見２りんかん",                                                      category:"お礼メール", priority:"medium", dueDate:"2026-06-11", assignee:"十文字"},
+  { title:"株式会社日産サティオ群馬",                   note:"電脳簿への確認のうえでデモ画面発行",                                                                                                                   category:"日程調整",   priority:"medium", dueDate:"2026-05-29", assignee:"十文字"},
+  { title:"株式会社アークミール",                       note:"代表向け資料（事例、分析、費用等算出を可視化 平均単価2500円 原価60%）☆日程調整リンクを5月末・6月6,7切にお願いします！",                              category:"資料作成",   priority:"high",   dueDate:"2026-06-06", assignee:"十文字"},
+  { title:"万葉倶楽部株式会社",                         note:"デモ画面発行：6月1日（豊洲千客万来・東京豊洲万葉倶楽部）・資料作成",                                                                                    category:"資料作成",   priority:"high",   dueDate:"2026-05-29", assignee:"十文字"},
+  { title:"株式会社マリモ・グローバル・テクノロジー",   note:"デモ対象店舗2箇取扱いただく",                                                                                                                          category:"デモ画面発行",priority:"medium", dueDate:"2026-06-01", assignee:"十文字"},
+  /* 井上 */
+  { title:"第一ゴルフ",                                 note:"",                                                                                                                                                     category:"お礼メール", priority:"medium", dueDate:"2026-05-29", assignee:"井上"  },
+  { title:"ベルクラシック東京",                         note:"次回12日10時(DashのAiミニは貸いて下さい)",                                                                                                             category:"",          priority:"medium", dueDate:"2026-05-29", assignee:"井上"  },
+  { title:"ベルクラシック東京",                         note:"次回12日10時 Dash資料（現状、検索ボリューム込）",                                                                                                      category:"資料作成",   priority:"medium", dueDate:"2026-06-05", assignee:"井上"  },
+  { title:"株式会社東京クレジットサービス",             note:"日程調整は6月15日への連絡！2個もらってください",                                                                                                       category:"デモ画面発行",priority:"high",   dueDate:"2026-06-08", assignee:"井上"  },
+  { title:"西武レクリエーション株式会社",               note:"6/11でデモ画面（豊島園、秩父）次回6/15ツール資料作成（見える化比較、現状分析込）",                                                                     category:"資料作成",   priority:"medium", dueDate:"2026-06-11", assignee:"井上"  },
+  { title:"株式会社IEC",                                note:"Dash資料（全室分析/GMOの他社比較資料）次回：6月3日(水)14:00〜",                                                                                       category:"資料作成",   priority:"medium", dueDate:"2026-05-29", assignee:"井上"  },
+  { title:"株式会社極東商会",                           note:"お礼メール+速度資料/資料作成（ツールとコンサルどっちも料金のせて）次回：6月12日11時-",                                                               category:"資料作成",   priority:"medium", dueDate:"2026-06-05", assignee:"井上"  },
+  /* 早川 */
+  { title:"ブックファーストデモ所感確認",               note:"",                                                                                                                                                     category:"社内確認",   priority:"medium", dueDate:"",          assignee:"早川"  },
+  { title:"中国銀行",                                   note:"競合比較、料金シミュレーション",                                                                                                                        category:"",          priority:"low",    dueDate:"2026-05-31", assignee:"早川"  },
+  { title:"株式会社東光ストア",                         note:"月末にてデモの所感得られれば資料",                                                                                                                     category:"社内確認",   priority:"low",    dueDate:"2026-05-31", assignee:"早川"  },
+  { title:"再度トモズ",                                 note:"",                                                                                                                                                     category:"資料作成",   priority:"medium", dueDate:"2026-05-29", assignee:"早川"  },
+  /* 早坂 */
+  { title:"丸福",                                       note:"受注後タスク",                                                                                                                                         category:"社内確認",   priority:"low",    dueDate:"2026-06-05", assignee:"早坂"  },
+  { title:"東京デリカ",                                 note:"ブランド毎の分析前材 サックスバー プランサックス ラバックス キャラトラ",                                                                               category:"資料作成",   priority:"high",   dueDate:"2026-06-02", assignee:"早坂"  },
+  { title:"静岡日産自動車株式会社",                     note:"中部 静岡市内東 清水伊豆 カンナ店 10店舗ずつの分析、指定キーワードでの地位状況",                                                                       category:"資料作成",   priority:"medium", dueDate:"2026-06-01", assignee:"早坂"  },
+  { title:"山新【リスケ】→27日に先方から電話くれるとのこと。▼連絡つかず", note:"",                                                                                                                                   category:"",          priority:"low",    dueDate:"2026-05-27", assignee:"早坂"  },
+];
+
+/** 重複（title+assignee）を除いて未登録タスクのみ追加 */
+function applyTaskImportV1(tasks) {
+  const existing = new Set(tasks.map(t => `${t.title}::${t.assignee}`));
+  const now = new Date().toISOString();
+  const toAdd = TASK_IMPORT_V1
+    .filter((r, _) => !existing.has(`${r.title}::${r.assignee}`))
+    .map((r, i) => ({
+      id: `task_import_v1_${i}`,
+      completed: false,
+      createdAt: now,
+      createdBy: "管理者",
+      dueTime:   "",
+      ...r,
+    }));
+  return toAdd.length > 0 ? [...tasks, ...toAdd] : tasks;
+}
+
 /* 当月 period 文字列 ("YYYY-MM") */
 const _NOW = new Date();
 const _PAD = (n) => String(n).padStart(2, "0");
@@ -213,7 +268,15 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   /* ── タスク ── */
-  const [tasks, setTasks] = useState(() => lsGet(LS_KEYS.TASKS, []));
+  const [tasks, setTasks] = useState(() => {
+    let t = lsGet(LS_KEYS.TASKS, []);
+    const IMPORT_KEY = "honnoji_task_import_v1";
+    if (!localStorage.getItem(IMPORT_KEY)) {
+      t = applyTaskImportV1(t);
+      localStorage.setItem(IMPORT_KEY, "1");
+    }
+    return t;
+  });
   useEffect(() => { lsSet(LS_KEYS.TASKS, tasks); }, [tasks]);
 
   const addTask = useCallback((raw) => {
@@ -588,7 +651,9 @@ export const AppProvider = ({ children }) => {
 
       /* tasks */
       if (Array.isArray(apiTasks) && apiTasks.length > 0) {
-        setTasks(apiTasks);
+        const merged = applyTaskImportV1(apiTasks);
+        if (merged.length > apiTasks.length) apiSet("tasks", merged).catch(console.error);
+        setTasks(merged);
       } else if (lsExists(LS_KEYS.TASKS)) {
         const local = lsGet(LS_KEYS.TASKS, []);
         if (local.length > 0) apiSet("tasks", local).catch(console.error);
