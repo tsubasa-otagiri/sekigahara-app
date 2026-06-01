@@ -1,7 +1,21 @@
 import { useState, useMemo, useRef } from "react";
+import { AlertTriangle } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
+import SimilarDealsPanel from "../SimilarDealsPanel.jsx";
 import { filterByTab, fmtAmt, isNeglected, getDealCredit, getMemberTarget } from "../../utils/index.js";
 import { CONF, CTW, THEX, REAL_TEAMS } from "../../constants/index.js";
+
+/* ── 法人格除去ヘルパー（類似企業名検出用） ── */
+const CORP_PREFIX = /^(株式会社|有限会社|合同会社|一般社団法人|一般財団法人|公益社団法人|公益財団法人|医療法人|学校法人|社会福祉法人|特定非営利活動法人|ＮＰＯ法人|NPO法人|（株）|\(株\)|（有）|\(有\))/;
+const CORP_SUFFIX = /(株式会社|有限会社|合同会社)$/;
+const stripCorp = (s) => s.replace(CORP_PREFIX, "").replace(CORP_SUFFIX, "").trim();
+
+const isSimilarCompany = (a, b) => {
+  if (!a || !b) return false;
+  if (a.includes(b) || b.includes(a)) return true;
+  const na = stripCorp(a), nb = stripCorp(b);
+  return na.length >= 2 && nb.length >= 2 && (na.includes(nb) || nb.includes(na));
+};
 
 /* チーム順ソートのインデックス（REAL_TEAMS 基準） */
 const teamIdx = (team) => {
@@ -22,15 +36,16 @@ const COLS = CONF; // ["30%","50%","70%","回収"]
 const COL_BODY_H = "calc(100vh - 250px)";
 
 /* ── 案件カード ── */
-function DealCard({ deal, isDragging, onDragStart, onDragEnd, onDetail }) {
+function DealCard({ deal, isDragging, onDragStart, onDragEnd, onDetail, hasDuplicate, onSimilarClick }) {
   return (
     <div
       draggable
       onDragStart={(e) => onDragStart(e, deal.id)}
       onDragEnd={onDragEnd}
       onClick={() => onDetail && onDetail(deal)}
-      className={`bg-white rounded-lg border border-slate-200 px-2 py-1.5 select-none transition-all
+      className={`bg-white rounded-lg border px-2 py-1.5 select-none transition-all
         cursor-pointer
+        ${hasDuplicate ? "border-amber-300" : "border-slate-200"}
         ${isDragging
           ? "opacity-25 rotate-1 scale-95 shadow-none"
           : "shadow-sm hover:shadow-md hover:border-blue-300 hover:-translate-y-px"
@@ -55,6 +70,15 @@ function DealCard({ deal, isDragging, onDragStart, onDragEnd, onDetail }) {
           </span>
         )}
       </div>
+      {hasDuplicate && (
+        <span
+          onClick={e => { e.stopPropagation(); onSimilarClick && onSimilarClick(deal); }}
+          className="text-[9px] font-bold text-amber-600 flex items-center gap-0.5 cursor-pointer hover:text-amber-700 transition-colors w-fit"
+        >
+          <AlertTriangle size={9} />
+          類似企業あり
+        </span>
+      )}
       {isNeglected(deal) && (
         <span className="text-[9px] font-bold text-red-500 flex items-center gap-0.5">
           🔥 放置注意
@@ -85,7 +109,7 @@ function DealCard({ deal, isDragging, onDragStart, onDragEnd, onDetail }) {
 /* ── カンバン列 ── */
 function KanbanCol({
   conf, deals, draggedId, dragOverCol,
-  onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop, onDetail,
+  onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop, onDetail, duplicateIds, onSimilarClick,
 }) {
   const tw     = CTW[conf] ?? CTW["30%"];
   const isOver = dragOverCol === conf;
@@ -145,6 +169,8 @@ function KanbanCol({
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
               onDetail={onDetail}
+              hasDuplicate={duplicateIds?.has(deal.id)}
+              onSimilarClick={onSimilarClick}
             />
           ))
         )}
@@ -242,11 +268,12 @@ export default function KanbanView() {
   const myName = currentUser?.name ?? "";
   const isMyTab = activeTab === "マイ";
 
-  const [draggedId,   setDraggedId]   = useState(null);
+  const [draggedId,     setDraggedId]     = useState(null);
   const draggedIdRef = useRef(null); /* stale closure 対策: state と並行管理 */
-  const [dragOverCol, setDragOverCol] = useState(null);
-  const [pendingMove, setPendingMove] = useState(null);
-  const [detailDeal,  setDetailDeal]  = useState(null);
+  const [dragOverCol,   setDragOverCol]   = useState(null);
+  const [pendingMove,   setPendingMove]   = useState(null);
+  const [detailDeal,    setDetailDeal]    = useState(null);
+  const [similarTarget, setSimilarTarget] = useState(null);
 
   const filtered = useMemo(() => {
     const pdDeals = deals.filter(d => activePeriods.includes(d.period));
@@ -295,13 +322,28 @@ export default function KanbanView() {
     setPendingMove(null);
   };
 
+  /* ── 類似企業名を持つ案件 ID の Set（全 deals 横断） ── */
+  const duplicateIds = useMemo(() => {
+    const ids = new Set();
+    for (let i = 0; i < filtered.length; i++) {
+      if (ids.has(filtered[i].id)) continue; // already flagged, skip inner loop
+      for (let j = i + 1; j < filtered.length; j++) {
+        if (isSimilarCompany(filtered[i].company || "", filtered[j].company || "")) {
+          ids.add(filtered[i].id);
+          ids.add(filtered[j].id);
+        }
+      }
+    }
+    return ids;
+  }, [filtered]);
+
   /* 目標: マイタブ → 個人目標 / チームタブ → チーム合計 */
   const teamTarget = useMemo(() => {
     if (isMyTab) return getMemberTarget(currentUser, activePeriods);
     return members
       .filter(m => m.role !== "admin" && m.status === "active" &&
         (activeTab === "全体" || m.team === activeTab ||
-         (activeTab === "鈴木Tプレ" && (m.team === "杉山T" || m.team === "鈴木T"))))
+         (activeTab === "鈴木Tプレ" && (m.team === "鈴木T" || (m.team === "杉山T" && m.name === "小田切")))))
       .reduce((s, m) => s + getMemberTarget(m, activePeriods), 0);
   }, [members, activeTab, currentUser, isMyTab, activePeriods]);
 
@@ -338,6 +380,8 @@ export default function KanbanView() {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onDetail={setDetailDeal}
+            duplicateIds={duplicateIds}
+            onSimilarClick={setSimilarTarget}
           />
         ))}
       </div>
@@ -363,6 +407,10 @@ export default function KanbanView() {
 
       {detailDeal && (
         <DealDetailModal deal={detailDeal} onClose={() => setDetailDeal(null)} />
+      )}
+
+      {similarTarget && (
+        <SimilarDealsPanel deal={similarTarget} onClose={() => setSimilarTarget(null)} />
       )}
     </div>
   );

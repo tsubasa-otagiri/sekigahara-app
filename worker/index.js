@@ -130,6 +130,115 @@ export default {
       return json({ ok: true, ts: Date.now(), clientIp: clientIP });
     }
 
+    /* ════════════════════════════════════════════════════
+     * POST /api/import-deals — Excel/CSV インポート Upsert
+     *
+     * Body: { deals: [...], period: "YYYY-MM" }
+     *
+     * Upsert ルール:
+     *   - normalizeCompanyName(company) + period でマッチング
+     *   - 一致: confidence / plan / amount / is / fs / team / note を更新
+     *   - 不一致: 新規 ID を採番して追加
+     * ════════════════════════════════════════════════════ */
+    if (path === "/api/import-deals" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const { deals: incoming, period } = body;
+
+        if (!Array.isArray(incoming) || !period) {
+          return err("deals[] と period が必要です", 400);
+        }
+
+        /* 企業名正規化（マッチングキー生成）— フロントと同一ロジック */
+        function normalizeCompanyName(name) {
+          if (!name) return "";
+          let s = String(name).trim();
+          s = s.replace(/株式会社|有限会社|合同会社|一般社団法人|一般財団法人|公益社団法人|公益財団法人|医療法人|学校法人|社会福祉法人|特定非営利活動法人|ＮＰＯ法人|NPO法人/g, "");
+          s = s.replace(/（株）|\(株\)|【株】|\[株\]|（有）|\(有\)|（合）|\(合\)/g, "");
+          s = s.replace(/[Ａ-Ｚ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+          s = s.replace(/[ａ-ｚ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+          s = s.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+          s = s.replace(/[\s　]/g, "");
+          s = s.replace(/[・、，,.\-]/g, "");
+          return s.toLowerCase();
+        }
+
+        /* 確度 → ヨミ度変換 */
+        const confToYomi = (c) =>
+          c === "回収" ? "受注" : c === "70%" ? "70%" : c === "50%" ? "50%" : "30%";
+
+        /* 既存 deals を KV から取得 */
+        const existingRaw = await env.KV.get("deals");
+        let existing = existingRaw ? JSON.parse(existingRaw) : [];
+
+        let added = 0, updated = 0;
+        const now = new Date().toISOString();
+
+        for (const deal of incoming) {
+          const normKey = normalizeCompanyName(deal.company);
+          if (!normKey) continue;
+
+          const idx = existing.findIndex(
+            d => d.period === period && normalizeCompanyName(d.company) === normKey
+          );
+
+          if (idx >= 0) {
+            /* ── 既存案件を更新 ── */
+            const ex = existing[idx];
+            existing[idx] = {
+              ...ex,
+              confidence: deal.confidence,
+              plan:       deal.plan  || ex.plan,
+              amount:     deal.amount != null ? deal.amount : ex.amount,
+              is:         deal.is    || ex.is,
+              fs:         deal.fs    || ex.fs,
+              team:       deal.team  || ex.team,
+              note:       deal.note !== "" ? deal.note : ex.note,
+              phase:      deal.confidence === "回収" ? "受注" : (ex.phase || "未設定"),
+              yomi:       confToYomi(deal.confidence),
+              updatedAt:  now,
+            };
+            updated++;
+          } else {
+            /* ── 新規案件を追加 ── */
+            const conf  = deal.confidence;
+            const uid   = `${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`;
+            existing.push({
+              id:         `import_${uid}`,
+              company:    deal.company,
+              plan:       deal.plan   || "MDC",
+              amount:     deal.amount || 0,
+              is:         deal.is     || "",
+              fs:         deal.fs     || "",
+              team:       deal.team   || "",
+              confidence: conf,
+              phase:      conf === "回収" ? "受注" : "未設定",
+              yomi:       confToYomi(conf),
+              note:       deal.note   || "",
+              period,
+              lossReason: "",
+              activities: [],
+              createdAt:  now,
+              updatedAt:  now,
+            });
+            added++;
+          }
+        }
+
+        /* KV に書き込み → キャッシュ無効化 */
+        await env.KV.put("deals", JSON.stringify(existing));
+        await caches.default
+          .delete(toCacheKey("deals"))
+          .catch(e => console.warn("Cache delete failed:", e.message));
+
+        return json({ ok: true, added, updated, total: existing.length, deals: existing, savedAt: now });
+
+      } catch (e) {
+        console.error("import-deals error:", e);
+        return err("Import failed: " + e.message, 500);
+      }
+    }
+
     /* リソースルーティング: /api/<resource> */
     const m = path.match(/^\/api\/([a-z_]+)$/);
     if (!m || !RESOURCES.includes(m[1])) {

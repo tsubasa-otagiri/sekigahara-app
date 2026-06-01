@@ -12,7 +12,7 @@ import { DEF_MEMBERS, DEF_DEALS } from "../constants/defaultData.js";
 import { LS_KEYS } from "../constants/index.js";
 import { lsGet, lsSet, authLoad, authSave, authClear, nextId, parseAmt, resolvePhase, normalizeName, normalizePeriod } from "../utils/index.js";
 import { buildMonthlyTasks } from "../utils/monthlyTasks.js";
-import { apiGet, apiSet, ForbiddenError } from "../utils/api.js";
+import { apiGet, apiSet, apiImportDeals, ForbiddenError } from "../utils/api.js";
 
 /* 月末タスク対象メンバー（固定16名） */
 const MONTHLY_MEMBERS = [
@@ -85,6 +85,71 @@ const IMPORT_CREATOR = {
   "早坂":   "早川",
 };
 
+/* ══════════════════════════════════════════════
+   6月案件一括インポート v1（2026-06 CSV登録 全51件）
+   company + period "2026-06" で照合：既存を更新 / 新規追加
+══════════════════════════════════════════════ */
+const JUNE_DEALS_V1 = [
+  /* 30% ─ 杉山T */
+  { company:"MS企画",                           plan:"MDC",      amount:8,     is:"早坂",   fs:"早川",   team:"杉山T", confidence:"30%" },
+  { company:"富山育英",                         plan:"MDC",      amount:10,    is:"早坂",   fs:"早川",   team:"杉山T", confidence:"30%" },
+  { company:"株式会社名鉄インプレス",           plan:"MDC",      amount:10,    is:"渡邉",   fs:"杉山",   team:"杉山T", confidence:"30%" },
+  { company:"ネッツトヨタ鹿児島",               plan:"MDC",      amount:10,    is:"小田切", fs:"早川",   team:"杉山T", confidence:"30%" },
+  { company:"栃木銀行",                         plan:"MDC",      amount:20,    is:"早川",   fs:"早川",   team:"杉山T", confidence:"30%" },
+  { company:"すしざんまい",                     plan:"MDC",      amount:10,    is:"早坂",   fs:"早川",   team:"杉山T", confidence:"30%" },
+  /* 30% ─ 中村T */
+  { company:"株式会社伸和ホールディングス",     plan:"コンサル", amount:30,    is:"櫻井",   fs:"中村",   team:"中村T", confidence:"30%" },
+  { company:"コンフィーステイ",                 plan:"コンサル", amount:0,     is:"中",     fs:"中村",   team:"中村T", confidence:"30%" },
+  { company:"アール・ケイエンタープライズ",     plan:"コンサル", amount:21.3,  is:"櫻井",   fs:"中村",   team:"中村T", confidence:"30%" },
+  { company:"エーディックス",                   plan:"コンサル", amount:0,     is:"中",     fs:"中村",   team:"中村T", confidence:"30%" },
+  { company:"JAM TRADING",                      plan:"コンサル", amount:0,     is:"中",     fs:"中村",   team:"中村T", confidence:"30%" },
+  { company:"ピー・エス・コープ",               plan:"MDC",      amount:15,    is:"櫻井",   fs:"中村",   team:"中村T", confidence:"30%" },
+  { company:"二木",                             plan:"MDC",      amount:10,    is:"中",     fs:"中村",   team:"中村T", confidence:"30%" },
+  { company:"ナイスクラップ",                   plan:"MDC",      amount:0,     is:"中",     fs:"中村",   team:"中村T", confidence:"30%" },
+  { company:"UKCorporation",                    plan:"MDC",      amount:0,     is:"櫻井",   fs:"中村",   team:"中村T", confidence:"30%" },
+  /* 30% ─ 渡部T */
+  { company:"神奈川トヨタ自動車",               plan:"コンサル", amount:44,    is:"渡部",   fs:"横井",   team:"渡部T", confidence:"30%" },
+  { company:"島根ダイハツ",                     plan:"MDC",      amount:5,     is:"太田",   fs:"渡部",   team:"渡部T", confidence:"30%" },
+  { company:"あいネットサービス",               plan:"コンサル", amount:0,     is:"太田",   fs:"渡部",   team:"渡部T", confidence:"30%" },
+  { company:"一蔵",                             plan:"コンサル", amount:16,    is:"横井",   fs:"渡部",   team:"渡部T", confidence:"30%", note:"稟議提出まち" },
+  { company:"旅籠屋",                           plan:"MDC",      amount:20,    is:"上浦",   fs:"渡部",   team:"渡部T", confidence:"30%" },
+  { company:"喪服レスキュー",                   plan:"MDC",      amount:8,     is:"上浦",   fs:"渡部",   team:"渡部T", confidence:"30%" },
+  { company:"コロナワールド",                   plan:"MDC",      amount:20,    is:"上浦",   fs:"渡部",   team:"渡部T", confidence:"30%" },
+  /* 30% ─ 鈴木T */
+  { company:"SMART EXCHANGE",                   plan:"コンサル", amount:35.5,  is:"鈴木",   fs:"鈴木",   team:"鈴木T", confidence:"30%" },
+  { company:"野嵩商会",                         plan:"コンサル", amount:30,    is:"十文字", fs:"鈴木",   team:"鈴木T", confidence:"30%" },
+  { company:"万葉倶楽部",                       plan:"MDC",      amount:10,    is:"十文字", fs:"鈴木",   team:"鈴木T", confidence:"30%" },
+  { company:"杏林堂薬局",                       plan:"MDC",      amount:8,     is:"十文字", fs:"鈴木",   team:"鈴木T", confidence:"30%" },
+  { company:"2りんかんイエローハット",          plan:"MDC",      amount:20,    is:"十文字", fs:"鈴木",   team:"鈴木T", confidence:"30%" },
+  { company:"大倉ビル",                         plan:"コンサル", amount:30,    is:"十文字", fs:"鈴木",   team:"鈴木T", confidence:"30%" },
+  { company:"十徳",                             plan:"コンサル", amount:30,    is:"十文字", fs:"鈴木",   team:"鈴木T", confidence:"30%" },
+  { company:"岐阜日産自動車",                   plan:"コンサル", amount:30,    is:"十文字", fs:"鈴木",   team:"鈴木T", confidence:"30%" },
+  { company:"ネッツトヨタ香川",                 plan:"コンサル", amount:30,    is:"十文字", fs:"鈴木",   team:"鈴木T", confidence:"30%" },
+  { company:"極東商会",                         plan:"MDC",      amount:10,    is:"井上",   fs:"鈴木",   team:"鈴木T", confidence:"30%" },
+  { company:"ギークマン",                       plan:"MDC",      amount:10,    is:"井上",   fs:"鈴木",   team:"鈴木T", confidence:"30%" },
+  { company:"セイコーリテール",                 plan:"コンサル", amount:30,    is:"井上",   fs:"鈴木",   team:"鈴木T", confidence:"30%" },
+  { company:"吉田",                             plan:"MDC",      amount:8,     is:"井上",   fs:"鈴木",   team:"鈴木T", confidence:"30%" },
+  { company:"トヨタモビリティ釧路",             plan:"コンサル", amount:24,    is:"井上",   fs:"鈴木",   team:"鈴木T", confidence:"30%" },
+  { company:"ミルク",                           plan:"コンサル", amount:40,    is:"井上",   fs:"鈴木",   team:"鈴木T", confidence:"30%" },
+  { company:"IEC",                              plan:"Dash!",    amount:3.75,  is:"井上",   fs:"鈴木",   team:"鈴木T", confidence:"30%" },
+  { company:"ニチイケアパレス",                 plan:"コンサル", amount:50,    is:"井上",   fs:"鈴木",   team:"鈴木T", confidence:"30%" },
+  { company:"喜久屋",                           plan:"MDC",      amount:8,     is:"井上",   fs:"鈴木",   team:"鈴木T", confidence:"30%" },
+  /* 50% */
+  { company:"株式会社学研スタディエ",           plan:"コンサル", amount:24.5,  is:"櫻井",   fs:"中村",   team:"中村T", confidence:"50%", note:"17日までに決" },
+  { company:"株式会社ジローレストランシステム", plan:"MDC",      amount:13,    is:"上浦",   fs:"渡部",   team:"渡部T", confidence:"50%", note:"あと承認1人" },
+  { company:"株式会社成通",                     plan:"MDC",      amount:12,    is:"太田",   fs:"渡部",   team:"渡部T", confidence:"50%", note:"6月20日" },
+  { company:"株式会社やる気",                   plan:"コンサル", amount:30,    is:"十文字", fs:"鈴木",   team:"鈴木T", confidence:"50%" },
+  /* 70% */
+  { company:"ウエインズトヨタ神奈川",           plan:"コンサル", amount:50,    is:"早坂",   fs:"杉山",   team:"杉山T", confidence:"70%" },
+  { company:"株式会社タイヤワールド館ベスト",   plan:"MDC",      amount:4,     is:"十文字", fs:"鈴木",   team:"鈴木T", confidence:"70%" },
+  /* 回収 */
+  { company:"丸福商店",                         plan:"MDC",      amount:15,    is:"早坂",   fs:"早川",   team:"杉山T", confidence:"回収", note:"29日決/決済者に打診中" },
+  { company:"株式会社タカハシ",                 plan:"MDC",      amount:8,     is:"中",     fs:"中村",   team:"中村T", confidence:"回収" },
+  { company:"株式会社ライダース・パブリシティ", plan:"コンサル", amount:30,    is:"櫻井",   fs:"中",     team:"中村T", confidence:"回収" },
+  { company:"ドゥワーク",                       plan:"MDC",      amount:10,    is:"上浦",   fs:"渡部",   team:"渡部T", confidence:"回収" },
+  { company:"株式会社大滝",                     plan:"MDC",      amount:3.55,  is:"十文字", fs:"鈴木",   team:"鈴木T", confidence:"回収" },
+];
+
 /** 重複（title+assignee）を除いて未登録タスクのみ追加 */
 function applyTaskImportV1(tasks) {
   const existing = new Set(tasks.map(t => `${t.title}::${t.assignee}`));
@@ -109,6 +174,36 @@ function applyTaskImportCreatorFix(tasks) {
       ? { ...t, createdBy: IMPORT_CREATOR[t.assignee] }
       : t
   );
+}
+
+/** 6月案件 v1 migration: 既存 2026-06 案件は一切変更しない。
+ *  company が存在しない場合のみ追加（冪等・ユーザー変更を上書きしない） */
+function applyJuneDealsV1(deals) {
+  const period = "2026-06";
+  const now = new Date().toISOString();
+  // 既存の 2026-06 会社名セット
+  const existingCompanies = new Set(
+    deals.filter(d => d.period === period).map(d => d.company)
+  );
+  let next = [...deals];
+  let changed = false;
+  JUNE_DEALS_V1.forEach((src, idx) => {
+    if (existingCompanies.has(src.company)) return; // 既存 → スキップ（上書きしない）
+    const conf  = src.confidence;
+    const phase = conf === "回収" ? "受注" : "未設定";
+    const yomi  = conf === "回収" ? "受注" : conf === "70%" ? "70%" : conf === "50%" ? "50%" : "30%";
+    next.push({
+      id: `june_v1_${idx}`,
+      company: src.company, plan: src.plan, amount: src.amount,
+      is: src.is, fs: src.fs, team: src.team,
+      confidence: conf, phase, yomi,
+      note: src.note || "", period, lossReason: "",
+      activities: [], createdAt: now, updatedAt: now,
+    });
+    existingCompanies.add(src.company);
+    changed = true;
+  });
+  return { deals: changed ? next : deals, changed };
 }
 
 /* 当月 period 文字列 ("YYYY-MM") */
@@ -359,7 +454,16 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   /* ── 案件 ── */
-  const [deals, setDeals] = useState(() => lsGet(LS_KEYS.DEALS, DEF_DEALS).map(_normDeal));
+  const [deals, setDeals] = useState(() => {
+    let d = lsGet(LS_KEYS.DEALS, DEF_DEALS).map(_normDeal);
+    const JUNE_KEY = "honnoji_june_deals_v1";
+    if (!localStorage.getItem(JUNE_KEY)) {
+      const { deals: migrated, changed } = applyJuneDealsV1(d);
+      if (changed) d = migrated;
+      localStorage.setItem(JUNE_KEY, "1");
+    }
+    return d;
+  });
   useEffect(() => { lsSet(LS_KEYS.DEALS, deals); }, [deals]);
 
   /* ── 年月選択 ── */
@@ -462,6 +566,21 @@ export const AppProvider = ({ children }) => {
   const replaceDeals = useCallback((ds) => {
     setDeals(ds);
     if (apiLoadedRef.current) { lastDealsWriteRef.current = Date.now(); apiSet("deals", ds).catch(console.error); }
+  }, []);
+
+  /**
+   * Excelインポート: パース済み案件配列をバックエンドの /api/import-deals へ送り
+   * Upsert（追加・更新）を実行。完了後に deals state を即時反映。
+   */
+  const importDeals = useCallback(async (incomingDeals, period) => {
+    const result = await apiImportDeals(incomingDeals, period);
+    if (result.ok && Array.isArray(result.deals)) {
+      const normalized = result.deals.map(_normDeal);
+      lastDealsWriteRef.current = Date.now();
+      setDeals(normalized);
+      lsSet(LS_KEYS.DEALS, normalized);
+    }
+    return result; // { ok, added, updated, total, savedAt }
   }, []);
 
   /* ── メンバー ── */
@@ -662,11 +781,19 @@ export const AppProvider = ({ children }) => {
       ]);
 
       /* deals —
-       * fetchStartTime < lastDealsWriteRef なら GET 中に書き込みが起きている
-       * → 古い KV レスポンスで削除/更新が上書きされるのを防ぐためスキップ */
+       * Cloudflare KV は最大60秒の伝播遅延があるため、書き込みから60秒間は
+       * ポーリングによる上書きをスキップして書き込み直後の巻き戻しを防ぐ。
+       * fetchStartTime < lastDealsWriteRef + 60s → スキップ */
       if (Array.isArray(apiDeals) && apiDeals.length > 0) {
-        if (fetchStartTime >= lastDealsWriteRef.current) {
-          setDeals(apiDeals.map(_normDeal));
+        if (fetchStartTime >= lastDealsWriteRef.current + 60_000) {
+          let nextDeals = apiDeals.map(_normDeal);
+          const { deals: migratedDeals, changed: juneChanged } = applyJuneDealsV1(nextDeals);
+          if (juneChanged) {
+            nextDeals = migratedDeals;
+            lastDealsWriteRef.current = Date.now();
+            apiSet("deals", nextDeals).catch(console.error);
+          }
+          setDeals(nextDeals);
         }
       } else if (lsExists(LS_KEYS.DEALS)) {
         const local = lsGet(LS_KEYS.DEALS, []);
@@ -905,7 +1032,7 @@ export const AppProvider = ({ children }) => {
       /* deals */
       deals, addDeal, updateDeal, deleteDeal,
       addActivity, deleteActivity, updateActivity,
-      replaceDeals,
+      replaceDeals, importDeals,
       /* tasks */
       tasks, addTask, updateTask, deleteTask, toggleTask,
       generateMonthlyCheckTasks,

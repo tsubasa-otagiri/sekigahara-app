@@ -55,11 +55,9 @@ export const getTabMemberNames = (tab, members, myName = "") => {
   );
 
   if (tab === "鈴木Tプレ") {
-    /* 鈴木T全員 + 杉山T（杉山を除く） — DISPLAY_GROUPS 定義を優先 */
+    /* 鈴木T全員 + 小田切（杉山T）のみ — DISPLAY_GROUPS 定義を優先 */
     const suzukiNames = (DISPLAY_GROUPS.find(g => g.label === "鈴木T")?.names || []);
-    const sugiyamaNames = (DISPLAY_GROUPS.find(g => g.label === "杉山T")?.names || [])
-      .filter(n => n !== "杉山");
-    return [...suzukiNames, ...sugiyamaNames].filter(n => activeNames.has(n));
+    return [...suzukiNames, "小田切"].filter(n => activeNames.has(n));
   }
 
   /* 単一チーム: DISPLAY_GROUPS の names を使って確定的に絞る */
@@ -84,7 +82,7 @@ export const filterByTab = (deals, tab, myName = "") => {
   if (tab === "マイ") return myName
     ? deals.filter(d => d.is === myName || d.fs === myName)
     : deals;
-  if (tab === "鈴木Tプレ") return deals.filter(d => d.team === "杉山T" || d.team === "鈴木T");
+  if (tab === "鈴木Tプレ") return deals.filter(d => d.team === "鈴木T" || (d.team === "杉山T" && d.is === "小田切"));
   return deals.filter(d => d.team === tab);
 };
 

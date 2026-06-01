@@ -292,7 +292,7 @@ export default function SummaryView() {
     return members
       .filter(m => m.role !== "admin" && m.status === "active" &&
         (activeTab === "全体" || m.team === activeTab ||
-         (activeTab === "鈴木Tプレ" && (m.team === "杉山T" || m.team === "鈴木T"))))
+         (activeTab === "鈴木Tプレ" && (m.team === "鈴木T" || (m.team === "杉山T" && m.name === "小田切")))))
       .reduce((s, m) => s + getMemberTarget(m, activePeriods), 0);
   }, [members, activeTab, currentUser, isMyTab, activePeriods]);
 

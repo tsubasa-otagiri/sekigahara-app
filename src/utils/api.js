@@ -75,6 +75,30 @@ export async function apiSet(resource, data) {
 }
 
 /**
+ * POST /api/import-deals  (upsert)
+ * @param {Object[]} deals  - パース済み案件配列
+ * @param {string}   period - "YYYY-MM"
+ * @throws {ForbiddenError} 403 の場合
+ */
+export async function apiImportDeals(deals, period) {
+  const res = await fetchWithTimeout(
+    `${BASE}/api/import-deals`,
+    {
+      method:  "POST",
+      headers: buildHeaders(),
+      body:    JSON.stringify({ deals, period }),
+    },
+    30000 // 大量データのため余裕を持って 30s
+  );
+  if (res.status === 403) throw new ForbiddenError("import-deals");
+  if (!res.ok) {
+    const msg = await res.text().catch(() => "");
+    throw new Error(`インポートに失敗しました: ${msg || res.status}`);
+  }
+  return res.json();
+}
+
+/**
  * Workers ヘルスチェック
  * @returns {Promise<number>} HTTP ステータスコード (0 = ネットワークエラー/タイムアウト)
  */

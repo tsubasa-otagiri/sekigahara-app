@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { ChevronUp, ChevronDown, ChevronsUpDown, X } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import { fmtAmt, getMemberTarget } from "../../utils/index.js";
-import { REAL_TEAMS, THEX } from "../../constants/index.js";
+import { REAL_TEAMS, THEX, DISPLAY_GROUPS } from "../../constants/index.js";
 import { TeamBadge, PlanBadge } from "../ui/Badges.jsx";
 
 /* ── ソート可能ヘッダー ── */
@@ -141,10 +141,28 @@ export default function TeamRankingView() {
     REAL_TEAMS.map(team => buildRow(team, [team])),
   [pdDeals, members]);
 
-  /* 鈴木Tプレは4チームランキングとは別枠 */
-  const preRow = useMemo(() =>
-    buildRow("鈴木Tプレ", ["杉山T", "鈴木T"], ["杉山", "渡邉"]),
-  [pdDeals, members]);
+  /* 鈴木Tプレは4チームランキングとは別枠（鈴木T全員 ＋ 小田切のみ） */
+  const preRow = useMemo(() => {
+    const PRE_NAMES = new Set([
+      ...(DISPLAY_GROUPS.find(g => g.label === "鈴木T")?.names ?? []),
+      "小田切",
+    ]);
+    const teamMembers = members.filter(m =>
+      PRE_NAMES.has(m.name) && m.role !== "admin" && m.status === "active"
+    );
+    const teamDeals = pdDeals.filter(d =>
+      d.team === "鈴木T" || (d.team === "杉山T" && d.is === "小田切")
+    );
+    const kaishuDeals = teamDeals.filter(d => d.confidence === "回収");
+    const kaishu      = kaishuDeals.reduce((s, d) => s + (d.amount || 0), 0);
+    const kaishuCount = kaishuDeals.length;
+    const aggressive  = teamDeals.filter(d => d.confidence === "70%" || d.confidence === "回収").reduce((s, d) => s + (d.amount || 0), 0);
+    const pipeline    = teamDeals.length;
+    const target      = teamMembers.reduce((s, m) => s + getMemberTarget(m, activePeriods), 0);
+    const rate        = target > 0 ? Math.round((kaishu / target) * 100) : 0;
+    const perPerson   = teamMembers.length > 0 ? Math.round((kaishu / teamMembers.length) * 100) / 100 : 0;
+    return { team: "鈴木Tプレ", target, kaishu, kaishuCount, aggressive, pipeline, rate, memberCount: teamMembers.length, perPerson };
+  }, [pdDeals, members, activePeriods]);
 
   const sorted = useMemo(() => [...rows].sort((a, b) => {
     const va = a[sortKey] ?? 0, vb = b[sortKey] ?? 0;
@@ -219,8 +237,7 @@ export default function TeamRankingView() {
                     <td className="px-4 py-3">
                       <button
                         onClick={() => {
-                          const keys = team === "鈴木Tプレ" ? ["杉山T", "鈴木T"] : [team];
-                          setKaishuModal({ title: team, deals: pdDeals.filter(d => d.confidence === "回収" && keys.includes(d.team)) });
+                          setKaishuModal({ title: team, deals: pdDeals.filter(d => d.confidence === "回収" && d.team === team) });
                         }}
                         className="flex items-center gap-2 hover:text-blue-600 transition-colors group"
                       >
@@ -285,7 +302,7 @@ export default function TeamRankingView() {
         <div className="px-4 py-2.5 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0" />
           <span className="text-[11px] font-black text-blue-700 tracking-wide">鈴木Tプレ（参考）</span>
-          <span className="text-[10px] text-blue-400 ml-1">杉山T（杉山除く） ＋ 鈴木T の合算</span>
+          <span className="text-[10px] text-blue-400 ml-1">小田切（杉山T） ＋ 鈴木T の合算</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[540px] border-collapse">
@@ -300,7 +317,7 @@ export default function TeamRankingView() {
                     </td>
                     <td className="px-4 py-3">
                       <button
-                        onClick={() => setKaishuModal({ title: team, deals: pdDeals.filter(d => d.confidence === "回収" && ["杉山T","鈴木T"].includes(d.team)) })}
+                        onClick={() => setKaishuModal({ title: team, deals: pdDeals.filter(d => d.confidence === "回収" && (d.team === "鈴木T" || (d.team === "杉山T" && d.is === "小田切"))) })}
                         className="flex items-center gap-2 hover:text-blue-600 transition-colors group"
                       >
                         <span className="w-3 h-3 rounded-full shrink-0" style={{ background: hex }} />

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Save } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Save, AlertTriangle } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
 import { CONF, PHASES, PLANS, TEAMS_OPT, MEMBER_MASTER_NAMES, YOMI, LOSS_REASONS } from "../constants/index.js";
 import { parseAmt, resolvePhase } from "../utils/index.js";
@@ -8,6 +8,11 @@ import Modal from "./ui/Modal.jsx";
 /* ── スタイル定数 ── */
 const SEL = "w-full px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition appearance-none cursor-pointer";
 const INP = "w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition";
+
+/* ── 法人格を除去して比較用の正規化名を返す ── */
+const CORP_PREFIX = /^(株式会社|有限会社|合同会社|一般社団法人|一般財団法人|公益社団法人|公益財団法人|医療法人|学校法人|社会福祉法人|特定非営利活動法人|ＮＰＯ法人|NPO法人|（株）|\(株\)|（有）|\(有\))/;
+const CORP_SUFFIX = /(株式会社|有限会社|合同会社)$/;
+const stripCorp = (s) => s.replace(CORP_PREFIX, "").replace(CORP_SUFFIX, "").trim();
 
 const Fld = ({ label, req, err, children }) => (
   <div>
@@ -28,7 +33,7 @@ const BLANK = {
 };
 
 export default function DealModal({ deal, onClose }) {
-  const { addDeal, updateDeal, members, currentPeriod } = useApp();
+  const { addDeal, updateDeal, members, deals, currentPeriod } = useApp();
   const isEdit = !!deal;
 
   const [form, setForm] = useState(() =>
@@ -65,6 +70,32 @@ export default function DealModal({ deal, onClose }) {
         ...globalFs.filter((g) => !teamMembers.find((t) => t.id === g.id)),
       ])
     : [];
+
+  /* ── 類似企業名チェック ── */
+  const similarDeals = useMemo(() => {
+    const q = form.company.trim();
+    if (q.length < 2) return [];
+    const nq = stripCorp(q);
+    const seen = new Set();
+    return deals
+      .filter(d => d.id !== deal?.id)
+      .filter(d => {
+        const c = d.company || "";
+        if (!c) return false;
+        /* ① 直接比較（どちらかがどちらかを含む） */
+        if (c.includes(q) || q.includes(c)) return true;
+        /* ② 法人格除去後の比較（「株式会社杏林堂薬局」↔「杏林堂薬局」など） */
+        const nc = stripCorp(c);
+        if (nq.length >= 2 && nc.length >= 2 && (nc.includes(nq) || nq.includes(nc))) return true;
+        return false;
+      })
+      .filter(d => {
+        if (seen.has(d.company)) return false;
+        seen.add(d.company);
+        return true;
+      })
+      .slice(0, 6);
+  }, [form.company, deals, deal?.id]);
 
   /* ── フォーム更新ヘルパー ── */
   const set = (key, val) => {
@@ -137,6 +168,37 @@ export default function DealModal({ deal, onClose }) {
             placeholder="株式会社〇〇"
             autoFocus
           />
+          {/* 新規: 類似あり時のみ警告 / 編集: 常に確認パネル表示 */}
+          {form.company.trim().length >= 2 && (similarDeals.length > 0 || isEdit) && (
+            <div className={`mt-1.5 rounded-xl border px-3 py-2 ${
+              similarDeals.length > 0
+                ? "border-amber-200 bg-amber-50"
+                : "border-green-200 bg-green-50"
+            }`}>
+              {similarDeals.length > 0 ? (
+                <>
+                  <div className="flex items-center gap-1 text-[11px] font-semibold text-amber-700 mb-1">
+                    <AlertTriangle size={11} />
+                    類似の企業名が既に登録されています
+                  </div>
+                  <ul className="space-y-0.5">
+                    {similarDeals.map(d => (
+                      <li key={d.id} className="text-[11px] text-amber-700 flex items-center gap-1">
+                        <span className="text-amber-400">·</span>
+                        <span className="font-medium">{d.company}</span>
+                        <span className="text-amber-500">（{d.period}・{d.team}・{d.confidence}）</span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                <div className="flex items-center gap-1 text-[11px] text-green-700">
+                  <span>✓</span>
+                  <span>他に類似の企業名はありません</span>
+                </div>
+              )}
+            </div>
+          )}
         </Fld>
 
         {/* プラン ・ 月額 */}

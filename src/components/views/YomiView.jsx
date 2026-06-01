@@ -1,7 +1,19 @@
 import { useState, useMemo, useEffect, Fragment } from "react";
-import { CheckSquare, Square, Trash } from "lucide-react";
+import { CheckSquare, Square, Trash, AlertTriangle } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import { filterByTab, fmtAmt, isNeglected } from "../../utils/index.js";
+import SimilarDealsPanel from "../SimilarDealsPanel.jsx";
+
+/* ── 類似企業名検出ヘルパー（KanbanView と同一ロジック） ── */
+const _CORP_PRE = /^(株式会社|有限会社|合同会社|一般社団法人|一般財団法人|公益社団法人|公益財団法人|医療法人|学校法人|社会福祉法人|特定非営利活動法人|ＮＰＯ法人|NPO法人|（株）|\(株\)|（有）|\(有\))/;
+const _CORP_SUF = /(株式会社|有限会社|合同会社)$/;
+const _stripCorp = (s) => s.replace(_CORP_PRE, "").replace(_CORP_SUF, "").trim();
+const _isSimilar = (a, b) => {
+  if (!a || !b) return false;
+  if (a.includes(b) || b.includes(a)) return true;
+  const na = _stripCorp(a), nb = _stripCorp(b);
+  return na.length >= 2 && nb.length >= 2 && (na.includes(nb) || nb.includes(na));
+};
 import { CONF, CTW } from "../../constants/index.js";
 import { TeamBadge, ConfBadge, PlanBadge } from "../ui/Badges.jsx";
 import Confirm from "../ui/Confirm.jsx";
@@ -28,7 +40,7 @@ const lastActivityMemo = (deal) => {
 };
 
 /* ── 1行 ── */
-function DealRow({ deal, isAdmin, checked, onToggle, onDetail }) {
+function DealRow({ deal, isAdmin, checked, onToggle, onDetail, hasDuplicate, onSimilarClick }) {
   return (
     <tr
       className="hover:bg-blue-50/40 transition-colors group border-b border-slate-100 last:border-0 cursor-pointer"
@@ -49,12 +61,22 @@ function DealRow({ deal, isAdmin, checked, onToggle, onDetail }) {
         </span>
       </td>
       <td className="px-4 py-3.5 min-w-[140px]">
-        <span className="text-[13px] font-semibold text-slate-800">{deal.company}</span>
-        {isNeglected(deal) && (
-          <span className="ml-1.5 text-[9px] font-bold bg-red-100 text-red-500 border border-red-200 rounded px-1 py-0.5 shrink-0">
-            🔥 放置注意
-          </span>
-        )}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[13px] font-semibold text-slate-800">{deal.company}</span>
+          {hasDuplicate && (
+            <span
+              onClick={e => { e.stopPropagation(); onSimilarClick && onSimilarClick(deal); }}
+              className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-amber-100 text-amber-600 border border-amber-300 rounded px-1 py-0.5 shrink-0 cursor-pointer hover:bg-amber-200 transition-colors"
+            >
+              <AlertTriangle size={8} /> 類似企業あり
+            </span>
+          )}
+          {isNeglected(deal) && (
+            <span className="inline-flex text-[9px] font-bold bg-red-100 text-red-500 border border-red-200 rounded px-1 py-0.5 shrink-0">
+              🔥 放置注意
+            </span>
+          )}
+        </div>
       </td>
       <td className="px-3 py-3.5 whitespace-nowrap">
         <PlanBadge plan={deal.plan} />
@@ -158,9 +180,13 @@ export default function YomiView() {
   const [detailDeal, setDetailDeal] = useState(null);
   /* 削除確認ダイアログ状態 */
   const [confirmDel, setConfirmDel] = useState(null); // null | {mode:"single",id} | {mode:"bulk",ids:[]}
+  /* 類似企業パネル */
+  const [similarTarget, setSimilarTarget] = useState(null);
+  /* 類似企業のみ表示フィルター */
+  const [showOnlySimilar, setShowOnlySimilar] = useState(false);
 
-  /* タブ切り替えで選択リセット */
-  useEffect(() => { setSelected(new Set()); }, [activeTab]);
+  /* タブ切り替えで選択・フィルターをリセット */
+  useEffect(() => { setSelected(new Set()); setShowOnlySimilar(false); }, [activeTab]);
 
   /* ── フィルター + 検索 ── */
   const filtered = useMemo(() => {
@@ -181,13 +207,34 @@ export default function YomiView() {
     return ds;
   }, [deals, activeTab, searchQuery, activePeriods]);
 
-  /* ── 確度別グループ ── */
+  /* ── 確度別グループ（表示案件ベース） ── */
   const groups = useMemo(() =>
     CONF_ORDER.map((conf) => {
-      const ds = filtered.filter((d) => d.confidence === conf);
+      const ds = displayed.filter((d) => d.confidence === conf);
       return { conf, deals: ds, total: ds.reduce((s, d) => s + (d.amount || 0), 0) };
     }),
-  [filtered]);
+  [displayed]);
+
+  /* ── 類似企業名を持つ案件IDのSet ── */
+  const duplicateIds = useMemo(() => {
+    const ids = new Set();
+    for (let i = 0; i < filtered.length; i++) {
+      if (ids.has(filtered[i].id)) continue;
+      for (let j = i + 1; j < filtered.length; j++) {
+        if (_isSimilar(filtered[i].company || "", filtered[j].company || "")) {
+          ids.add(filtered[i].id);
+          ids.add(filtered[j].id);
+        }
+      }
+    }
+    return ids;
+  }, [filtered]);
+
+  /* ── 表示案件（類似フィルター適用後） ── */
+  const displayed = useMemo(
+    () => showOnlySimilar ? filtered.filter(d => duplicateIds.has(d.id)) : filtered,
+    [filtered, duplicateIds, showOnlySimilar]
+  );
 
   /* ── 選択操作 ── */
   const toggleSelect = (id) => {
@@ -234,21 +281,38 @@ export default function YomiView() {
     ? `この案件を削除しますか？\n削除したデータは復元できません。`
     : `選択した ${confirmDel?.ids?.length} 件の案件を\nまとめて削除しますか？`;
 
-  const totalFiltered = filtered.reduce((s, d) => s + (d.amount || 0), 0);
+  const totalDisplayed = displayed.reduce((s, d) => s + (d.amount || 0), 0);
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto fade-in">
       {/* サマリーバー */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-bold text-slate-700">{activeTab} — ヨミ一覧</h2>
           <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 rounded-full px-2.5 py-0.5">
-            {filtered.length} 件
+            {displayed.length} 件
           </span>
+          {/* 類似企業フィルター */}
+          {duplicateIds.size > 0 && (
+            <button
+              onClick={() => setShowOnlySimilar(v => !v)}
+              className={`flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full border transition-all ${
+                showOnlySimilar
+                  ? "bg-amber-500 text-white border-amber-500 shadow-sm"
+                  : "bg-amber-50 text-amber-600 border-amber-300 hover:bg-amber-100"
+              }`}
+            >
+              <AlertTriangle size={10} />
+              類似企業のみ
+              <span className={`text-[10px] font-black tabular ${showOnlySimilar ? "text-white/80" : "text-amber-500"}`}>
+                {duplicateIds.size}
+              </span>
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-1.5">
           <span className="text-[11px] text-slate-400">合計</span>
-          <span className="text-base font-black text-slate-800 tabular">{fmtAmt(totalFiltered)}</span>
+          <span className="text-base font-black text-slate-800 tabular">{fmtAmt(totalDisplayed)}</span>
         </div>
       </div>
 
@@ -306,6 +370,8 @@ export default function YomiView() {
                           checked={selected.has(deal.id)}
                           onToggle={toggleSelect}
                           onDetail={setDetailDeal}
+                          hasDuplicate={duplicateIds.has(deal.id)}
+                          onSimilarClick={setSimilarTarget}
                         />
                       ))}
                     </Fragment>
@@ -331,6 +397,11 @@ export default function YomiView() {
       {/* 案件詳細モーダル */}
       {detailDeal && (
         <DealDetailModal deal={detailDeal} onClose={() => setDetailDeal(null)} />
+      )}
+
+      {/* 類似企業パネル */}
+      {similarTarget && (
+        <SimilarDealsPanel deal={similarTarget} onClose={() => setSimilarTarget(null)} />
       )}
     </div>
   );

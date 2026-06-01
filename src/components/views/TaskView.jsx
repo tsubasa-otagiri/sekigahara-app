@@ -117,13 +117,10 @@ function buildSections(activeTab, members) {
   }
   if (activeTab === "鈴木Tプレ") {
     const suzuki  = activeNames(DISPLAY_GROUPS.find(g => g.label === "鈴木T")?.names || []);
-    const sugiyama = activeNames(
-      (DISPLAY_GROUPS.find(g => g.label === "杉山T")?.names || []).filter(n => n !== "杉山")
-    );
-    return [
-      { label: "鈴木T",  memberNames: suzuki  },
-      { label: "杉山T",  memberNames: sugiyama },
-    ];
+    const odagiri = activeNames(["小田切"]);
+    const groups = [{ label: "鈴木T", memberNames: suzuki }];
+    if (odagiri.length > 0) groups.push({ label: "杉山T", memberNames: odagiri });
+    return groups;
   }
   if (activeTab === "マイ") return null; // フラットリスト
   const group = DISPLAY_GROUPS.find(g => g.label === activeTab);

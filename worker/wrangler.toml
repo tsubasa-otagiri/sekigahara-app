@@ -1,6 +1,7 @@
 name            = "kpi-dashboard"
 main            = "index.js"
 compatibility_date = "2024-11-01"
+account_id      = "b1de89472c3d33b4cb527252dbec9cb8"
 
 # ── KV Namespace ──────────────────────────────────────
 [[kv_namespaces]]
@@ -11,10 +12,11 @@ id      = "30733344d83840aabc5e2bd3a59b70a6"
 # ALLOWED_IPS: カンマ区切りの許可IPアドレス一覧
 #   ①主回線:        210.172.143.39
 #   ②Mac用VPN回線: 210.172.143.37
+#   ③追加回線:      210.172.130.69
 # ※ Cloudflare Dashboard > Workers > kpi-dashboard > Settings > Variables
 #    で上書き設定することも可能（Dashboard 側が優先される）
 [vars]
-ALLOWED_IPS = "210.172.143.39,210.172.143.37"
+ALLOWED_IPS = "210.172.143.39,210.172.143.37,210.172.130.69"
 
 # ── オプション: API キー認証 ───────────────────────────
 # 認証が必要な場合は Cloudflare Dashboard > Workers > Settings >

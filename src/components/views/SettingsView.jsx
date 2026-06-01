@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo } from "react";
 import ImageCropModal from "../ImageCropModal.jsx";
-import { Plus, Edit2, Save, X, Eye, EyeOff, Download, Upload, FileText, Lock, UserX, UserCheck, Flag, Bell, BellOff, Trash2, ChevronUp, ChevronDown, GripVertical, ClipboardList, Sparkles } from "lucide-react";
+import ImportDealsModal from "../ImportDealsModal.jsx";
+import { Plus, Edit2, Save, X, Eye, EyeOff, Download, Upload, FileText, Lock, UserX, UserCheck, Flag, Bell, BellOff, Trash2, ChevronUp, ChevronDown, GripVertical, ClipboardList, Sparkles, FileSpreadsheet } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import { DEFAULT_PANEL_TASKS } from "../../contexts/AppContext.jsx";
 import { TEAMS_OPT, ROLE_OPT, LS_KEYS } from "../../constants/index.js";
@@ -282,6 +283,7 @@ function BackupSection() {
   const jsonRef = useRef(null);
   const csvRef  = useRef(null);
   const [status, setStatus] = useState("");
+  const [showExcelImport, setShowExcelImport] = useState(false);
 
   const flash = (msg) => { setStatus(msg); setTimeout(()=>setStatus(""), 3500); };
 
@@ -449,27 +451,53 @@ function BackupSection() {
         </div>
       </div>
 
-      {/* CSV（管理者限定） */}
+      {/* CSV / Excelインポート（管理者限定） */}
       {isAdmin ? (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
           <div className="flex items-center gap-2 mb-1">
             <h3 className="text-sm font-bold text-gray-700">案件CSVデータ管理</h3>
             <span className="text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200 rounded px-1.5 py-0.5">管理者限定</span>
           </div>
-          <p className="text-xs text-gray-500 mb-4">案件データをCSV形式でExcel等に書き出し・一括インポートします。</p>
-          <div className="flex flex-wrap gap-3">
-            <button onClick={exportCSV} className={BTN_PRI}>
-              <FileText size={13}/> CSVエクスポート
-            </button>
-            <label className={BTN_GRAY + " cursor-pointer"}>
-              <Upload size={13}/> CSVインポート（追加 / 更新）
-              <input ref={csvRef} type="file" accept=".csv" className="hidden" onChange={importCSV} />
-            </label>
+
+          {/* 当月ヨミ Excelインポート */}
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shrink-0 mt-0.5">
+                <FileSpreadsheet size={15} className="text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-blue-800 mb-0.5">当月ヨミ Excel 一括インポート</p>
+                <p className="text-[11px] text-blue-600 mb-3">
+                  「当月ヨミ(案件管理)」シートの横並び形式（30%/50%/70%/回収済み）を解析して一括登録・更新します。
+                  法人格の表記ゆれ（株式会社・(株) など）は自動吸収。
+                </p>
+                <button
+                  onClick={() => setShowExcelImport(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-sm"
+                >
+                  <FileSpreadsheet size={13} /> Excel インポートを開く
+                </button>
+              </div>
+            </div>
           </div>
-          <p className="text-[11px] text-gray-400 mt-3">
-            CSVフォーマット: id, 企業名, プラン, 月額, IS担当, FS担当, チーム, 確度, フェーズ, 備考, 対象年月<br />
-            id列が一致する行は更新、id列が空または新規の行は追加。活動履歴は保持されます。
-          </p>
+
+          {/* 従来の CSV */}
+          <div>
+            <p className="text-xs text-gray-500 mb-3">従来の案件CSVデータ管理（エクスポート / インポート）</p>
+            <div className="flex flex-wrap gap-3">
+              <button onClick={exportCSV} className={BTN_PRI}>
+                <FileText size={13}/> CSVエクスポート
+              </button>
+              <label className={BTN_GRAY + " cursor-pointer"}>
+                <Upload size={13}/> CSVインポート（追加 / 更新）
+                <input ref={csvRef} type="file" accept=".csv" className="hidden" onChange={importCSV} />
+              </label>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-3">
+              CSVフォーマット: id, 企業名, プラン, 月額, IS担当, FS担当, チーム, 確度, フェーズ, 備考, 対象年月<br />
+              id列が一致する行は更新、id列が空または新規の行は追加。活動履歴は保持されます。
+            </p>
+          </div>
         </div>
       ) : (
         <div className="bg-gray-100 border border-gray-200 rounded-2xl p-5 flex items-center gap-3">
@@ -480,6 +508,8 @@ function BackupSection() {
           </div>
         </div>
       )}
+
+      {showExcelImport && <ImportDealsModal onClose={() => setShowExcelImport(false)} />}
 
       {/* ステータスメッセージ */}
       {status && (

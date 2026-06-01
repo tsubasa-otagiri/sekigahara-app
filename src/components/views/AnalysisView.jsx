@@ -280,7 +280,7 @@ export default function AnalysisView() {
     if (activeTab === "鈴木Tプレ") {
       const names = [
         ...DISPLAY_GROUPS.find(g => g.label === "鈴木T")?.names ?? [],
-        ...DISPLAY_GROUPS.find(g => g.label === "杉山T")?.names ?? [],
+        "小田切",
       ];
       return base.filter(m => names.includes(m.name));
     }
