@@ -207,21 +207,18 @@ export default function YomiView() {
     return ds;
   }, [deals, activeTab, searchQuery, activePeriods]);
 
-  /* ── 確度別グループ（表示案件ベース） ── */
-  const groups = useMemo(() =>
-    CONF_ORDER.map((conf) => {
-      const ds = displayed.filter((d) => d.confidence === conf);
-      return { conf, deals: ds, total: ds.reduce((s, d) => s + (d.amount || 0), 0) };
-    }),
-  [displayed]);
-
   /* ── 類似企業名を持つ案件IDのSet ── */
   const duplicateIds = useMemo(() => {
     const ids = new Set();
+    // 正規化済み名をキャッシュして O(n²) の regex コストを削減
+    const stripped = filtered.map(d => _strip(d.company || "").toLowerCase());
+    const names    = filtered.map(d => (d.company || "").toLowerCase());
     for (let i = 0; i < filtered.length; i++) {
-      if (ids.has(filtered[i].id)) continue;
       for (let j = i + 1; j < filtered.length; j++) {
-        if (_isSimilar(filtered[i].company || "", filtered[j].company || "")) {
+        const a = names[i], b = names[j], na = stripped[i], nb = stripped[j];
+        if (!a || !b) continue;
+        if (a.includes(b) || b.includes(a) ||
+            (na.length >= 2 && nb.length >= 2 && (na.includes(nb) || nb.includes(na)))) {
           ids.add(filtered[i].id);
           ids.add(filtered[j].id);
         }
@@ -235,6 +232,14 @@ export default function YomiView() {
     () => showOnlySimilar ? filtered.filter(d => duplicateIds.has(d.id)) : filtered,
     [filtered, duplicateIds, showOnlySimilar]
   );
+
+  /* ── 確度別グループ（displayed ベース） ── */
+  const groups = useMemo(() =>
+    CONF_ORDER.map((conf) => {
+      const ds = displayed.filter((d) => d.confidence === conf);
+      return { conf, deals: ds, total: ds.reduce((s, d) => s + (d.amount || 0), 0) };
+    }),
+  [displayed]);
 
   /* ── 選択操作 ── */
   const toggleSelect = (id) => {
