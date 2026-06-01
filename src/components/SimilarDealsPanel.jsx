@@ -2,8 +2,12 @@
  * SimilarDealsPanel.jsx
  *
  * 「類似企業あり」バッジを押したときに表示されるパネル。
- * 対象案件と類似企業名を持つ全案件（全期間）を一覧し、
- * 確認後に削除できる。
+ * ┌─────────────────────────────┐
+ * │ この案件（削除ボタンなし）   │  ← バッジを押した元の案件
+ * ├─────────────────────────────┤
+ * │ 類似企業の案件 N件           │
+ * │  会社名 / 期間 / チーム / ¥  🗑 │  ← 削除可
+ * └─────────────────────────────┘
  */
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -13,7 +17,7 @@ import { fmtAmt } from "../utils/index.js";
 import { TeamBadge, ConfBadge } from "./ui/Badges.jsx";
 import Confirm from "./ui/Confirm.jsx";
 
-/* ── 企業名正規化・類似判定（他ファイルと同一ロジック） ── */
+/* ── 企業名正規化・類似判定 ── */
 const _PRE = /^(株式会社|有限会社|合同会社|一般社団法人|一般財団法人|公益社団法人|公益財団法人|医療法人|学校法人|社会福祉法人|特定非営利活動法人|ＮＰＯ法人|NPO法人|（株）|\(株\)|（有）|\(有\))/;
 const _SUF = /(株式会社|有限会社|合同会社)$/;
 const _strip = (s) => s.replace(_PRE, "").replace(_SUF, "").trim();
@@ -24,22 +28,70 @@ const _isSimilar = (a, b) => {
   return na.length >= 2 && nb.length >= 2 && (na.includes(nb) || nb.includes(na));
 };
 
+/* ── 案件1行 ── */
+function DealItem({ d, onDelete }) {
+  return (
+    <div className="flex items-center gap-3 px-3 py-3 rounded-xl
+      bg-slate-50 border border-slate-200
+      hover:border-amber-300 hover:bg-amber-50/40 transition-colors"
+    >
+      <div className="flex-1 min-w-0">
+        <p className="text-[13px] font-bold text-slate-800 leading-tight truncate">
+          {d.company}
+        </p>
+        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+          <span className="text-[10px] text-slate-400 font-medium">{d.period}</span>
+          <TeamBadge team={d.team} />
+          <ConfBadge conf={d.confidence} />
+        </div>
+        {(d.is || d.fs) && (
+          <div className="flex gap-1.5 mt-0.5">
+            {d.is && <span className="text-[10px] text-cyan-700 font-semibold">IS {d.is}</span>}
+            {d.fs && <span className="text-[10px] text-emerald-700 font-semibold">FS {d.fs}</span>}
+          </div>
+        )}
+      </div>
+      <span className="text-sm font-black text-slate-700 tabular shrink-0">
+        {fmtAmt(d.amount)}
+      </span>
+      {onDelete && (
+        <button
+          onClick={() => onDelete(d.id)}
+          title="この案件を削除"
+          className="shrink-0 flex items-center justify-center w-8 h-8 rounded-xl
+            bg-red-50 hover:bg-red-100 text-red-500 transition border border-red-200"
+        >
+          <Trash2 size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
+
 /**
- * @param {Object} deal    - バッジを押した元の案件
+ * @param {Object}   deal    - バッジを押した元の案件（削除不可）
  * @param {Function} onClose
  */
 export default function SimilarDealsPanel({ deal, onClose }) {
   const { deals, deleteDeal } = useApp();
   const [confirmId, setConfirmId] = useState(null);
 
-  /* 全期間から類似企業名を持つ案件を抽出（元案件自身を除く） */
+  /* 元案件の String 化した ID（型ズレを防ぐ） */
+  const originId = String(deal.id);
+
+  /* 全期間から類似企業名を持つ案件を抽出（元案件自身を厳密に除外） */
   const similars = deals.filter(
-    d => d.id !== deal.id && _isSimilar(deal.company || "", d.company || "")
+    d => String(d.id) !== originId && _isSimilar(deal.company || "", d.company || "")
   );
 
-  const confirmDeal = similars.find(d => d.id === confirmId);
+  const confirmDeal = similars.find(d => String(d.id) === String(confirmId));
 
   const execDelete = () => {
+    /* 安全ガード: 元案件は絶対に削除しない */
+    if (String(confirmId) === originId) {
+      setConfirmId(null);
+      return;
+    }
     deleteDeal(confirmId);
     setConfirmId(null);
   };
@@ -67,8 +119,8 @@ export default function SimilarDealsPanel({ deal, onClose }) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-slate-800">類似企業の案件</p>
-            <p className="text-[11px] text-slate-500 mt-0.5 truncate">
-              「{deal.company}」と類似している案件 {similars.length} 件
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              類似する案件 {similars.length} 件を削除できます
             </p>
           </div>
           <button
@@ -79,62 +131,42 @@ export default function SimilarDealsPanel({ deal, onClose }) {
           </button>
         </div>
 
-        {/* リスト */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-          {similars.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 text-sm">
-              類似企業の案件はありません
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+
+          {/* この案件（削除不可） */}
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 px-1">
+              この案件（削除不可）
+            </p>
+            <div className="opacity-60 pointer-events-none">
+              <DealItem d={deal} />
             </div>
-          ) : (
-            similars.map(d => (
-              <div
-                key={d.id}
-                className="flex items-center gap-3 px-3 py-3 rounded-xl
-                  bg-slate-50 border border-slate-200
-                  hover:border-amber-300 hover:bg-amber-50/40 transition-colors"
-              >
-                {/* 案件情報 */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold text-slate-800 leading-tight truncate">
-                    {d.company}
-                  </p>
-                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                    <span className="text-[10px] text-slate-400 font-medium">{d.period}</span>
-                    <TeamBadge team={d.team} />
-                    <ConfBadge conf={d.confidence} />
-                  </div>
-                  {(d.is || d.fs) && (
-                    <div className="flex gap-1.5 mt-0.5">
-                      {d.is && <span className="text-[10px] text-cyan-700 font-semibold">IS {d.is}</span>}
-                      {d.fs && <span className="text-[10px] text-emerald-700 font-semibold">FS {d.fs}</span>}
-                    </div>
-                  )}
-                </div>
+          </div>
 
-                {/* 月額 */}
-                <span className="text-sm font-black text-slate-700 tabular shrink-0">
-                  {fmtAmt(d.amount)}
-                </span>
-
-                {/* 削除ボタン */}
-                <button
-                  onClick={() => setConfirmId(d.id)}
-                  title="削除"
-                  className="shrink-0 flex items-center justify-center w-8 h-8 rounded-xl
-                    bg-red-50 hover:bg-red-100 text-red-500 transition border border-red-200"
-                >
-                  <Trash2 size={14} />
-                </button>
+          {/* 類似企業の案件（削除可） */}
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 px-1">
+              類似企業の案件（削除可）
+            </p>
+            {similars.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-sm rounded-xl border-2 border-dashed border-slate-200">
+                類似企業の案件はありません
               </div>
-            ))
-          )}
+            ) : (
+              <div className="space-y-2">
+                {similars.map(d => (
+                  <DealItem key={d.id} d={d} onDelete={setConfirmId} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* 削除確認ダイアログ */}
-      {confirmId && (
+      {confirmId !== null && confirmDeal && (
         <Confirm
-          message={`「${confirmDeal?.company}」を削除しますか？\n削除したデータは復元できません。`}
+          message={`「${confirmDeal.company}」を削除しますか？\n削除したデータは復元できません。`}
           danger
           okLabel="削除する"
           onOk={execDelete}
