@@ -2,7 +2,7 @@ import { useState, useMemo, useRef } from "react";
 import { AlertTriangle } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import SimilarDealsPanel from "../SimilarDealsPanel.jsx";
-import { filterByTab, fmtAmt, isNeglected, getDealCredit, getMemberTarget, isSimilarCompanyName, normalizeCompanyKey } from "../../utils/index.js";
+import { filterByTab, fmtAmt, isNeglected, getDealCredit, getMemberTarget, stripCompany } from "../../utils/index.js";
 import { CONF, CTW, THEX, REAL_TEAMS } from "../../constants/index.js";
 
 /* チーム順ソートのインデックス（REAL_TEAMS 基準） */
@@ -310,14 +310,15 @@ export default function KanbanView() {
     setPendingMove(null);
   };
 
-  /* ── 類似企業名を持つ案件 ID の Set（完全正規化一致のみ） ── */
+  /* ── 類似企業名を持つ案件 ID の Set（3文字以上一致） ── */
   const duplicateIds = useMemo(() => {
     const ids = new Set();
-    const keys = filtered.map(d => normalizeCompanyKey(d.company || ""));
+    const stripped = filtered.map(d => stripCompany(d.company || ""));
     for (let i = 0; i < filtered.length; i++) {
-      if (!keys[i] || keys[i].length < 2) continue;
+      if (stripped[i].length < 3) continue;
       for (let j = i + 1; j < filtered.length; j++) {
-        if (keys[i] === keys[j]) {
+        if (stripped[j].length < 3) continue;
+        if (stripped[i].includes(stripped[j]) || stripped[j].includes(stripped[i])) {
           ids.add(filtered[i].id);
           ids.add(filtered[j].id);
         }

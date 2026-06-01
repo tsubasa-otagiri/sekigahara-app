@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, Fragment } from "react";
 import { CheckSquare, Square, Trash, AlertTriangle } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
-import { filterByTab, fmtAmt, isNeglected, isSimilarCompanyName, normalizeCompanyKey } from "../../utils/index.js";
+import { filterByTab, fmtAmt, isNeglected, stripCompany } from "../../utils/index.js";
 import SimilarDealsPanel from "../SimilarDealsPanel.jsx";
 import { CONF, CTW } from "../../constants/index.js";
 import { TeamBadge, ConfBadge, PlanBadge } from "../ui/Badges.jsx";
@@ -196,14 +196,15 @@ export default function YomiView() {
     return ds;
   }, [deals, activeTab, searchQuery, activePeriods]);
 
-  /* ── 類似企業名を持つ案件IDのSet（完全正規化一致のみ） ── */
+  /* ── 類似企業名を持つ案件IDのSet（3文字以上一致） ── */
   const duplicateIds = useMemo(() => {
     const ids = new Set();
-    const keys = filtered.map(d => normalizeCompanyKey(d.company || ""));
+    const stripped = filtered.map(d => stripCompany(d.company || ""));
     for (let i = 0; i < filtered.length; i++) {
-      if (!keys[i] || keys[i].length < 2) continue;
+      if (stripped[i].length < 3) continue;
       for (let j = i + 1; j < filtered.length; j++) {
-        if (keys[i] === keys[j]) {
+        if (stripped[j].length < 3) continue;
+        if (stripped[i].includes(stripped[j]) || stripped[j].includes(stripped[i])) {
           ids.add(filtered[i].id);
           ids.add(filtered[j].id);
         }
