@@ -211,7 +211,7 @@ export default function YomiView() {
   const duplicateIds = useMemo(() => {
     const ids = new Set();
     // 正規化済み名をキャッシュして O(n²) の regex コストを削減
-    const stripped = filtered.map(d => _strip(d.company || "").toLowerCase());
+    const stripped = filtered.map(d => _stripCorp(d.company || "").toLowerCase());
     const names    = filtered.map(d => (d.company || "").toLowerCase());
     for (let i = 0; i < filtered.length; i++) {
       for (let j = i + 1; j < filtered.length; j++) {
