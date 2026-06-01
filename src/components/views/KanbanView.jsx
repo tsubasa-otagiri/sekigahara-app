@@ -315,9 +315,9 @@ export default function KanbanView() {
     const ids = new Set();
     const stripped = filtered.map(d => stripCompany(d.company || ""));
     for (let i = 0; i < filtered.length; i++) {
-      if (stripped[i].length < 3) continue;
+      if (stripped[i].length < 2) continue;
       for (let j = i + 1; j < filtered.length; j++) {
-        if (stripped[j].length < 3) continue;
+        if (stripped[j].length < 2) continue;
         if (stripped[i].includes(stripped[j]) || stripped[j].includes(stripped[i])) {
           ids.add(filtered[i].id);
           ids.add(filtered[j].id);

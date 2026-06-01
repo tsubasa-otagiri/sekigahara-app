@@ -48,7 +48,7 @@ export const isSimilarCompanyName = (a, b) => {
   if (!a || !b) return false;
   const na = stripCompany(a);
   const nb = stripCompany(b);
-  if (na.length < 3 || nb.length < 3) return false;
+  if (na.length < 2 || nb.length < 2) return false;
   return na.includes(nb) || nb.includes(na);
 };
 
