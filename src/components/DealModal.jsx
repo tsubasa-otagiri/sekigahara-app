@@ -2,17 +2,13 @@ import { useState, useMemo } from "react";
 import { Save, AlertTriangle } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
 import { CONF, PHASES, PLANS, TEAMS_OPT, MEMBER_MASTER_NAMES, YOMI, LOSS_REASONS } from "../constants/index.js";
-import { parseAmt, resolvePhase } from "../utils/index.js";
+import { parseAmt, resolvePhase, isSimilarCompanyName } from "../utils/index.js";
 import Modal from "./ui/Modal.jsx";
 
 /* ── スタイル定数 ── */
 const SEL = "w-full px-3 py-2 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition appearance-none cursor-pointer";
 const INP = "w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition";
 
-/* ── 法人格を除去して比較用の正規化名を返す ── */
-const CORP_PREFIX = /^(株式会社|有限会社|合同会社|一般社団法人|一般財団法人|公益社団法人|公益財団法人|医療法人|学校法人|社会福祉法人|特定非営利活動法人|ＮＰＯ法人|NPO法人|（株）|\(株\)|（有）|\(有\))/;
-const CORP_SUFFIX = /(株式会社|有限会社|合同会社)$/;
-const stripCorp = (s) => s.replace(CORP_PREFIX, "").replace(CORP_SUFFIX, "").trim();
 
 const Fld = ({ label, req, err, children }) => (
   <div>
@@ -71,23 +67,17 @@ export default function DealModal({ deal, onClose }) {
       ])
     : [];
 
-  /* ── 類似企業名チェック ── */
+  /* ── 類似企業名チェック（完全正規化一致） ── */
   const similarDeals = useMemo(() => {
     const q = form.company.trim();
     if (q.length < 2) return [];
-    const nq = stripCorp(q);
     const seen = new Set();
     return deals
       .filter(d => d.id !== deal?.id)
       .filter(d => {
         const c = d.company || "";
         if (!c) return false;
-        /* ① 直接比較（どちらかがどちらかを含む） */
-        if (c.includes(q) || q.includes(c)) return true;
-        /* ② 法人格除去後の比較（「株式会社杏林堂薬局」↔「杏林堂薬局」など） */
-        const nc = stripCorp(c);
-        if (nq.length >= 2 && nc.length >= 2 && (nc.includes(nq) || nq.includes(nc))) return true;
-        return false;
+        return isSimilarCompanyName(q, c);
       })
       .filter(d => {
         if (seen.has(d.company)) return false;

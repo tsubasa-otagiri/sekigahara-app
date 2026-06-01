@@ -2,20 +2,8 @@ import { useState, useMemo, useRef } from "react";
 import { AlertTriangle } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import SimilarDealsPanel from "../SimilarDealsPanel.jsx";
-import { filterByTab, fmtAmt, isNeglected, getDealCredit, getMemberTarget } from "../../utils/index.js";
+import { filterByTab, fmtAmt, isNeglected, getDealCredit, getMemberTarget, isSimilarCompanyName, normalizeCompanyKey } from "../../utils/index.js";
 import { CONF, CTW, THEX, REAL_TEAMS } from "../../constants/index.js";
-
-/* ── 法人格除去ヘルパー（類似企業名検出用） ── */
-const CORP_PREFIX = /^(株式会社|有限会社|合同会社|一般社団法人|一般財団法人|公益社団法人|公益財団法人|医療法人|学校法人|社会福祉法人|特定非営利活動法人|ＮＰＯ法人|NPO法人|（株）|\(株\)|（有）|\(有\))/;
-const CORP_SUFFIX = /(株式会社|有限会社|合同会社)$/;
-const stripCorp = (s) => s.replace(CORP_PREFIX, "").replace(CORP_SUFFIX, "").trim();
-
-const isSimilarCompany = (a, b) => {
-  if (!a || !b) return false;
-  if (a.includes(b) || b.includes(a)) return true;
-  const na = stripCorp(a), nb = stripCorp(b);
-  return na.length >= 2 && nb.length >= 2 && (na.includes(nb) || nb.includes(na));
-};
 
 /* チーム順ソートのインデックス（REAL_TEAMS 基準） */
 const teamIdx = (team) => {
@@ -322,13 +310,14 @@ export default function KanbanView() {
     setPendingMove(null);
   };
 
-  /* ── 類似企業名を持つ案件 ID の Set（全 deals 横断） ── */
+  /* ── 類似企業名を持つ案件 ID の Set（完全正規化一致のみ） ── */
   const duplicateIds = useMemo(() => {
     const ids = new Set();
+    const keys = filtered.map(d => normalizeCompanyKey(d.company || ""));
     for (let i = 0; i < filtered.length; i++) {
-      if (ids.has(filtered[i].id)) continue; // already flagged, skip inner loop
+      if (!keys[i] || keys[i].length < 2) continue;
       for (let j = i + 1; j < filtered.length; j++) {
-        if (isSimilarCompany(filtered[i].company || "", filtered[j].company || "")) {
+        if (keys[i] === keys[j]) {
           ids.add(filtered[i].id);
           ids.add(filtered[j].id);
         }

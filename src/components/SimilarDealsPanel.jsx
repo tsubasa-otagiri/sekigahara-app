@@ -13,20 +13,9 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Trash2, AlertTriangle } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
-import { fmtAmt } from "../utils/index.js";
+import { fmtAmt, isSimilarCompanyName } from "../utils/index.js";
 import { TeamBadge, ConfBadge } from "./ui/Badges.jsx";
 import Confirm from "./ui/Confirm.jsx";
-
-/* ── 企業名正規化・類似判定 ── */
-const _PRE = /^(株式会社|有限会社|合同会社|一般社団法人|一般財団法人|公益社団法人|公益財団法人|医療法人|学校法人|社会福祉法人|特定非営利活動法人|ＮＰＯ法人|NPO法人|（株）|\(株\)|（有）|\(有\))/;
-const _SUF = /(株式会社|有限会社|合同会社)$/;
-const _strip = (s) => s.replace(_PRE, "").replace(_SUF, "").trim();
-const _isSimilar = (a, b) => {
-  if (!a || !b) return false;
-  if (a.includes(b) || b.includes(a)) return true;
-  const na = _strip(a), nb = _strip(b);
-  return na.length >= 2 && nb.length >= 2 && (na.includes(nb) || nb.includes(na));
-};
 
 /* ── 案件1行 ── */
 function DealItem({ d, onDelete }) {
@@ -81,7 +70,7 @@ export default function SimilarDealsPanel({ deal, onClose }) {
 
   /* 全期間から類似企業名を持つ案件を抽出（元案件自身を厳密に除外） */
   const similars = deals.filter(
-    d => String(d.id) !== originId && _isSimilar(deal.company || "", d.company || "")
+    d => String(d.id) !== originId && isSimilarCompanyName(deal.company || "", d.company || "")
   );
 
   const confirmDeal = similars.find(d => String(d.id) === String(confirmId));

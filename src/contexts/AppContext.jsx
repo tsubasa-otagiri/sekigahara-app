@@ -10,7 +10,7 @@
 import { createContext, useState, useEffect, useCallback, useRef } from "react";
 import { DEF_MEMBERS, DEF_DEALS } from "../constants/defaultData.js";
 import { LS_KEYS } from "../constants/index.js";
-import { lsGet, lsSet, authLoad, authSave, authClear, nextId, parseAmt, resolvePhase, normalizeName, normalizePeriod } from "../utils/index.js";
+import { lsGet, lsSet, authLoad, authSave, authClear, nextId, parseAmt, resolvePhase, normalizeName, normalizePeriod, normalizeCompanyKey } from "../utils/index.js";
 import { buildMonthlyTasks } from "../utils/monthlyTasks.js";
 import { apiGet, apiSet, apiImportDeals, ForbiddenError } from "../utils/api.js";
 
@@ -177,18 +177,18 @@ function applyTaskImportCreatorFix(tasks) {
 }
 
 /** 6月案件 v1 migration: 既存 2026-06 案件は一切変更しない。
- *  company が存在しない場合のみ追加（冪等・ユーザー変更を上書きしない） */
+ *  正規化済み会社名が存在しない場合のみ追加（法人格ゆれを吸収・冪等） */
 function applyJuneDealsV1(deals) {
   const period = "2026-06";
   const now = new Date().toISOString();
-  // 既存の 2026-06 会社名セット
-  const existingCompanies = new Set(
-    deals.filter(d => d.period === period).map(d => d.company)
+  // 既存の 2026-06 会社名セット（正規化キーで比較）
+  const existingKeys = new Set(
+    deals.filter(d => d.period === period).map(d => normalizeCompanyKey(d.company || ""))
   );
   let next = [...deals];
   let changed = false;
   JUNE_DEALS_V1.forEach((src, idx) => {
-    if (existingCompanies.has(src.company)) return; // 既存 → スキップ（上書きしない）
+    if (existingKeys.has(normalizeCompanyKey(src.company))) return; // 既存 → スキップ
     const conf  = src.confidence;
     const phase = conf === "回収" ? "受注" : "未設定";
     const yomi  = conf === "回収" ? "受注" : conf === "70%" ? "70%" : conf === "50%" ? "50%" : "30%";
@@ -200,7 +200,7 @@ function applyJuneDealsV1(deals) {
       note: src.note || "", period, lossReason: "",
       activities: [], createdAt: now, updatedAt: now,
     });
-    existingCompanies.add(src.company);
+    existingKeys.add(normalizeCompanyKey(src.company));
     changed = true;
   });
   return { deals: changed ? next : deals, changed };

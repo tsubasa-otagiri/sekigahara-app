@@ -1,19 +1,8 @@
 import { useState, useMemo, useEffect, Fragment } from "react";
 import { CheckSquare, Square, Trash, AlertTriangle } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
-import { filterByTab, fmtAmt, isNeglected } from "../../utils/index.js";
+import { filterByTab, fmtAmt, isNeglected, isSimilarCompanyName, normalizeCompanyKey } from "../../utils/index.js";
 import SimilarDealsPanel from "../SimilarDealsPanel.jsx";
-
-/* ── 類似企業名検出ヘルパー（KanbanView と同一ロジック） ── */
-const _CORP_PRE = /^(株式会社|有限会社|合同会社|一般社団法人|一般財団法人|公益社団法人|公益財団法人|医療法人|学校法人|社会福祉法人|特定非営利活動法人|ＮＰＯ法人|NPO法人|（株）|\(株\)|（有）|\(有\))/;
-const _CORP_SUF = /(株式会社|有限会社|合同会社)$/;
-const _stripCorp = (s) => s.replace(_CORP_PRE, "").replace(_CORP_SUF, "").trim();
-const _isSimilar = (a, b) => {
-  if (!a || !b) return false;
-  if (a.includes(b) || b.includes(a)) return true;
-  const na = _stripCorp(a), nb = _stripCorp(b);
-  return na.length >= 2 && nb.length >= 2 && (na.includes(nb) || nb.includes(na));
-};
 import { CONF, CTW } from "../../constants/index.js";
 import { TeamBadge, ConfBadge, PlanBadge } from "../ui/Badges.jsx";
 import Confirm from "../ui/Confirm.jsx";
@@ -207,18 +196,14 @@ export default function YomiView() {
     return ds;
   }, [deals, activeTab, searchQuery, activePeriods]);
 
-  /* ── 類似企業名を持つ案件IDのSet ── */
+  /* ── 類似企業名を持つ案件IDのSet（完全正規化一致のみ） ── */
   const duplicateIds = useMemo(() => {
     const ids = new Set();
-    // 正規化済み名をキャッシュして O(n²) の regex コストを削減
-    const stripped = filtered.map(d => _stripCorp(d.company || "").toLowerCase());
-    const names    = filtered.map(d => (d.company || "").toLowerCase());
+    const keys = filtered.map(d => normalizeCompanyKey(d.company || ""));
     for (let i = 0; i < filtered.length; i++) {
+      if (!keys[i] || keys[i].length < 2) continue;
       for (let j = i + 1; j < filtered.length; j++) {
-        const a = names[i], b = names[j], na = stripped[i], nb = stripped[j];
-        if (!a || !b) continue;
-        if (a.includes(b) || b.includes(a) ||
-            (na.length >= 2 && nb.length >= 2 && (na.includes(nb) || nb.includes(na)))) {
+        if (keys[i] === keys[j]) {
           ids.add(filtered[i].id);
           ids.add(filtered[j].id);
         }

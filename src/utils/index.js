@@ -1,5 +1,43 @@
 import { LS_KEYS, AUTH_TTL, NEGLECT_DAYS, DISPLAY_GROUPS } from "../constants/index.js";
 
+/* ══════════════════════════════════════════════════════
+   企業名 完全正規化（類似判定・Upsertマッチング共通）
+
+   「株式会社GMO」「GMO(株)」「ＧＭＯ」→ すべて "gmo"
+   法人格・記号・スペース・全角英数を除去して小文字化
+   ※ 表示用企業名は変更しない。マッチングキー生成専用
+══════════════════════════════════════════════════════ */
+export const normalizeCompanyKey = (name) => {
+  if (!name) return "";
+  let s = String(name).trim();
+  /* ① 法人格（前付き） */
+  s = s.replace(/^(株式会社|有限会社|合同会社|一般社団法人|一般財団法人|公益社団法人|公益財団法人|医療法人|学校法人|社会福祉法人|特定非営利活動法人|ＮＰＯ法人|NPO法人|（株）|\(株\)|（有）|\(有\))/, "");
+  /* ② 法人格（後付き） */
+  s = s.replace(/(株式会社|有限会社|合同会社)$/, "");
+  /* ③ 全角英数 → 半角 */
+  s = s.replace(/[Ａ-Ｚ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+  s = s.replace(/[ａ-ｚ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+  s = s.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+  /* ④ スペース（全角・半角）除去 */
+  s = s.replace(/[\s　]/g, "");
+  /* ⑤ 記号除去（・、,.-） */
+  s = s.replace(/[・、，,.\-・]/g, "");
+  /* ⑥ 小文字化 */
+  return s.toLowerCase();
+};
+
+/**
+ * 企業名が「類似」かどうかを判定
+ * 完全正規化後に一致するものだけを類似とみなす（厳格判定）
+ * → 「株式会社〇〇」と「〇〇」は一致、「セイコーリテール」と「セイコーリテールマーケティング」は不一致
+ */
+export const isSimilarCompanyName = (a, b) => {
+  if (!a || !b) return false;
+  const na = normalizeCompanyKey(a);
+  const nb = normalizeCompanyKey(b);
+  return na.length >= 2 && nb.length >= 2 && na === nb;
+};
+
 /* ── 金額パース: "¥227,200" "3.5万円" "1万" "48" など → 万単位の数値 ── */
 export const parseAmt = (v) => {
   if (v === "" || v == null) return 0;
