@@ -5,14 +5,15 @@
  * 「当月ヨミ(案件管理)」シートの横並び形式を解析し、
  * バックエンド /api/import-deals で Upsert（追加・更新）を実行
  */
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
   Upload, X, FileSpreadsheet, CheckCircle2,
-  AlertTriangle, ArrowRight, RotateCcw, Loader2,
+  AlertTriangle, ArrowRight, RotateCcw, Loader2, Plus, RefreshCw,
 } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
 import { parseExcelFile, parseCsvText } from "../utils/importDeals.js";
+import { normalizeCompanyKey } from "../utils/index.js";
 
 /* 確度ラベル表示用 */
 const CONF_LABEL = { "30%":"30%", "50%":"50%", "70%":"70%", "回収":"回収" };
@@ -24,7 +25,7 @@ const CONF_COLOR = {
 };
 
 export default function ImportDealsModal({ onClose }) {
-  const { importDeals, currentPeriod, currentYear, currentMonth } = useApp();
+  const { importDeals, currentPeriod, currentYear, currentMonth, deals } = useApp();
 
   /* ── ステート ── */
   const [step,        setStep]        = useState("upload");   // upload|preview|importing|done|error
@@ -93,12 +94,29 @@ export default function ImportDealsModal({ onClose }) {
     }
   }, [importDeals, parsedDeals, period]);
 
-  /* ── 集計 ── */
+  /* ── 確度別集計 ── */
   const summary = (() => {
     const by = { "30%": 0, "50%": 0, "70%": 0, "回収": 0 };
     for (const d of parsedDeals) by[d.confidence] = (by[d.confidence] || 0) + 1;
     return by;
   })();
+
+  /* ── 新規追加 / 更新 の事前集計 ── */
+  const { willAdd, willUpdate } = useMemo(() => {
+    if (parsedDeals.length === 0) return { willAdd: 0, willUpdate: 0 };
+    const existingKeys = new Set(
+      deals
+        .filter(d => d.period === period)
+        .map(d => normalizeCompanyKey(d.company || ""))
+    );
+    let add = 0, upd = 0;
+    for (const d of parsedDeals) {
+      const key = normalizeCompanyKey(d.company || "");
+      if (key && existingKeys.has(key)) upd++;
+      else add++;
+    }
+    return { willAdd: add, willUpdate: upd };
+  }, [parsedDeals, deals, period]);
 
   /* ── レンダリング ── */
   const modal = (
@@ -221,6 +239,28 @@ export default function ImportDealsModal({ onClose }) {
                 ))}
               </div>
 
+              {/* 新規追加 / 更新 内訳 */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50 border border-blue-200">
+                  <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
+                    <Plus size={14} className="text-white" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold text-blue-500">新規追加</p>
+                    <p className="text-xl font-black text-blue-700 tabular leading-none">{willAdd} <span className="text-[11px] font-bold">件</span></p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
+                  <div className="w-7 h-7 rounded-lg bg-amber-500 flex items-center justify-center shrink-0">
+                    <RefreshCw size={13} className="text-white" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold text-amber-500">更新</p>
+                    <p className="text-xl font-black text-amber-600 tabular leading-none">{willUpdate} <span className="text-[11px] font-bold">件</span></p>
+                  </div>
+                </div>
+              </div>
+
               {/* 対象年月確認 */}
               <div className="flex items-center justify-between px-4 py-3 bg-slate-50 rounded-xl border border-slate-200">
                 <span className="text-[12px] font-semibold text-slate-600">対象年月</span>
@@ -336,7 +376,7 @@ export default function ImportDealsModal({ onClose }) {
                 style={{ background: "#0070d2" }}
               >
                 <ArrowRight size={14} />
-                {parsedDeals.length} 件をインポート
+                追加 {willAdd} · 更新 {willUpdate} 件を実行
               </button>
             </>
           )}
