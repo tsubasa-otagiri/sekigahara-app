@@ -310,17 +310,25 @@ export default function KanbanView() {
     setPendingMove(null);
   };
 
-  /* ── 類似企業名を持つ案件 ID の Set（3文字以上一致） ── */
+  /* ── 類似企業名を持つ案件 ID の Set（O(n) グループ化） ── */
   const duplicateIds = useMemo(() => {
+    const byKey = new Map();
+    for (const d of filtered) {
+      const key = stripCompany(d.company || "");
+      if (key.length < 2) continue;
+      if (!byKey.has(key)) byKey.set(key, []);
+      byKey.get(key).push(d.id);
+    }
     const ids = new Set();
-    const stripped = filtered.map(d => stripCompany(d.company || ""));
-    for (let i = 0; i < filtered.length; i++) {
-      if (stripped[i].length < 2) continue;
-      for (let j = i + 1; j < filtered.length; j++) {
-        if (stripped[j].length < 2) continue;
-        if (stripped[i].includes(stripped[j]) || stripped[j].includes(stripped[i])) {
-          ids.add(filtered[i].id);
-          ids.add(filtered[j].id);
+    for (const group of byKey.values()) {
+      if (group.length > 1) group.forEach(id => ids.add(id));
+    }
+    const keys = [...byKey.keys()];
+    for (let i = 0; i < keys.length; i++) {
+      for (let j = i + 1; j < keys.length; j++) {
+        if (keys[i].includes(keys[j]) || keys[j].includes(keys[i])) {
+          byKey.get(keys[i]).forEach(id => ids.add(id));
+          byKey.get(keys[j]).forEach(id => ids.add(id));
         }
       }
     }

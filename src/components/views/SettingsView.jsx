@@ -1,7 +1,8 @@
 import { useState, useRef, useMemo } from "react";
 import ImageCropModal from "../ImageCropModal.jsx";
 import ImportDealsModal from "../ImportDealsModal.jsx";
-import { Plus, Edit2, Save, X, Eye, EyeOff, Download, Upload, FileText, Lock, UserX, UserCheck, Flag, Bell, BellOff, Trash2, ChevronUp, ChevronDown, GripVertical, ClipboardList, Sparkles, FileSpreadsheet } from "lucide-react";
+import DuplicateCleanser from "../DuplicateCleanser.jsx";
+import { Plus, Edit2, Save, X, Eye, EyeOff, Download, Upload, FileText, Lock, UserX, UserCheck, Flag, Bell, BellOff, Trash2, ChevronUp, ChevronDown, GripVertical, ClipboardList, Sparkles, FileSpreadsheet, Layers } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import { DEFAULT_PANEL_TASKS } from "../../contexts/AppContext.jsx";
 import { TEAMS_OPT, ROLE_OPT, LS_KEYS } from "../../constants/index.js";
@@ -283,7 +284,8 @@ function BackupSection() {
   const jsonRef = useRef(null);
   const csvRef  = useRef(null);
   const [status, setStatus] = useState("");
-  const [showExcelImport, setShowExcelImport] = useState(false);
+  const [showExcelImport,    setShowExcelImport]    = useState(false);
+  const [showDupCleanser,    setShowDupCleanser]    = useState(false);
 
   const flash = (msg) => { setStatus(msg); setTimeout(()=>setStatus(""), 3500); };
 
@@ -481,6 +483,28 @@ function BackupSection() {
             </div>
           </div>
 
+          {/* 重複クレンジング */}
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center shrink-0 mt-0.5">
+                <Layers size={15} className="text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-amber-800 mb-0.5">重複案件クレンジング</p>
+                <p className="text-[11px] text-amber-600 mb-3">
+                  企業名の表記ゆれ（株式会社あり・なし等）を正規化して重複案件を検出。
+                  削除する件数を確認してから一括削除できます。
+                </p>
+                <button
+                  onClick={() => setShowDupCleanser(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition shadow-sm"
+                >
+                  <Layers size={13} /> 重複クレンジングを開く
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* 従来の CSV */}
           <div>
             <p className="text-xs text-gray-500 mb-3">従来の案件CSVデータ管理（エクスポート / インポート）</p>
@@ -509,7 +533,8 @@ function BackupSection() {
         </div>
       )}
 
-      {showExcelImport && <ImportDealsModal onClose={() => setShowExcelImport(false)} />}
+      {showExcelImport  && <ImportDealsModal    onClose={() => setShowExcelImport(false)}  />}
+      {showDupCleanser  && <DuplicateCleanser   onClose={() => setShowDupCleanser(false)}   />}
 
       {/* ステータスメッセージ */}
       {status && (

@@ -196,17 +196,28 @@ export default function YomiView() {
     return ds;
   }, [deals, activeTab, searchQuery, activePeriods]);
 
-  /* ── 類似企業名を持つ案件IDのSet（3文字以上一致） ── */
+  /* ── 類似企業名を持つ案件IDのSet（O(n) グループ化） ── */
   const duplicateIds = useMemo(() => {
+    /* Step1: 正規化キーでグループ化 */
+    const byKey = new Map();
+    for (const d of filtered) {
+      const key = stripCompany(d.company || "");
+      if (key.length < 2) continue;
+      if (!byKey.has(key)) byKey.set(key, []);
+      byKey.get(key).push(d.id);
+    }
     const ids = new Set();
-    const stripped = filtered.map(d => stripCompany(d.company || ""));
-    for (let i = 0; i < filtered.length; i++) {
-      if (stripped[i].length < 2) continue;
-      for (let j = i + 1; j < filtered.length; j++) {
-        if (stripped[j].length < 2) continue;
-        if (stripped[i].includes(stripped[j]) || stripped[j].includes(stripped[i])) {
-          ids.add(filtered[i].id);
-          ids.add(filtered[j].id);
+    /* Step2: 同キーが2件以上 → 重複確定 */
+    for (const group of byKey.values()) {
+      if (group.length > 1) group.forEach(id => ids.add(id));
+    }
+    /* Step3: 異キー間の includes チェック（ユニークキーのみ・件数少） */
+    const keys = [...byKey.keys()];
+    for (let i = 0; i < keys.length; i++) {
+      for (let j = i + 1; j < keys.length; j++) {
+        if (keys[i].includes(keys[j]) || keys[j].includes(keys[i])) {
+          byKey.get(keys[i]).forEach(id => ids.add(id));
+          byKey.get(keys[j]).forEach(id => ids.add(id));
         }
       }
     }
