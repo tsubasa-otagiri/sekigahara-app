@@ -286,8 +286,24 @@ function BackupSection() {
   const [status, setStatus] = useState("");
   const [showExcelImport,    setShowExcelImport]    = useState(false);
   const [showDupCleanser,    setShowDupCleanser]    = useState(false);
-  const [delWarn1,           setDelWarn1]           = useState(false); // 1回目警告
-  const [delWarn2,           setDelWarn2]           = useState(false); // 2回目警告
+  const [delWarn1,           setDelWarn1]           = useState(false); // 全件削除 1回目
+  const [delWarn2,           setDelWarn2]           = useState(false); // 全件削除 2回目
+  const [delMonth,           setDelMonth]           = useState("");    // 月別削除: 選択中の period
+  const [delMonthWarn1,      setDelMonthWarn1]      = useState(false); // 月別削除 1回目
+  const [delMonthWarn2,      setDelMonthWarn2]      = useState(false); // 月別削除 2回目
+
+  /* 月別削除: 案件が存在する月一覧（降順） */
+  const availablePeriods = useMemo(() => {
+    const ps = [...new Set(deals.map(d => d.period).filter(Boolean))];
+    return ps.sort((a, b) => b.localeCompare(a));
+  }, [deals]);
+
+  const delMonthCount = delMonth ? deals.filter(d => d.period === delMonth).length : 0;
+  const fmtPeriodLabel = (ym) => {
+    if (!ym) return "";
+    const [y, m] = ym.split("-");
+    return `${y}年${Number(m)}月`;
+  };
 
   const flash = (msg) => { setStatus(msg); setTimeout(()=>setStatus(""), 3500); };
 
@@ -546,18 +562,74 @@ function BackupSection() {
             <span className="text-[10px] font-bold bg-red-100 text-red-600 border border-red-300 rounded px-1.5 py-0.5">管理者限定</span>
           </div>
           <p className="text-xs text-gray-500">以下の操作は取り消せません。実行前に必ずエクスポートしてバックアップを取ってください。</p>
-          <div className="flex flex-wrap gap-3">
+
+          {/* 月別削除 */}
+          <div className="rounded-xl border border-red-200 bg-red-50/50 p-3 space-y-2">
+            <p className="text-[11px] font-bold text-red-700">月別削除</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <select
+                value={delMonth}
+                onChange={e => setDelMonth(e.target.value)}
+                className="px-3 py-1.5 rounded-lg border border-red-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-red-300"
+              >
+                <option value="">対象月を選択...</option>
+                {availablePeriods.map(p => (
+                  <option key={p} value={p}>
+                    {fmtPeriodLabel(p)}（{deals.filter(d => d.period === p).length}件）
+                  </option>
+                ))}
+              </select>
+              <button
+                disabled={!delMonth || delMonthCount === 0}
+                onClick={() => setDelMonthWarn1(true)}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-bold transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Trash2 size={12} />
+                {delMonth ? `${fmtPeriodLabel(delMonth)} の ${delMonthCount} 件を削除` : "月を選択してください"}
+              </button>
+            </div>
+          </div>
+
+          {/* 全件削除 */}
+          <div className="flex flex-wrap gap-3 pt-1">
             <button
               onClick={() => setDelWarn1(true)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition shadow-sm"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white text-xs font-bold transition shadow-sm"
             >
-              <Trash2 size={13} /> 案件リストを全件削除
+              <Trash2 size={13} /> 案件リストを全件削除（全月）
             </button>
           </div>
         </div>
       )}
 
-      {/* 1回目の警告 */}
+      {/* 月別削除 1回目の警告 */}
+      {delMonthWarn1 && (
+        <Confirm
+          message={`⚠️ 警告\n\n${fmtPeriodLabel(delMonth)} の案件 ${delMonthCount} 件を削除しようとしています。\n\nこの操作は元に戻せません。\n本当に削除しますか？`}
+          danger
+          okLabel="次へ進む"
+          onOk={() => { setDelMonthWarn1(false); setDelMonthWarn2(true); }}
+          onCancel={() => setDelMonthWarn1(false)}
+        />
+      )}
+
+      {/* 月別削除 2回目の警告（最終確認） */}
+      {delMonthWarn2 && (
+        <Confirm
+          message={`🚨 最終確認\n\n${fmtPeriodLabel(delMonth)} の案件 ${delMonthCount} 件を完全に削除します。\nCloudflare KV からも削除されます。\n\n「削除する」を押すと復元できません。`}
+          danger
+          okLabel={`${delMonthCount} 件を完全削除`}
+          onOk={() => {
+            replaceDeals(deals.filter(d => d.period !== delMonth));
+            setDelMonthWarn2(false);
+            flash(`✅ ${fmtPeriodLabel(delMonth)} の案件 ${delMonthCount} 件を削除しました`);
+            setDelMonth("");
+          }}
+          onCancel={() => setDelMonthWarn2(false)}
+        />
+      )}
+
+      {/* 全件削除 1回目の警告 */}
       {delWarn1 && (
         <Confirm
           message={`⚠️ 警告\n\n現在の案件リスト全 ${deals.length} 件を削除しようとしています。\n\nこの操作は元に戻せません。\n本当に削除しますか？`}
