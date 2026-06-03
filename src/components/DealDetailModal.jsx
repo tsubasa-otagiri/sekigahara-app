@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, Trash2, Pencil, Check, Ban, MessageSquare, Phone, Mail, FileText, Users, Clock, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+import { X, Trash2, Pencil, Check, Ban, MessageSquare, Phone, Mail, FileText, Users, Clock, ChevronDown, ChevronUp, AlertTriangle, CopyPlus } from "lucide-react";
 import { useApp } from "../contexts/useApp.js";
 import { ACTIVITY_TYPES, YOMI_COLOR, PLANS, TEAMS_OPT, MEMBER_MASTER_NAMES, CONF } from "../constants/index.js";
 import { fmtAmt, isNeglected, parseAmt } from "../utils/index.js";
@@ -39,8 +39,9 @@ const sortByMaster = (arr) =>
   });
 
 export default function DealDetailModal({ deal: dealProp, onClose }) {
-  const { deals, members, addActivity, deleteActivity, updateActivity, updateDeal, deleteDeal } = useApp();
+  const { deals, members, addActivity, deleteActivity, updateActivity, updateDeal, deleteDeal, addDeal, currentPeriod } = useApp();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [cloned,        setCloned]        = useState(false); // 追加完了フラグ
   const deal = deals.find(d => d.id === dealProp.id) ?? dealProp;
 
   /* 活動追加フォーム */
@@ -84,6 +85,36 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
   }, [onClose, editingId, showEdit]);
 
   if (!deal) return null;
+
+  /* 対象年月フォーマット "2026-05" → "2026年5月" */
+  const fmtPeriod = (ym) => {
+    if (!ym) return ym;
+    const [y, m] = ym.split("-");
+    return `${y}年${Number(m)}月`;
+  };
+
+  /* 過去案件を当月にコピー（状態・担当者をそのまま引き継ぎ） */
+  const cloneToCurrent = () => {
+    addDeal({
+      company:        deal.company,
+      plan:           deal.plan,
+      amount:         deal.amount,
+      is:             deal.is,
+      fs:             deal.fs,
+      team:           deal.team,
+      confidence:     deal.confidence,
+      phase:          deal.phase,
+      yomi:           deal.yomi,
+      note:           deal.note || "",
+      lossReason:     "",
+      nextActionDate: deal.nextActionDate || null,
+      period:         currentPeriod,
+      activities:     [],
+    });
+    setCloned(true);
+  };
+
+  const isPastDeal = deal.period && deal.period !== currentPeriod;
 
   const yomi    = deal.yomi || "50%";
   const neglect = isNeglected(deal);
@@ -259,6 +290,43 @@ export default function DealDetailModal({ deal: dealProp, onClose }) {
             </button>
           </div>
         </div>
+
+        {/* ── 過去案件: 今月リストに追加バナー ── */}
+        {isPastDeal && (
+          <div className={`px-5 py-3 border-b shrink-0 flex items-center gap-3
+            ${cloned ? "bg-emerald-50 border-emerald-100" : "bg-blue-50 border-blue-100"}`}>
+            {cloned ? (
+              <>
+                <Check size={15} className="text-emerald-600 shrink-0" />
+                <p className="text-[12px] font-bold text-emerald-700 flex-1">
+                  {fmtPeriod(currentPeriod)} のリストに追加しました
+                </p>
+                <button
+                  onClick={onClose}
+                  className="text-[11px] font-bold text-emerald-600 hover:underline shrink-0"
+                >
+                  閉じる
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] text-blue-600">
+                    <span className="font-bold">{fmtPeriod(deal.period)}</span> の案件です
+                  </p>
+                </div>
+                <button
+                  onClick={cloneToCurrent}
+                  className="flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-lg
+                    bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold transition shadow-sm"
+                >
+                  <CopyPlus size={12} />
+                  {fmtPeriod(currentPeriod)} に追加
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         {/* ── 案件情報編集パネル ── */}
         {showEdit && (
