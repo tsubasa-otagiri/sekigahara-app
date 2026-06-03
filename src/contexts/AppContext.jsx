@@ -176,6 +176,36 @@ function applyTaskImportCreatorFix(tasks) {
   );
 }
 
+/**
+ * IS/FS 復元マイグレーション
+ * JUNE_DEALS_V1 を正規化キーで照合し、IS または FS が空の案件にセットし直す。
+ * 既に値が入っている場合は変更しない（ユーザー更新を上書きしない）。
+ */
+function applyIsFsRestoreV1(deals) {
+  /* 正規化キー → {is, fs} マップを作成 */
+  const refMap = new Map();
+  JUNE_DEALS_V1.forEach(src => {
+    const key = normalizeCompanyKey(src.company);
+    if (key) refMap.set(key, { is: src.is || "", fs: src.fs || "" });
+  });
+
+  let changed = false;
+  const next = deals.map(d => {
+    if (d.is && d.fs) return d; // 両方あればスキップ
+    const key = normalizeCompanyKey(d.company || "");
+    const ref = refMap.get(key);
+    if (!ref) return d;
+    const patch = {
+      is: d.is || normalizeName(ref.is),
+      fs: d.fs || normalizeName(ref.fs),
+    };
+    if (patch.is === d.is && patch.fs === d.fs) return d;
+    changed = true;
+    return { ...d, ...patch, updatedAt: new Date().toISOString() };
+  });
+  return { deals: changed ? next : deals, changed };
+}
+
 /** 6月案件 v1 migration: 既存 2026-06 案件は一切変更しない。
  *  正規化済み会社名が存在しない場合のみ追加（法人格ゆれを吸収・冪等） */
 function applyJuneDealsV1(deals) {
@@ -456,11 +486,18 @@ export const AppProvider = ({ children }) => {
   /* ── 案件 ── */
   const [deals, setDeals] = useState(() => {
     let d = lsGet(LS_KEYS.DEALS, DEF_DEALS).map(_normDeal);
-    const JUNE_KEY = "honnoji_june_deals_v1";
+    const JUNE_KEY   = "honnoji_june_deals_v1";
+    const ISFS_KEY   = "honnoji_isfs_restore_v1";
     if (!localStorage.getItem(JUNE_KEY)) {
       const { deals: migrated, changed } = applyJuneDealsV1(d);
       if (changed) d = migrated;
       localStorage.setItem(JUNE_KEY, "1");
+    }
+    /* IS/FS 復元（担当者が消えた場合の救済） */
+    if (!localStorage.getItem(ISFS_KEY)) {
+      const { deals: restored, changed } = applyIsFsRestoreV1(d);
+      if (changed) d = restored;
+      localStorage.setItem(ISFS_KEY, "1");
     }
     return d;
   });
@@ -787,9 +824,14 @@ export const AppProvider = ({ children }) => {
       if (Array.isArray(apiDeals) && apiDeals.length > 0) {
         if (fetchStartTime >= lastDealsWriteRef.current + 60_000) {
           let nextDeals = apiDeals.map(_normDeal);
-          const { deals: migratedDeals, changed: juneChanged } = applyJuneDealsV1(nextDeals);
-          if (juneChanged) {
-            nextDeals = migratedDeals;
+          let dirty = false;
+          /* June v1 マイグレーション */
+          const { deals: jd, changed: juneChanged } = applyJuneDealsV1(nextDeals);
+          if (juneChanged) { nextDeals = jd; dirty = true; }
+          /* IS/FS 復元 */
+          const { deals: rd, changed: isFsChanged } = applyIsFsRestoreV1(nextDeals);
+          if (isFsChanged) { nextDeals = rd; dirty = true; }
+          if (dirty) {
             lastDealsWriteRef.current = Date.now();
             apiSet("deals", nextDeals).catch(console.error);
           }
