@@ -286,6 +286,8 @@ function BackupSection() {
   const [status, setStatus] = useState("");
   const [showExcelImport,    setShowExcelImport]    = useState(false);
   const [showDupCleanser,    setShowDupCleanser]    = useState(false);
+  const [delWarn1,           setDelWarn1]           = useState(false); // 1回目警告
+  const [delWarn2,           setDelWarn2]           = useState(false); // 2回目警告
 
   const flash = (msg) => { setStatus(msg); setTimeout(()=>setStatus(""), 3500); };
 
@@ -535,6 +537,51 @@ function BackupSection() {
 
       {showExcelImport  && <ImportDealsModal    onClose={() => setShowExcelImport(false)}  />}
       {showDupCleanser  && <DuplicateCleanser   onClose={() => setShowDupCleanser(false)}   />}
+
+      {/* ── 危険ゾーン（管理者限定） ── */}
+      {isAdmin && (
+        <div className="bg-white rounded-2xl border-2 border-red-200 p-5 space-y-3">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="text-sm font-bold text-red-600">危険ゾーン</h3>
+            <span className="text-[10px] font-bold bg-red-100 text-red-600 border border-red-300 rounded px-1.5 py-0.5">管理者限定</span>
+          </div>
+          <p className="text-xs text-gray-500">以下の操作は取り消せません。実行前に必ずエクスポートしてバックアップを取ってください。</p>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => setDelWarn1(true)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition shadow-sm"
+            >
+              <Trash2 size={13} /> 案件リストを全件削除
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 1回目の警告 */}
+      {delWarn1 && (
+        <Confirm
+          message={`⚠️ 警告\n\n現在の案件リスト全 ${deals.length} 件を削除しようとしています。\n\nこの操作は元に戻せません。\n本当に削除しますか？`}
+          danger
+          okLabel="次へ進む"
+          onOk={() => { setDelWarn1(false); setDelWarn2(true); }}
+          onCancel={() => setDelWarn1(false)}
+        />
+      )}
+
+      {/* 2回目の警告（最終確認） */}
+      {delWarn2 && (
+        <Confirm
+          message={`🚨 最終確認\n\n${deals.length} 件の案件データを完全に削除します。\nCloudflare KV からも削除されます。\n\n「削除する」を押すと復元できません。`}
+          danger
+          okLabel={`${deals.length} 件を完全削除`}
+          onOk={() => {
+            replaceDeals([]);
+            setDelWarn2(false);
+            flash("✅ 案件リストを全件削除しました");
+          }}
+          onCancel={() => setDelWarn2(false)}
+        />
+      )}
 
       {/* ステータスメッセージ */}
       {status && (
