@@ -11,7 +11,7 @@ import { ConfBadge, TeamBadge } from "./ui/Badges.jsx";
 import Confirm from "./ui/Confirm.jsx";
 
 export default function DuplicateCleanser({ onClose }) {
-  const { deals, deleteDeal } = useApp();
+  const { deals, replaceDeals } = useApp();
   const [selected, setSelected] = useState(new Set()); // 削除対象 deal ID
   const [confirm,  setConfirm]  = useState(false);
   const [done,     setDone]     = useState(false);
@@ -69,7 +69,9 @@ export default function DuplicateCleanser({ onClose }) {
   };
 
   const execDelete = () => {
-    selected.forEach(id => deleteDeal(id));
+    /* 複数 deleteDeal を連続呼びすると apiSet が競合して最後の1件だけ KV に反映される。
+       replaceDeals で1回だけ書き込み、確実に削除する。 */
+    replaceDeals(deals.filter(d => !selected.has(d.id)));
     setSelected(new Set());
     setConfirm(false);
     setDone(true);
