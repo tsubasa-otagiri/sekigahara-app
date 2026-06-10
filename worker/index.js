@@ -66,6 +66,21 @@ function checkAuth(request, env) {
   return k === env.API_KEY;
 }
 
+/* ── アクセスログ（利用履歴管理: 誰が・いつ・どこから） ── */
+function accessLog(level, event, ip, method, path, extra = {}) {
+  const entry = JSON.stringify({
+    level, event, ip,
+    method, path,
+    ts: new Date().toISOString(),
+    ...extra,
+  });
+  if (level === "WARN" || level === "ERROR") {
+    console.error(entry);
+  } else {
+    console.log(entry);
+  }
+}
+
 export default {
   /* ctx を受け取る（ctx.waitUntil でバックグラウンド処理） */
   async fetch(request, env, ctx) {
@@ -81,10 +96,12 @@ export default {
      * 【最優先②】IPホワイトリスト チェック
      * ════════════════════════════════════════════════════ */
     const clientIP = request.headers.get("CF-Connecting-IP") || "unknown";
+    const url  = new URL(request.url);
+    const path = url.pathname;
 
     /* CF-Connecting-IP が取得できない場合も安全のためブロック */
     if (clientIP === "unknown") {
-      console.error(`[IP ACCESS DENIED] CF-Connecting-IP header missing. Blocked: ${request.method} ${request.url}`);
+      accessLog("ERROR", "IP_UNKNOWN", clientIP, request.method, path);
       return new Response(
         JSON.stringify({ error: "Forbidden: Cannot determine client IP" }),
         { status: 403, headers: { ...CORS, "Content-Type": "application/json" } }
@@ -94,7 +111,7 @@ export default {
     /* ALLOWED_IPS 未設定 → 安全のため全拒否 */
     const rawAllowed = (env.ALLOWED_IPS || "").trim();
     if (!rawAllowed) {
-      console.error(`[IP ACCESS DENIED] ALLOWED_IPS not configured. Blocked: ${clientIP} tried to access ${request.method} ${request.url}`);
+      accessLog("ERROR", "ALLOWED_IPS_UNSET", clientIP, request.method, path);
       return new Response(
         JSON.stringify({ error: "Forbidden: Access Denied" }),
         { status: 403, headers: { ...CORS, "Content-Type": "application/json" } }
@@ -104,7 +121,7 @@ export default {
     /* 許可IPリストを作成してチェック */
     const allowedIPs = rawAllowed.split(",").map(ip => ip.trim()).filter(Boolean);
     if (!allowedIPs.includes(clientIP)) {
-      console.error(`[IP ACCESS DENIED] Unauthorized IP: ${clientIP} tried to access ${request.method} ${request.url}`);
+      accessLog("WARN", "IP_DENIED", clientIP, request.method, path);
       return new Response(
         JSON.stringify({
           error:    "Forbidden: Access Denied",
@@ -116,14 +133,14 @@ export default {
     }
 
     /* ════════════════════════════════════════════════════
-     * IPホワイトリスト通過 → 通常処理へ
+     * IPホワイトリスト通過 → アクセスログ記録・通常処理へ
      * ════════════════════════════════════════════════════ */
+    accessLog("INFO", "REQUEST", clientIP, request.method, path, {
+      ua: (request.headers.get("User-Agent") || "").slice(0, 80),
+    });
 
     /* APIキー認証 */
     if (!checkAuth(request, env)) return err("Unauthorized", 401);
-
-    const url  = new URL(request.url);
-    const path = url.pathname;
 
     /* ヘルスチェック */
     if (path === "/api/health") {

@@ -16,9 +16,18 @@ id      = "30733344d83840aabc5e2bd3a59b70a6"
 # ※ Cloudflare Dashboard > Workers > kpi-dashboard > Settings > Variables
 #    で上書き設定することも可能（Dashboard 側が優先される）
 [vars]
+# ── IPホワイトリスト（渋谷オフィス回線） ───────────────────
+#   ①主回線:        210.172.143.39
+#   ②Mac用VPN回線: 210.172.143.37
+#   ③追加回線:      210.172.130.69
 ALLOWED_IPS = "210.172.143.39,210.172.143.37,210.172.130.69"
 
 # ── オプション: API キー認証 ───────────────────────────
-# 認証が必要な場合は Cloudflare Dashboard > Workers > Settings >
-# Variables に API_KEY を設定する（設定しなければ認証なし）
+# Cloudflare Dashboard > Workers > kpi-dashboard > Settings > Variables
+# に API_KEY を追加することで有効化（設定しなければ認証なし）
+# ──────────────────────────────────────────────────────
+
+# ── アクセスログ ──────────────────────────────────────
+# Cloudflare Dashboard > Workers > kpi-dashboard > Logs でリアルタイム確認可能
+# ログ形式: { level, event, ip, method, path, ts, ua }
 # ──────────────────────────────────────────────────────
