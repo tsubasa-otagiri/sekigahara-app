@@ -20,12 +20,11 @@ import LostView          from "./components/views/LostView.jsx";
 import TeamRankingView  from "./components/views/TeamRankingView.jsx";
 import CalendarView    from "./components/views/CalendarView.jsx";
 import TaskView       from "./components/views/TaskView.jsx";
-import { requestNotifPermission, fireNotif } from "./utils/desktopNotif.js";
 import { LS_KEYS } from "./constants/index.js";
 
 /* ── 期限監視フック ── */
 function useTaskDeadlineWatcher() {
-  const { tasks, addNotifLog, currentUserId, currentUser, getMyNotifSettings } = useApp();
+  const { tasks, addNotifLog, currentUserId, currentUser } = useApp();
 
   /*
    * notifiedRef: セッション中の発火済みキー管理
@@ -61,13 +60,11 @@ function useTaskDeadlineWatcher() {
     };
 
     const check = () => {
-      const { notifyOnTaskReminder } = getMyNotifSettings(currentUserId);
       const now = Date.now();
 
       tasks.forEach(t => {
         if (t.completed || !t.dueDate) return;
 
-        /* ★ 自分が担当者のタスクのみを通知対象とする */
         const isMyTask = (t.assignee === myName);
 
         const due = new Date(t.dueDate + "T23:59:59").getTime();
@@ -76,14 +73,12 @@ function useTaskDeadlineWatcher() {
         /* 期限1日前アラート */
         const key24 = `${t.id}_24h`;
         if (diffH > 0 && diffH <= 24 && !notifiedRef.current.has(key24)) {
-          markFired(key24); // 担当者不問でキーを記録（重複防止）
+          markFired(key24);
           if (isMyTask) {
             const body = `担当: ${myName}`;
-            if (notifyOnTaskReminder)
-              fireNotif(`⏰ 期限1日前: ${t.title}`, body, () => window.focus());
             addNotifLog({
               taskId: t.id, type: "task_deadline",
-              targetUser: myName, // ★ 必ず自分の名前をセット
+              targetUser: myName,
               title: `⏰ 期限1日前: ${t.title}`, body,
             });
           }
@@ -95,8 +90,6 @@ function useTaskDeadlineWatcher() {
           markFired(key1h);
           if (isMyTask) {
             const body = `担当: ${myName}`;
-            if (notifyOnTaskReminder)
-              fireNotif(`🔴 期限1時間前: ${t.title}`, body, () => window.focus());
             addNotifLog({
               taskId: t.id, type: "task_overdue",
               targetUser: myName,
@@ -110,7 +103,7 @@ function useTaskDeadlineWatcher() {
     check();
     const timer = setInterval(check, 60000);
     return () => clearInterval(timer);
-  }, [tasks, currentUserId, currentUser, addNotifLog, getMyNotifSettings]);
+  }, [tasks, currentUserId, currentUser, addNotifLog]);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -189,7 +182,7 @@ function ApiCheckingScreen() {
 /* ── 月末チェックリスト: 勤怠申請 18:55 専用ウォッチャー ── */
 function useKintaiPanelWatcher() {
   const { currentUserId, currentUser, currentYear, currentMonth,
-          monthEndChecks, panelTasks, addNotifLog, getMyNotifSettings } = useApp();
+          monthEndChecks, panelTasks, addNotifLog } = useApp();
   const firedRef = useRef(new Set());
 
   useEffect(() => {
@@ -223,14 +216,6 @@ function useKintaiPanelWatcher() {
       /* 当日判定: 同じ年月の最終営業日かどうかはシンプルにh===18&&m>=55で発火 */
       if (h === 18 && m >= 55 && !firedRef.current.has(key)) {
         firedRef.current.add(key);
-        const { notifyOnTaskReminder } = getMyNotifSettings(currentUserId);
-        if (notifyOnTaskReminder) {
-          fireNotif(
-            "🔔 勤怠申請の締め切りです！",
-            `${myName} さん、18:55になりました。今すぐ申請してください！`,
-            () => window.focus()
-          );
-        }
         addNotifLog({
           taskId: null, type: "task_overdue",
           targetUser: myName,
@@ -243,7 +228,7 @@ function useKintaiPanelWatcher() {
     check();
     const timer = setInterval(check, 30000); // 30秒ごとにチェック
     return () => clearInterval(timer);
-  }, [currentUserId, currentUser, currentYear, currentMonth, monthEndChecks, addNotifLog, getMyNotifSettings]);
+  }, [currentUserId, currentUser, currentYear, currentMonth, monthEndChecks, addNotifLog]);
 }
 
 function MainApp() {
@@ -258,12 +243,6 @@ function MainApp() {
 
   /* 月末警告バナー用データ */
   const { activeWarn, daysToEnd, incomplete, doneCount, totalCount, lastBizDay } = useMonthEndWarning();
-
-  /* 通知許可 — ログイン後に一度だけ要求 */
-  useEffect(() => {
-    if (!currentUserId) return;
-    requestNotifPermission();
-  }, [currentUserId]);
 
   /* 期限監視 */
   useTaskDeadlineWatcher();

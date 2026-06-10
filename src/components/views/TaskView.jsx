@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import { MEMBER_MASTER_NAMES, DISPLAY_GROUPS } from "../../constants/index.js";
-import { fireNotif } from "../../utils/desktopNotif.js";
 import { filterTasksByTab, getTabMemberNames, NAME_TO_TEAM } from "../../utils/index.js";
 import { launchConfetti, showNiceJob } from "../../utils/confetti.js";
 import { launchPachinko } from "../../utils/pachinko.js";
@@ -811,7 +810,7 @@ function DayTaskModal({ day, ym, tasks, onClose, onToggle, onEdit, onDelete }) {
 ──────────────────────────────────────────── */
 export default function TaskView() {
   const { tasks, members, addTask, updateTask, deleteTask, toggleTask,
-          addNotifLog, currentUserId, getMyNotifSettings,
+          addNotifLog, currentUserId,
           activeTab, currentUser } = useApp();
   const myName = currentUser?.name || "";
 
@@ -857,12 +856,6 @@ export default function TaskView() {
         });
       }
 
-      /* 自分が担当の場合はデスクトップ通知のみ（通知センターには記録しない） */
-      if (assignee === myName) {
-        const { notifyOnTaskAdded } = getMyNotifSettings(currentUserId);
-        if (notifyOnTaskAdded)
-          fireNotif(`✅ 新規タスク: ${data.title}`, `担当: ${myName}`, () => window.focus());
-      }
     }
     setEditTask(null);
   };

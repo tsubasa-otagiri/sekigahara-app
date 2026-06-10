@@ -2,7 +2,7 @@ import { useState, useRef, useMemo } from "react";
 import ImageCropModal from "../ImageCropModal.jsx";
 import ImportDealsModal from "../ImportDealsModal.jsx";
 import DuplicateCleanser from "../DuplicateCleanser.jsx";
-import { Plus, Edit2, Save, X, Eye, EyeOff, Download, Upload, FileText, Lock, UserX, UserCheck, Flag, Bell, BellOff, Trash2, ChevronUp, ChevronDown, GripVertical, ClipboardList, Sparkles, FileSpreadsheet, Layers } from "lucide-react";
+import { Plus, Edit2, Save, X, Eye, EyeOff, Download, Upload, FileText, Lock, UserX, UserCheck, Flag, Trash2, ChevronUp, ChevronDown, GripVertical, ClipboardList, Sparkles, FileSpreadsheet, Layers } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import { DEFAULT_PANEL_TASKS } from "../../contexts/AppContext.jsx";
 import { TEAMS_OPT, ROLE_OPT, LS_KEYS } from "../../constants/index.js";
@@ -897,83 +897,6 @@ function Toggle({ checked, onChange, disabled }) {
   );
 }
 
-function NotifSection() {
-  const { currentUser, currentUserId, getMyNotifSettings, updateMyNotifSettings } = useApp();
-  const s = getMyNotifSettings(currentUserId);
-
-  const browserGranted = ("Notification" in window) && Notification.permission === "granted";
-  const browserDenied  = ("Notification" in window) && Notification.permission === "denied";
-
-  const toggle = (key, val) => updateMyNotifSettings(currentUserId, { [key]: val });
-
-  return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-      {/* ヘッダー */}
-      <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3"
-        style={{ background: "linear-gradient(90deg,#0070d2 0%,#1589ee 100%)" }}>
-        <Bell size={16} className="text-white shrink-0" />
-        <div>
-          <p className="text-sm font-black text-white">通知カスタム設定</p>
-          <p className="text-[10px] text-blue-100 mt-0.5">{currentUser?.name} さんの個人設定（自動保存）</p>
-        </div>
-      </div>
-
-      <div className="px-5 py-5 space-y-4">
-        {/* ブラウザ通知状態バナー */}
-        {browserDenied && (
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl">
-            <BellOff size={14} className="text-red-500 shrink-0" />
-            <p className="text-[11px] font-bold text-red-600">
-              ブラウザの通知がブロックされています。ブラウザの設定から許可してください。
-            </p>
-          </div>
-        )}
-        {!("Notification" in window) && (
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
-            <BellOff size={14} className="text-amber-500 shrink-0" />
-            <p className="text-[11px] font-bold text-amber-600">このブラウザはデスクトップ通知に対応していません。</p>
-          </div>
-        )}
-
-        {/* 設定項目 */}
-        {[
-          {
-            key: "notifyOnTaskAdded",
-            label: "自分を担当者とする新規タスクが追加されたときにPC通知を受け取る",
-            desc:  "他のメンバーが自分を担当者として割り当てたタスクが追加されたときに通知が届きます",
-            icon:  "✅",
-          },
-          {
-            key: "notifyOnTaskReminder",
-            label: "自分が担当するタスクの期限前にPC通知を受け取る",
-            desc:  "自分が担当者に設定されたタスクの期限1日前・1時間前に自動で通知が届きます",
-            icon:  "⏰",
-          },
-        ].map(({ key, label, desc, icon }) => (
-          <div key={key} className="flex items-center justify-between gap-4 py-3 border-b border-slate-50 last:border-0">
-            <div className="flex items-start gap-3 min-w-0">
-              <span className="text-lg leading-none shrink-0 mt-0.5">{icon}</span>
-              <div>
-                <p className="text-[13px] font-semibold text-slate-800">{label}</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">{desc}</p>
-              </div>
-            </div>
-            <Toggle
-              checked={s[key]}
-              onChange={(v) => toggle(key, v)}
-              disabled={browserDenied || !("Notification" in window)}
-            />
-          </div>
-        ))}
-
-        <p className="text-[10px] text-slate-400 pt-1">
-          ※ デスクトップ通知のON/OFFのみ制御します。アプリ内の通知センター（🔔）への履歴記録は常に行われます。
-        </p>
-      </div>
-    </div>
-  );
-}
-
 /* ━━━━━━━━ 月末タスク定義管理セクション（管理者限定） ━━━━━━━━ */
 function MonthEndTaskSection() {
   const { panelTasks, setPanelTasks, generateMonthlyCheckTasks, currentYear, currentMonth } = useApp();
@@ -1248,24 +1171,17 @@ const SECTIONS = [
   { id:"backup",    label:"バックアップ"   },
   { id:"favicon",   label:"旗印"          },
   { id:"monthend",  label:"📋 月末タスク" },
-  { id:"notif",     label:"🔔 通知設定"   },
 ];
 
 export default function SettingsView() {
   const [section, setSection] = useState("members");
   const { currentUser } = useApp();
 
-  /* 管理者以外: 通知設定のみ表示 */
+  /* 管理者以外: 設定なし */
   if (currentUser?.role !== "admin") {
     return (
-      <div className="min-h-full bg-gray-300/60 p-3 sm:p-5">
-        <div className="max-w-2xl mx-auto">
-          <div className="mb-5">
-            <h2 className="text-base font-black text-gray-700">設定</h2>
-            <p className="text-xs text-gray-500 mt-0.5">個人の通知設定を管理できます</p>
-          </div>
-          <NotifSection />
-        </div>
+      <div className="min-h-full bg-gray-300/60 p-3 sm:p-5 flex items-center justify-center">
+        <p className="text-sm text-gray-500">設定は管理者のみ利用できます</p>
       </div>
     );
   }
@@ -1303,7 +1219,6 @@ export default function SettingsView() {
         {section === "backup"   && <BackupSection />}
         {section === "favicon"  && <FaviconSection />}
         {section === "monthend" && <MonthEndTaskSection />}
-        {section === "notif"    && <NotifSection />}
       </div>
     </div>
   );
