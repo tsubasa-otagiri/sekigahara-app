@@ -491,12 +491,21 @@ function BackupSection() {
                   「当月ヨミ(案件管理)」シートの横並び形式（30%/50%/70%/回収済み）を解析して一括登録・更新します。
                   法人格の表記ゆれ（株式会社・(株) など）は自動吸収。
                 </p>
-                <button
-                  onClick={() => setShowExcelImport(true)}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-sm"
-                >
-                  <FileSpreadsheet size={13} /> Excel インポートを開く
-                </button>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setShowExcelImport(true)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-sm"
+                  >
+                    <FileSpreadsheet size={13} /> Excel インポートを開く
+                  </button>
+                  <a
+                    href="/ヨミインポートテンプレート.xlsx"
+                    download="ヨミインポートテンプレート.xlsx"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white border border-blue-300 hover:bg-blue-50 text-blue-700 text-xs font-bold transition shadow-sm"
+                  >
+                    <Download size={13} /> テンプレートDL
+                  </a>
+                </div>
               </div>
             </div>
           </div>
