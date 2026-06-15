@@ -42,6 +42,23 @@ export const NOTIF_SETTINGS_DEFAULTS = {
 };
 
 /**
+ * 通知センター「全体設定」（管理者が全員に強制適用するオーバーライド）
+ *
+ * userSettings 内の予約キー __globalNotif に保存され、全ユーザーへ同期される。
+ * 各カテゴリの値: "personal" | "normal" | "silent" | "off"
+ *   personal … 上書きしない（各メンバーの個人設定に従う）※既定
+ *   normal / silent / off … 個人設定を無視して全員にこのモードを強制
+ *
+ * 実効モード = global が "personal" 以外なら global を優先、そうでなければ個人設定。
+ */
+export const GLOBAL_NOTIF_KEY = "__globalNotif";
+export const GLOBAL_NOTIF_DEFAULTS = {
+  notifTaskAssigned: "personal",
+  notifTaskReminder: "personal",
+  notifKintai:       "personal",
+};
+
+/**
  * 月末処理タスクのデフォルト定義
  * daysBefore: 最終営業日の何日前が締切か（0=当日, 正数=N日前）
  */
@@ -371,6 +388,37 @@ export const AppProvider = ({ children }) => {
       return next;
     });
   }, []);
+
+  /* ── 通知センター「全体設定」（管理者が全員へ強制適用） ── */
+  const getGlobalNotifSettings = useCallback(() => {
+    return { ...GLOBAL_NOTIF_DEFAULTS, ...((userSettings[GLOBAL_NOTIF_KEY]) || {}) };
+  }, [userSettings]);
+
+  const updateGlobalNotifSettings = useCallback((patch) => {
+    setUserSettings(prev => {
+      const next = {
+        ...prev,
+        [GLOBAL_NOTIF_KEY]: { ...GLOBAL_NOTIF_DEFAULTS, ...(prev[GLOBAL_NOTIF_KEY] || {}), ...patch },
+      };
+      userSettingsRef.current = next;
+      if (apiLoadedRef.current) {
+        apiSet("user_settings", { ...next, __panelTasks: panelTasksRef.current, __loginCounts: loginCountsRef.current }).catch(console.error);
+      }
+      return next;
+    });
+  }, []);
+
+  /**
+   * 実効モード解決: 全体設定（管理者）が "personal" 以外なら最優先、
+   * そうでなければ各メンバーの個人設定に従う。
+   * @returns {"normal"|"silent"|"off"}
+   */
+  const getEffectiveNotifMode = useCallback((userId, key) => {
+    const g = (userSettings[GLOBAL_NOTIF_KEY] || {})[key];
+    if (g && g !== "personal") return g;
+    const p = (userSettings[userId] || {})[key];
+    return p || "normal";
+  }, [userSettings]);
 
   const setPanelTasks = useCallback((tasks) => {
     setPanelTasksRaw(tasks);
@@ -1099,6 +1147,7 @@ export const AppProvider = ({ children }) => {
       notifLogs, addNotifLog, markNotifRead, markAllNotifsRead, clearNotifLogs,
       /* userSettings */
       userSettings, getMyNotifSettings, updateMyNotifSettings,
+      getGlobalNotifSettings, updateGlobalNotifSettings, getEffectiveNotifMode,
       /* loginCounts */
       loginCounts,
       /* requests */

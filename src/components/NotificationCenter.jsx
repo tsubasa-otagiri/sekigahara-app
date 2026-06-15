@@ -28,18 +28,16 @@ function notifCategory(type) {
 }
 
 export default function NotificationCenter() {
-  const { notifLogs, markNotifRead, markAllNotifsRead, currentUser, currentUserId, getMyNotifSettings } = useApp();
+  const { notifLogs, markNotifRead, markAllNotifsRead, currentUser, currentUserId, getEffectiveNotifMode, userSettings } = useApp();
   const myName = currentUser?.name || "";
   const [open, setOpen] = useState(false);
   const panelRef = useRef(null);
 
-  /* 自分の通知センター設定（種別ごとに normal / silent / off） */
-  const notifSettings = getMyNotifSettings(currentUserId);
-
-  /* 種別ごとのモードを解決（未知カテゴリは normal 扱い） */
+  /* 種別ごとの実効モードを解決
+     （管理者の全体設定が個人設定より優先 / 未知カテゴリは normal 扱い） */
   const modeOf = (n) => {
     const cat = notifCategory(n.type);
-    return cat ? (notifSettings[cat] || "normal") : "normal";
+    return cat ? getEffectiveNotifMode(currentUserId, cat) : "normal";
   };
 
   /* ────────────────────────────────────────────
@@ -50,12 +48,12 @@ export default function NotificationCenter() {
   const myLogs = useMemo(() => {
     if (!myName) return [];
     return notifLogs.filter(n => n.targetUser === myName && modeOf(n) !== "off");
-  }, [notifLogs, myName, notifSettings]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [notifLogs, myName, userSettings]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* 未読件数: "normal" 種別の未読のみカウント（silent はバッジに数えない） */
   const unread = useMemo(
     () => myLogs.filter(n => !n.isRead && modeOf(n) === "normal").length,
-    [myLogs, notifSettings] // eslint-disable-line react-hooks/exhaustive-deps
+    [myLogs, userSettings] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   /* パネル外クリックで閉じる */

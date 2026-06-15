@@ -925,41 +925,39 @@ const NOTIF_MODES = [
   { val: "silent", icon: "🔕", label: "静かに", hint: "履歴のみ・バッジなし", active: "bg-slate-500 text-white border-slate-500" },
   { val: "off",    icon: "🚫", label: "オフ",   hint: "表示しない", active: "bg-red-500 text-white border-red-500" },
 ];
+/* 全体設定（管理者）: 先頭に「個人に任せる」を追加した4択 */
+const GLOBAL_MODES = [
+  { val: "personal", icon: "👤", label: "個人に任せる", hint: "各メンバーの設定に従う", active: "bg-emerald-500 text-white border-emerald-500" },
+  ...NOTIF_MODES,
+];
+const MODE_LABEL = { normal: "通知", silent: "静かに", off: "オフ", personal: "個人に任せる" };
 
-function NotifCenterSection() {
-  const { currentUser, currentUserId, getMyNotifSettings, updateMyNotifSettings } = useApp();
-  const s = getMyNotifSettings(currentUserId);
-  const setMode = (key, val) => updateMyNotifSettings(currentUserId, { [key]: val });
-
+/* ── 管理者: 全体設定（全員へ強制適用） ── */
+function GlobalNotifSection({ global, setGlobal }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-      {/* ヘッダー */}
-      <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3"
-        style={{ background: "linear-gradient(90deg,#0070d2 0%,#1589ee 100%)" }}>
-        <Bell size={16} className="text-white shrink-0" />
+    <div className="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
+      <div className="px-5 py-4 border-b border-amber-100 flex items-center gap-3"
+        style={{ background: "linear-gradient(90deg,#b45309 0%,#d97706 100%)" }}>
+        <Flag size={16} className="text-white shrink-0" />
         <div>
-          <p className="text-sm font-black text-white">通知センター設定</p>
-          <p className="text-[10px] text-blue-100 mt-0.5">{currentUser?.name} さんの個人設定（自動保存）</p>
+          <p className="text-sm font-black text-white">全体設定（全員へ強制適用）</p>
+          <p className="text-[10px] text-amber-100 mt-0.5">管理者専用 — 個人設定より優先されます</p>
         </div>
       </div>
 
       <div className="px-5 py-5 space-y-3">
-        {/* 凡例 */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-slate-500 bg-slate-50 rounded-lg px-3 py-2 mb-1">
-          {NOTIF_MODES.map(m => (
-            <span key={m.val} className="flex items-center gap-1">
-              <span>{m.icon}</span>
-              <span className="font-bold text-slate-600">{m.label}</span>
-              <span className="text-slate-400">— {m.hint}</span>
-            </span>
-          ))}
+        <div className="flex items-start gap-2 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          <span className="shrink-0">⚠️</span>
+          <span>
+            「個人に任せる」以外を選ぶと、<strong>全メンバーの個人設定を無視</strong>してそのモードを強制します。
+            全員の通知を止めたい場合は <strong>🚫 オフ</strong> を選択してください。
+          </span>
         </div>
 
-        {/* カテゴリごとのモード選択 */}
         {NOTIF_CATS.map(({ key, icon, label, desc }) => {
-          const cur = s[key] || "normal";
+          const cur = global[key] || "personal";
           return (
-            <div key={key} className="flex items-center justify-between gap-4 py-3 border-b border-slate-50 last:border-0">
+            <div key={key} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 border-b border-slate-50 last:border-0">
               <div className="flex items-start gap-3 min-w-0">
                 <span className="text-lg leading-none shrink-0 mt-0.5">{icon}</span>
                 <div className="min-w-0">
@@ -967,13 +965,11 @@ function NotifCenterSection() {
                   <p className="text-[11px] text-slate-400 mt-0.5">{desc}</p>
                 </div>
               </div>
-
-              {/* セグメント選択 */}
-              <div className="flex gap-1 shrink-0 bg-slate-100 rounded-lg p-1">
-                {NOTIF_MODES.map(m => (
+              <div className="flex gap-1 shrink-0 bg-slate-100 rounded-lg p-1 flex-wrap">
+                {GLOBAL_MODES.map(m => (
                   <button
                     key={m.val}
-                    onClick={() => setMode(key, m.val)}
+                    onClick={() => setGlobal(key, m.val)}
                     title={m.hint}
                     className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-bold transition-all border
                       ${cur === m.val
@@ -981,17 +977,105 @@ function NotifCenterSection() {
                         : "bg-transparent border-transparent text-slate-500 hover:bg-white"}`}
                   >
                     <span className="text-xs">{m.icon}</span>
-                    <span className="hidden sm:inline">{m.label}</span>
+                    <span>{m.label}</span>
                   </button>
                 ))}
               </div>
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
 
-        <p className="text-[10px] text-slate-400 pt-1">
-          ※ この設定はアプリ内の通知センター（🔔）の表示のみを制御します。設定はあなた個人にのみ適用されます。
-        </p>
+function NotifCenterSection() {
+  const {
+    currentUser, currentUserId,
+    getMyNotifSettings, updateMyNotifSettings,
+    getGlobalNotifSettings, updateGlobalNotifSettings,
+  } = useApp();
+  const isAdmin = currentUser?.role === "admin";
+  const s       = getMyNotifSettings(currentUserId);
+  const global  = getGlobalNotifSettings();
+  const setMode       = (key, val) => updateMyNotifSettings(currentUserId, { [key]: val });
+  const setGlobalMode = (key, val) => updateGlobalNotifSettings({ [key]: val });
+
+  return (
+    <div className="space-y-5">
+      {/* 管理者のみ: 全体設定カード */}
+      {isAdmin && <GlobalNotifSection global={global} setGlobal={setGlobalMode} />}
+
+      {/* 個人設定カード（全員） */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        {/* ヘッダー */}
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3"
+          style={{ background: "linear-gradient(90deg,#0070d2 0%,#1589ee 100%)" }}>
+          <Bell size={16} className="text-white shrink-0" />
+          <div>
+            <p className="text-sm font-black text-white">通知センター設定</p>
+            <p className="text-[10px] text-blue-100 mt-0.5">{currentUser?.name} さんの個人設定（自動保存）</p>
+          </div>
+        </div>
+
+        <div className="px-5 py-5 space-y-3">
+          {/* 凡例 */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-slate-500 bg-slate-50 rounded-lg px-3 py-2 mb-1">
+            {NOTIF_MODES.map(m => (
+              <span key={m.val} className="flex items-center gap-1">
+                <span>{m.icon}</span>
+                <span className="font-bold text-slate-600">{m.label}</span>
+                <span className="text-slate-400">— {m.hint}</span>
+              </span>
+            ))}
+          </div>
+
+          {/* カテゴリごとのモード選択 */}
+          {NOTIF_CATS.map(({ key, icon, label, desc }) => {
+            const cur        = s[key] || "normal";
+            const gMode      = global[key] || "personal";
+            const overridden = gMode !== "personal"; // 管理者が全体設定で上書き中
+            return (
+              <div key={key} className="flex items-center justify-between gap-4 py-3 border-b border-slate-50 last:border-0">
+                <div className="flex items-start gap-3 min-w-0">
+                  <span className="text-lg leading-none shrink-0 mt-0.5">{icon}</span>
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-slate-800">{label}</p>
+                    {overridden ? (
+                      <p className="text-[11px] text-amber-600 mt-0.5 font-semibold">
+                        🔒 管理者により全員「{MODE_LABEL[gMode]}」に設定されています
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-slate-400 mt-0.5">{desc}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* セグメント選択（全体設定で上書き中は無効化） */}
+                <div className={`flex gap-1 shrink-0 bg-slate-100 rounded-lg p-1 ${overridden ? "opacity-40 pointer-events-none" : ""}`}>
+                  {NOTIF_MODES.map(m => (
+                    <button
+                      key={m.val}
+                      onClick={() => setMode(key, m.val)}
+                      title={m.hint}
+                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-bold transition-all border
+                        ${cur === m.val
+                          ? m.active + " shadow-sm"
+                          : "bg-transparent border-transparent text-slate-500 hover:bg-white"}`}
+                    >
+                      <span className="text-xs">{m.icon}</span>
+                      <span className="hidden sm:inline">{m.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          <p className="text-[10px] text-slate-400 pt-1">
+            ※ この設定はアプリ内の通知センター（🔔）の表示のみを制御します。設定はあなた個人にのみ適用されます。
+          </p>
+        </div>
       </div>
     </div>
   );
