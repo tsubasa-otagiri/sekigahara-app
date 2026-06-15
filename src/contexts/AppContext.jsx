@@ -25,6 +25,23 @@ const MONTHLY_MEMBERS = [
 export const AppContext = createContext(null);
 
 /**
+ * 通知センター個人設定のデフォルト
+ *
+ * 各カテゴリの値: "normal" | "silent" | "off"
+ *   normal … 通知センターに記録し、未読バッジ（赤）に数える
+ *   silent … 履歴には残すが未読バッジに数えない（静かに記録）
+ *   off    … 通知センターに表示しない
+ *
+ * ※ 旧 boolean キー (notifyOnTaskAdded / notifyOnTaskReminder) は
+ *    PCポップアップ通知撤廃に伴い廃止。残っていても無害。
+ */
+export const NOTIF_SETTINGS_DEFAULTS = {
+  notifTaskAssigned: "normal", // 新規タスク割り当て
+  notifTaskReminder: "normal", // タスク期限リマインド（1日前・1時間前）
+  notifKintai:       "normal", // 勤怠申請リマインド（18:55）
+};
+
+/**
  * 月末処理タスクのデフォルト定義
  * daysBefore: 最終営業日の何日前が締切か（0=当日, 正数=N日前）
  */
@@ -337,14 +354,14 @@ export const AppProvider = ({ children }) => {
   }, [userSettings, panelTasks, loginCounts]);
 
   const getMyNotifSettings = useCallback((userId) => {
-    return { notifyOnTaskAdded: true, notifyOnTaskReminder: true, ...((userSettings[userId]) || {}) };
+    return { ...NOTIF_SETTINGS_DEFAULTS, ...((userSettings[userId]) || {}) };
   }, [userSettings]);
 
   const updateMyNotifSettings = useCallback((userId, patch) => {
     setUserSettings(prev => {
       const next = {
         ...prev,
-        [userId]: { notifyOnTaskAdded: true, notifyOnTaskReminder: true, ...(prev[userId] || {}), ...patch },
+        [userId]: { ...NOTIF_SETTINGS_DEFAULTS, ...(prev[userId] || {}), ...patch },
       };
       userSettingsRef.current = next;
       /* ユーザー操作 → API書き込み */

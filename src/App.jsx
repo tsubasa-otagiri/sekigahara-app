@@ -217,7 +217,7 @@ function useKintaiPanelWatcher() {
       if (h === 18 && m >= 55 && !firedRef.current.has(key)) {
         firedRef.current.add(key);
         addNotifLog({
-          taskId: null, type: "task_overdue",
+          taskId: null, type: "kintai",
           targetUser: myName,
           title: "🔔 勤怠申請の締め切りです！",
           body: "18:55になりました。今すぐ申請してください！",

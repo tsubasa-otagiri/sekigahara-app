@@ -16,25 +16,47 @@ const TYPE_ICON = {
   task_add:      { emoji: "✅", color: "#059669" },
   task_deadline: { emoji: "⏰", color: "#d97706" },
   task_overdue:  { emoji: "🔴", color: "#ef4444" },
+  kintai:        { emoji: "🔔", color: "#7c3aed" },
 };
 
+/* 通知 type → 設定カテゴリキーへのマッピング */
+function notifCategory(type) {
+  if (type === "task_add") return "notifTaskAssigned";
+  if (type === "kintai")   return "notifKintai";
+  if (type === "task_deadline" || type === "task_overdue") return "notifTaskReminder";
+  return null; // 未知タイプは常に通常表示
+}
+
 export default function NotificationCenter() {
-  const { notifLogs, markNotifRead, markAllNotifsRead, currentUser } = useApp();
+  const { notifLogs, markNotifRead, markAllNotifsRead, currentUser, currentUserId, getMyNotifSettings } = useApp();
   const myName = currentUser?.name || "";
   const [open, setOpen] = useState(false);
   const panelRef = useRef(null);
 
+  /* 自分の通知センター設定（種別ごとに normal / silent / off） */
+  const notifSettings = getMyNotifSettings(currentUserId);
+
+  /* 種別ごとのモードを解決（未知カテゴリは normal 扱い） */
+  const modeOf = (n) => {
+    const cat = notifCategory(n.type);
+    return cat ? (notifSettings[cat] || "normal") : "normal";
+  };
+
   /* ────────────────────────────────────────────
      【核心】自分宛て（targetUser === myName）の通知のみに絞り込む
+     + 個人設定が "off" の種別は非表示
      targetUser が未設定の古いエントリーは表示しない（他人のデータ混入防止）
   ──────────────────────────────────────────── */
   const myLogs = useMemo(() => {
     if (!myName) return [];
-    return notifLogs.filter(n => n.targetUser === myName);
-  }, [notifLogs, myName]);
+    return notifLogs.filter(n => n.targetUser === myName && modeOf(n) !== "off");
+  }, [notifLogs, myName, notifSettings]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* 未読件数も自分宛てのみカウント */
-  const unread = useMemo(() => myLogs.filter(n => !n.isRead).length, [myLogs]);
+  /* 未読件数: "normal" 種別の未読のみカウント（silent はバッジに数えない） */
+  const unread = useMemo(
+    () => myLogs.filter(n => !n.isRead && modeOf(n) === "normal").length,
+    [myLogs, notifSettings] // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   /* パネル外クリックで閉じる */
   useEffect(() => {
@@ -132,35 +154,47 @@ export default function NotificationCenter() {
               <>
                 {myLogs.map(n => {
                   const ti = TYPE_ICON[n.type] || { emoji: "🔔", color: "#64748b" };
+                  /* silent 種別は未読でもバッジに数えないため、常に「静かに記録」スタイル */
+                  const isSilent = modeOf(n) === "silent";
+                  const muted    = n.isRead || isSilent;
                   return (
                     <div
                       key={n.id}
                       className={`flex items-start gap-3 px-4 py-3 border-b border-slate-50 transition-colors
-                        ${n.isRead ? "bg-white" : "bg-blue-50/40"}`}
+                        ${muted ? "bg-white" : "bg-blue-50/40"}`}
                     >
                       {/* アイコン */}
                       <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm shrink-0 mt-0.5"
-                        style={{ background: n.isRead ? "#f1f5f9" : ti.color + "18" }}>
-                        <span style={{ opacity: n.isRead ? 0.45 : 1 }}>{ti.emoji}</span>
+                        style={{ background: muted ? "#f1f5f9" : ti.color + "18" }}>
+                        <span style={{ opacity: muted ? 0.45 : 1 }}>{ti.emoji}</span>
                       </div>
 
                       {/* 本文 */}
                       <div className="flex-1 min-w-0">
                         <p className={`text-[11px] leading-snug
-                          ${n.isRead ? "text-slate-400 font-normal" : "text-slate-800 font-semibold"}`}>
+                          ${muted ? "text-slate-400 font-normal" : "text-slate-800 font-semibold"}`}>
                           {n.title}
                         </p>
                         {n.body && (
                           <p className={`text-[10px] mt-0.5 truncate
-                            ${n.isRead ? "text-slate-300" : "text-slate-400"}`}>
+                            ${muted ? "text-slate-300" : "text-slate-400"}`}>
                             {n.body}
                           </p>
                         )}
-                        <p className="text-[9px] text-slate-300 mt-1">{timeAgo(n.createdAt)}</p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <p className="text-[9px] text-slate-300">{timeAgo(n.createdAt)}</p>
+                          {isSilent && (
+                            <span className="text-[8px] font-bold text-slate-400 bg-slate-100 rounded px-1 py-0.5 leading-none">
+                              🔕 静かに記録
+                            </span>
+                          )}
+                        </div>
                       </div>
 
-                      {/* 既読インジケーター */}
-                      {n.isRead ? (
+                      {/* 既読インジケーター（silent はバッジ非対象なので操作不要） */}
+                      {isSilent ? (
+                        <span className="shrink-0 w-5 h-5" />
+                      ) : n.isRead ? (
                         /* 既読済み: 緑チェック（操作不可） */
                         <span
                           className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center bg-emerald-50 text-emerald-400"

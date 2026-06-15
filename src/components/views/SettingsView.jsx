@@ -2,7 +2,7 @@ import { useState, useRef, useMemo } from "react";
 import ImageCropModal from "../ImageCropModal.jsx";
 import ImportDealsModal from "../ImportDealsModal.jsx";
 import DuplicateCleanser from "../DuplicateCleanser.jsx";
-import { Plus, Edit2, Save, X, Eye, EyeOff, Download, Upload, FileText, Lock, UserX, UserCheck, Flag, Trash2, ChevronUp, ChevronDown, GripVertical, ClipboardList, Sparkles, FileSpreadsheet, Layers } from "lucide-react";
+import { Plus, Edit2, Save, X, Eye, EyeOff, Download, Upload, FileText, Lock, UserX, UserCheck, Flag, Trash2, ChevronUp, ChevronDown, GripVertical, ClipboardList, Sparkles, FileSpreadsheet, Layers, Bell } from "lucide-react";
 import { useApp } from "../../contexts/useApp.js";
 import { DEFAULT_PANEL_TASKS } from "../../contexts/AppContext.jsx";
 import { TEAMS_OPT, ROLE_OPT, LS_KEYS } from "../../constants/index.js";
@@ -906,6 +906,97 @@ function Toggle({ checked, onChange, disabled }) {
   );
 }
 
+/* ━━━━━━━━ 通知センター設定セクション（全ユーザー共通） ━━━━━━━━
+
+   通知センター（🔔）に流れる通知を種別ごとに制御する個人設定。
+   各種別に 3 つのモード:
+     🔔 通知    … 未読バッジ（赤）に数えて目立たせる
+     🔕 静かに  … 履歴には残すが未読バッジに数えない
+     🚫 オフ    … 通知センターに表示しない
+   実際のフィルタリングは NotificationCenter 側で行う（保存は常に実施）。
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const NOTIF_CATS = [
+  { key: "notifTaskAssigned", icon: "✅", label: "新規タスクの割り当て", desc: "他のメンバーが自分を担当者に設定したとき" },
+  { key: "notifTaskReminder", icon: "⏰", label: "タスク期限リマインド",  desc: "自分が担当するタスクの期限 1日前・1時間前" },
+  { key: "notifKintai",       icon: "🔔", label: "勤怠申請リマインド",    desc: "毎月 最終営業日 18:55 の締切通知" },
+];
+const NOTIF_MODES = [
+  { val: "normal", icon: "🔔", label: "通知",   hint: "未読バッジに表示", active: "bg-[#0070d2] text-white border-[#0070d2]" },
+  { val: "silent", icon: "🔕", label: "静かに", hint: "履歴のみ・バッジなし", active: "bg-slate-500 text-white border-slate-500" },
+  { val: "off",    icon: "🚫", label: "オフ",   hint: "表示しない", active: "bg-red-500 text-white border-red-500" },
+];
+
+function NotifCenterSection() {
+  const { currentUser, currentUserId, getMyNotifSettings, updateMyNotifSettings } = useApp();
+  const s = getMyNotifSettings(currentUserId);
+  const setMode = (key, val) => updateMyNotifSettings(currentUserId, { [key]: val });
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      {/* ヘッダー */}
+      <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3"
+        style={{ background: "linear-gradient(90deg,#0070d2 0%,#1589ee 100%)" }}>
+        <Bell size={16} className="text-white shrink-0" />
+        <div>
+          <p className="text-sm font-black text-white">通知センター設定</p>
+          <p className="text-[10px] text-blue-100 mt-0.5">{currentUser?.name} さんの個人設定（自動保存）</p>
+        </div>
+      </div>
+
+      <div className="px-5 py-5 space-y-3">
+        {/* 凡例 */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-slate-500 bg-slate-50 rounded-lg px-3 py-2 mb-1">
+          {NOTIF_MODES.map(m => (
+            <span key={m.val} className="flex items-center gap-1">
+              <span>{m.icon}</span>
+              <span className="font-bold text-slate-600">{m.label}</span>
+              <span className="text-slate-400">— {m.hint}</span>
+            </span>
+          ))}
+        </div>
+
+        {/* カテゴリごとのモード選択 */}
+        {NOTIF_CATS.map(({ key, icon, label, desc }) => {
+          const cur = s[key] || "normal";
+          return (
+            <div key={key} className="flex items-center justify-between gap-4 py-3 border-b border-slate-50 last:border-0">
+              <div className="flex items-start gap-3 min-w-0">
+                <span className="text-lg leading-none shrink-0 mt-0.5">{icon}</span>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-slate-800">{label}</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">{desc}</p>
+                </div>
+              </div>
+
+              {/* セグメント選択 */}
+              <div className="flex gap-1 shrink-0 bg-slate-100 rounded-lg p-1">
+                {NOTIF_MODES.map(m => (
+                  <button
+                    key={m.val}
+                    onClick={() => setMode(key, m.val)}
+                    title={m.hint}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-bold transition-all border
+                      ${cur === m.val
+                        ? m.active + " shadow-sm"
+                        : "bg-transparent border-transparent text-slate-500 hover:bg-white"}`}
+                  >
+                    <span className="text-xs">{m.icon}</span>
+                    <span className="hidden sm:inline">{m.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+
+        <p className="text-[10px] text-slate-400 pt-1">
+          ※ この設定はアプリ内の通知センター（🔔）の表示のみを制御します。設定はあなた個人にのみ適用されます。
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /* ━━━━━━━━ 月末タスク定義管理セクション（管理者限定） ━━━━━━━━ */
 function MonthEndTaskSection() {
   const { panelTasks, setPanelTasks, generateMonthlyCheckTasks, currentYear, currentMonth } = useApp();
@@ -1180,17 +1271,24 @@ const SECTIONS = [
   { id:"backup",    label:"バックアップ"   },
   { id:"favicon",   label:"旗印"          },
   { id:"monthend",  label:"📋 月末タスク" },
+  { id:"notif",     label:"🔔 通知設定"   },
 ];
 
 export default function SettingsView() {
   const [section, setSection] = useState("members");
   const { currentUser } = useApp();
 
-  /* 管理者以外: 設定なし */
+  /* 管理者以外: 個人の通知センター設定のみ表示 */
   if (currentUser?.role !== "admin") {
     return (
-      <div className="min-h-full bg-gray-300/60 p-3 sm:p-5 flex items-center justify-center">
-        <p className="text-sm text-gray-500">設定は管理者のみ利用できます</p>
+      <div className="min-h-full bg-gray-300/60 p-3 sm:p-5">
+        <div className="max-w-2xl mx-auto">
+          <div className="mb-5">
+            <h2 className="text-base font-black text-gray-700">設定</h2>
+            <p className="text-xs text-gray-500 mt-0.5">通知センターの表示設定を管理できます</p>
+          </div>
+          <NotifCenterSection />
+        </div>
       </div>
     );
   }
@@ -1228,6 +1326,7 @@ export default function SettingsView() {
         {section === "backup"   && <BackupSection />}
         {section === "favicon"  && <FaviconSection />}
         {section === "monthend" && <MonthEndTaskSection />}
+        {section === "notif"    && <NotifCenterSection />}
       </div>
     </div>
   );
